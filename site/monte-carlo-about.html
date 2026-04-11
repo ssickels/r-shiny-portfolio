@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>About — Monte Carlo Portfolio Simulator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+
+.page-wrap{max-width:740px;margin:0 auto;padding:72px 24px 60px}
+
+.about-header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.about-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
+.about-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
+
+.motivation-box{border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:24px 28px;margin-bottom:40px;background:rgba(255,255,255,0.03)}
+.motivation-box h2{font-size:0.78rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.45);margin-bottom:20px}
+.motivation-item{display:flex;gap:16px;margin-bottom:18px;align-items:flex-start}
+.motivation-item:last-child{margin-bottom:0}
+.motivation-num{font-size:1.4rem;font-weight:300;color:#1D9E75;line-height:1.3;min-width:1.6rem}
+.motivation-item p{margin:0;line-height:1.65;font-size:0.97rem;color:#c4b5a0}
+
+section{margin-bottom:40px}
+section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem}
+section p:last-child{margin-bottom:0}
+em{color:#f0e6d8;font-style:italic}
+strong{color:#f0e6d8;font-weight:500}
+
+.callout{border-left:3px solid #1D9E75;padding:14px 20px;margin:20px 0;color:rgba(200,185,160,0.65);font-size:0.95rem;line-height:1.7}
+
+/* Screenshots side-by-side */
+.screenshot-pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:24px 0}
+@media(max-width:560px){.screenshot-pair{grid-template-columns:1fr}}
+.screenshot-item{text-align:center}
+.screenshot-item .img-placeholder{background:rgba(255,255,255,0.04);border:1px dashed rgba(200,185,160,0.2);border-radius:6px;padding:40px 16px;margin-bottom:8px;color:rgba(200,185,160,0.3);font-size:0.85rem}
+.screenshot-item img{width:100%;border-radius:6px;border:1px solid rgba(200,185,160,0.15);cursor:pointer;transition:opacity 0.15s}
+.screenshot-item img:hover{opacity:0.85}
+.screenshot-item .caption{font-size:0.82rem;color:rgba(200,185,160,0.45);line-height:1.5;margin-top:6px}
+
+/* Lightbox overlay */
+.lightbox{display:none;position:fixed;inset:0;z-index:99999;background:rgba(10,8,6,0.92);backdrop-filter:blur(4px);align-items:center;justify-content:center;cursor:pointer;padding:24px}
+.lightbox.is-open{display:flex}
+.lightbox img{max-width:95vw;max-height:92vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.6);cursor:default}
+.lightbox-close{position:absolute;top:16px;right:20px;color:rgba(200,185,160,0.6);font-size:28px;font-weight:300;cursor:pointer;line-height:1;transition:color 0.15s}
+.lightbox-close:hover{color:#e8ddd0}
+
+/* Interactive frontier widget */
+.widget-wrap{border:1px solid rgba(200,185,160,0.15);border-radius:8px;overflow:hidden;background:#241c14;margin:24px 0}
+.canvas-wrap{position:relative;background:#241c14;padding:20px 20px 10px}
+canvas{display:block;width:100%;background:#241c14;border-radius:4px}
+
+.controls{display:flex;flex-wrap:wrap;gap:16px;padding:16px 20px;border-top:1px solid rgba(200,185,160,0.1);background:rgba(20,14,8,0.5)}
+.ctrl{flex:1;min-width:140px}
+.ctrl label{display:block;font-size:0.72rem;color:rgba(200,185,160,0.45);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px}
+.ctrl .val{float:right;color:#d4b896;font-size:0.72rem}
+.ctrl input[type=range]{width:100%;accent-color:#1D9E75;height:4px;margin:0}
+
+.legend{display:flex;gap:24px;padding:10px 20px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.78rem}
+.legend-item{display:flex;align-items:center;gap:6px;color:rgba(200,185,160,0.55)}
+.legend-swatch{width:20px;height:3px;border-radius:1px}
+
+.formula-ref{font-size:0.82rem;color:rgba(200,185,160,0.4);line-height:1.6;margin-top:12px}
+.formula-ref a{color:#d4b896}
+.formula-ref a:hover{color:#f0e6d8}
+
+.fig-wrap{margin:24px 0;border:1px solid rgba(200,185,160,0.15);border-radius:8px;overflow:hidden;background:#241c14}
+.fig-wrap figcaption{font-size:0.8rem;color:rgba(200,185,160,0.4);padding:10px 16px;border-top:1px solid rgba(200,185,160,0.1);line-height:1.5}
+
+.tech-section{padding-top:40px;border-top:1px solid rgba(200,185,160,0.15)}
+.tech-section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:24px}
+.tech-subsection{margin-bottom:32px}
+.tech-subsection h3{font-size:0.78rem;font-weight:500;color:rgba(200,185,160,0.45);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px}
+.tech-subsection p{margin-bottom:12px;color:#c4b5a0;font-size:0.95rem}
+
+table{width:100%;border-collapse:collapse;font-size:0.88rem;margin-top:12px}
+th{text-align:left;padding:8px 12px;border-bottom:1px solid rgba(200,185,160,0.15);color:rgba(200,185,160,0.45);font-weight:500;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em}
+td{padding:8px 12px;border-bottom:1px solid rgba(200,185,160,0.08);vertical-align:top;line-height:1.55;color:#c4b5a0}
+tr:last-child td{border-bottom:none}
+td:first-child{color:rgba(200,185,160,0.55);white-space:nowrap;width:38%}
+
+.sim-link{display:inline-block;margin-top:24px;padding:9px 20px;border:1px solid rgba(200,185,160,0.2);border-radius:6px;color:rgba(200,185,160,0.55);text-decoration:none;font-size:0.9rem;transition:border-color 0.15s,color 0.15s}
+.sim-link:hover{border-color:#1D9E75;color:#f0e6d8}
+
+.timestep-note{border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:16px 20px;margin:20px 0;background:rgba(255,255,255,0.02);font-size:0.9rem;color:rgba(200,185,160,0.55);line-height:1.65}
+.timestep-note strong{color:rgba(200,185,160,0.7)}
+
+a[style]{color:#1D9E75 !important}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <div class="about-header">
+    <h1>About the Simulator</h1>
+    <p>A Monte Carlo exploration of stock/bond portfolios &mdash; what rebalancing
+       actually does, and why the efficient frontier is more complicated than it looks.</p>
+  </div>
+
+  <div class="motivation-box">
+    <h2>Two motivating questions</h2>
+    <div class="motivation-item">
+      <div class="motivation-num">1</div>
+      <p><strong>Distributions, not point estimates.</strong>
+         Most financial projections give you a single number &mdash; an expected outcome.
+         But any single run of a portfolio through time is just one draw from a
+         wide distribution of possibilities. This simulator makes that distribution
+         visible: hundreds of independent runs, each following the same parameters
+         but arriving at very different places. The spread is the story.</p>
+    </div>
+    <div class="motivation-item">
+      <div class="motivation-num">2</div>
+      <p><strong>What does rebalancing do to the efficient frontier?</strong>
+         Standard treatments of the frontier (discussed below) assume rebalancing &mdash;
+         it's baked into the math, so only one curve is ever shown. This simulator
+         plots both the rebalanced and non-rebalanced frontiers side by side. As far
+         as I can tell this comparison isn't common in the literature, though
+         it's a large field and I don't claim to have read it all.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>Why I built this</h2>
+    <p>I've long been skeptical of financial projections that give you a single
+       number &mdash; "at 7% annual return, your $10,000 grows to $76,000 in 30 years."
+       That figure isn't wrong exactly, but it papers over an enormous amount of
+       uncertainty. Real markets don't move at a steady 7%. They lurch, recover,
+       crash, and surge, and the path matters as much as the average.</p>
+    <p>I wanted to see the <em>distribution</em> of outcomes, not just the expected
+       value. Building a simulation from scratch forced me to be precise about my
+       assumptions and gave me something I could actually poke at.</p>
+
+    <div class="screenshot-pair">
+      <div class="screenshot-item">
+        <img src="img/point_estimate_no_cloud.png" alt="Gain vs SD plot showing only two point estimates for rebalanced and non-rebalanced strategies">
+        <div class="caption">Two point estimates &mdash; one for the rebalanced strategy,
+          one for non-rebalanced. This is what most projections give you.</div>
+      </div>
+      <div class="screenshot-item">
+        <img src="img/point_estimate_w_cloud.png" alt="Gain vs SD plot showing the full cloud of simulation outcomes with point estimates">
+        <div class="caption">The distribution of outcomes, with the point estimates
+          derived from them. The spread is what matters.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What's behind a pair of dots</h2>
+    <p>Each simulation generates a single set of correlated price paths, but
+       produces <em>two</em> dots on the Gain vs SD plot &mdash; one for the rebalanced
+       strategy and one for the non-rebalanced strategy, each with its own
+       annualized gain and standard deviation. It's tempting to treat these as
+       abstract data points, but each pair represents a complete simulated history:
+       a thousand days of correlated price movements, portfolio rebalancing events,
+       and compounding returns. The Single Sim Explorer tab lets you open up any
+       simulation and see the machinery inside.</p>
+
+    <div class="screenshot-pair">
+      <div class="screenshot-item">
+        <img src="img/sim_2_point.png" alt="Gain vs SD cloud with Sim #2 highlighted by a yellow dot and arrow">
+        <div class="caption">The Gain vs SD cloud. Each simulation produces two dots
+          (rebalanced and non-rebalanced). The highlighted pair is one simulation
+          we'll zoom into.</div>
+      </div>
+      <div class="screenshot-item">
+        <img src="img/sim_2_run.png" alt="Single Sim Explorer showing three panels: asset values, shares held, and share prices for Sim #2">
+        <div class="caption">The same simulation, unpacked: asset values, shares held,
+          and underlying prices. This is what produced that pair of dots.</div>
+      </div>
+    </div>
+
+    <p>The top panel shows how much each asset is worth over time in the rebalanced
+       portfolio, plus the total value for both strategies. The middle panel shows
+       shares held &mdash; watch them shift at each rebalancing event as the portfolio
+       sells winners and buys losers. The bottom panel shows the raw price paths
+       generated by the MCMC engine. Every pair of dots on the Gain vs SD plot has
+       a story like this behind it.</p>
+  </section>
+
+  <section>
+    <h2>What this is &mdash; and isn't</h2>
+    <p>This simulator is a demonstration of general principles, not a predictive
+       model of real markets. The simplifications are significant and worth being
+       clear about.</p>
+    <div class="callout">
+      The goal is to build intuition about rebalancing, risk, and diversification &mdash;
+      not to prove anything about real markets or validate any particular
+      investment strategy.
+    </div>
+    <p>The most important simplification: the statistical properties of simulated
+       prices are fixed and don't change over time. In technical terms the process
+       is <em>stationary</em> &mdash; or approximately ergodic. Real market data is
+       famously neither. Volatility clusters. Correlations spike during crises.
+       Entire regimes shift. None of that is captured here.</p>
+    <p>On the other hand, the simulator does model correlation between stock and
+       bond returns &mdash; a genuinely important factor. Decorrelation is a key source
+       of diversification benefit, and you can explore it directly via the
+       stock&ndash;bond correlation parameter.</p>
+  </section>
+
+  <section>
+    <h2>The efficient frontier</h2>
+    <p>Imagine plotting every possible stock/bond mix on a chart &mdash; risk on the
+       horizontal axis, expected return on the vertical. Most of those points are
+       <em>dominated</em> &mdash; meaning there's some other mix that offers either
+       higher return for the same risk, or lower risk for the same return.
+       The <strong>efficient frontier</strong> is the curve formed by the mixes
+       that <em>aren't</em> dominated: the best achievable return at every level
+       of risk.</p>
+
+    <p>Standard treatments of this concept assume rebalancing throughout &mdash; it's
+       an implicit part of the framework, so there's typically only ever one
+       frontier shown. This simulator plots two: one for rebalanced portfolios
+       and one for portfolios left to drift. The gap between them makes visible
+       something that's easy to overlook &mdash; rebalancing doesn't just keep you on
+       the frontier, it changes where the frontier is.</p>
+
+    <p>In the simulator, the <strong>Efficient Frontier</strong> tab shows the
+       frontier as point estimates &mdash; each dot is the mean gain and mean SD
+       across all simulations for one stock/bond split. The <strong>Frontier
+       Explorer</strong> tab shows the full distributions from which those point
+       estimates are derived: clouds of individual simulation outcomes at each
+       allocation, with the frontier overlaid.</p>
+
+    <p>Use the interactive widget below to explore how the frontier's shape responds
+       to changes in correlation, returns, and volatility:</p>
+
+    <!-- Interactive frontier widget (merged from monte-carlo-frontier.html) -->
+    <div class="widget-wrap">
+      <div class="canvas-wrap">
+        <canvas id="frontier-canvas" width="800" height="480"></canvas>
+      </div>
+      <div class="controls">
+        <div class="ctrl">
+          <label>Correlation (&rho;) <span class="val" id="v-corr">0.70</span></label>
+          <input type="range" id="s-corr" min="-1" max="1" step="0.05" value="0.70">
+        </div>
+        <div class="ctrl">
+          <label>Stock return <span class="val" id="v-sr">6.0%</span></label>
+          <input type="range" id="s-sr" min="0" max="15" step="0.5" value="6">
+        </div>
+        <div class="ctrl">
+          <label>Bond return <span class="val" id="v-br">2.0%</span></label>
+          <input type="range" id="s-br" min="0" max="15" step="0.5" value="2">
+        </div>
+        <div class="ctrl">
+          <label>Stock volatility <span class="val" id="v-sv">6.0</span></label>
+          <input type="range" id="s-sv" min="1" max="15" step="0.5" value="6">
+        </div>
+        <div class="ctrl">
+          <label>Bond volatility <span class="val" id="v-bv">3.0</span></label>
+          <input type="range" id="s-bv" min="1" max="15" step="0.5" value="3">
+        </div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:#1D9E75"></div> Rebalanced</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#c86080;border-style:dashed"></div> Non-rebalanced (approx.)</div>
+      </div>
+    </div>
+
+    <p class="formula-ref">The rebalanced frontier uses the
+       <a href="https://en.wikipedia.org/wiki/Modern_portfolio_theory#Two_mutual_fund_theorem" target="_blank">standard two-asset portfolio variance formula</a>:
+       &sigma;<sub>p</sub> = &radic;(w&sup2;&sigma;<sub>s</sub>&sup2; + (1&minus;w)&sup2;&sigma;<sub>b</sub>&sup2; + 2w(1&minus;w)&rho;&sigma;<sub>s</sub>&sigma;<sub>b</sub>).
+       The non-rebalanced curve is an approximation &mdash; without rebalancing,
+       the portfolio drifts toward the higher-returning asset, increasing effective
+       volatility and reducing the diversification benefit.</p>
+  </section>
+
+  <section>
+    <h2>Interpreting days</h2>
+    <div class="timestep-note">
+      <strong>A rough heuristic:</strong> with the default parameters (interest period = 300,
+      time horizon = 1000), each timestep corresponds to roughly one trading day. That makes
+      the default run about 3.3 years. This isn't a precise calibration &mdash; it's a back-of-the-envelope
+      guide to help anchor the numbers. The qualitative conclusions (rebalancing benefit,
+      frontier shape, spread of outcomes) don't depend on this interpretation.
+    </div>
+  </section>
+
+  <a href="/monte-carlo.html" class="sim-link">&larr; Open the simulator</a>
+
+  <div class="tech-section">
+    <h2>Technical notes</h2>
+
+    <div class="tech-subsection">
+      <h3>Price model</h3>
+      <p>Stock and bond prices follow a random walk generated by Metropolis-Hastings
+         sampling. At each time step, a new price is proposed from a multivariate normal
+         centered on the current price. The proposal is accepted or rejected based on
+         the ratio of target densities, producing correlated price paths that respect
+         the specified distribution parameters.</p>
+    </div>
+
+    <div class="tech-subsection">
+      <h3>Parameters</h3>
+      <table>
+        <thead><tr><th>Parameter</th><th>What it controls</th></tr></thead>
+        <tbody>
+          <tr><td>Simulations (n)</td><td>Number of independent runs. Frontier sweep needs n &ge; 500 for a reasonably clean curve.</td></tr>
+          <tr><td>Time horizon (days)</td><td>Length of each run. ~1 trading day per step with default settings.</td></tr>
+          <tr><td>Stock allocation (%)</td><td>Target stock percentage. Bonds hold the remainder. Disabled in frontier sweep mode.</td></tr>
+          <tr><td>Rebalance interval</td><td>How often (in days) the portfolio resets to target allocation.</td></tr>
+          <tr><td>Volatility (SD)</td><td>Price distribution standard deviation per asset. Higher = more volatile.</td></tr>
+          <tr><td>Stock&ndash;bond correlation</td><td>How closely the two assets move together. Negative = more diversification benefit.</td></tr>
+          <tr><td>Interest rates</td><td>Compound growth rates per interest period, independent of price volatility.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tech-subsection">
+      <h3>Implementation</h3>
+      <p>Written in R using Shiny, deployed on shinyapps.io and embedded via iframe.
+         Plots rendered with ggplot2 + plotly. Source code on
+         <a href="https://github.com/ssickels/r-shiny-portfolio" style="color:#1D9E75;">GitHub</a>.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const canvas = document.getElementById('frontier-canvas');
+  const ctx = canvas.getContext('2d');
+
+  const sCorr = document.getElementById('s-corr');
+  const sSr   = document.getElementById('s-sr');
+  const sBr   = document.getElementById('s-br');
+  const sSv   = document.getElementById('s-sv');
+  const sBv   = document.getElementById('s-bv');
+
+  const vCorr = document.getElementById('v-corr');
+  const vSr   = document.getElementById('v-sr');
+  const vBr   = document.getElementById('v-br');
+  const vSv   = document.getElementById('v-sv');
+  const vBv   = document.getElementById('v-bv');
+
+  let currentParams = getParams();
+  let targetParams = getParams();
+  let animating = false;
+
+  function getParams() {
+    return {
+      rho: parseFloat(sCorr.value),
+      sr: parseFloat(sSr.value) / 100,
+      br: parseFloat(sBr.value) / 100,
+      sv: parseFloat(sSv.value),
+      bv: parseFloat(sBv.value)
+    };
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function lerpParams(a, b, t) {
+    return {
+      rho: lerp(a.rho, b.rho, t),
+      sr: lerp(a.sr, b.sr, t),
+      br: lerp(a.br, b.br, t),
+      sv: lerp(a.sv, b.sv, t),
+      bv: lerp(a.bv, b.bv, t)
+    };
+  }
+
+  function rebalancedFrontier(w, p) {
+    const ret = w * p.sr + (1 - w) * p.br;
+    const vol = Math.sqrt(
+      w * w * p.sv * p.sv +
+      (1 - w) * (1 - w) * p.bv * p.bv +
+      2 * w * (1 - w) * p.rho * p.sv * p.bv
+    );
+    return { ret, vol };
+  }
+
+  function nonrebalancedFrontier(w, p) {
+    const ret = w * p.sr + (1 - w) * p.br;
+    const returnDiff = Math.abs(p.sr - p.br);
+    const driftStrength = returnDiff * 2.5;
+    const shift = w * (1 - w) * driftStrength;
+    const wEff = p.sr > p.br ? Math.min(1, w + shift) : Math.max(0, w - shift);
+    const vol = Math.sqrt(
+      wEff * wEff * p.sv * p.sv +
+      (1 - wEff) * (1 - wEff) * p.bv * p.bv +
+      2 * wEff * (1 - wEff) * p.rho * p.sv * p.bv
+    );
+    return { ret, vol };
+  }
+
+  function draw(p) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const W = rect.width;
+    const H = rect.height;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const ml = 60, mr = 30, mt = 20, mb = 50;
+    const cw = W - ml - mr;
+    const ch = H - mt - mb;
+
+    const nPts = 51;
+    const rebalPts = [];
+    const nonrebalPts = [];
+    for (let i = 0; i <= nPts; i++) {
+      const w = i / nPts;
+      rebalPts.push(rebalancedFrontier(w, p));
+      nonrebalPts.push(nonrebalancedFrontier(w, p));
+    }
+
+    const allPts = rebalPts.concat(nonrebalPts);
+    let minVol = Infinity, maxVol = -Infinity, minRet = Infinity, maxRet = -Infinity;
+    for (const pt of allPts) {
+      if (pt.vol < minVol) minVol = pt.vol;
+      if (pt.vol > maxVol) maxVol = pt.vol;
+      if (pt.ret < minRet) minRet = pt.ret;
+      if (pt.ret > maxRet) maxRet = pt.ret;
+    }
+    const vPad = (maxVol - minVol) * 0.15 || 1;
+    const rPad = (maxRet - minRet) * 0.15 || 0.01;
+    minVol = Math.max(0, minVol - vPad);
+    maxVol += vPad;
+    minRet -= rPad;
+    maxRet += rPad;
+
+    function toX(vol) { return ml + (vol - minVol) / (maxVol - minVol) * cw; }
+    function toY(ret) { return mt + ch - (ret - minRet) / (maxRet - minRet) * ch; }
+
+    // Grid
+    ctx.strokeStyle = 'rgba(100,85,65,0.3)';
+    ctx.lineWidth = 0.5;
+    const nGrid = 5;
+    for (let i = 0; i <= nGrid; i++) {
+      const y = mt + (ch / nGrid) * i;
+      ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + cw, y); ctx.stroke();
+      const x = ml + (cw / nGrid) * i;
+      ctx.beginPath(); ctx.moveTo(x, mt); ctx.lineTo(x, mt + ch); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#5a4a3a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ml, mt); ctx.lineTo(ml, mt + ch); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ml, mt + ch); ctx.lineTo(ml + cw, mt + ch); ctx.stroke();
+
+    // Axis labels
+    ctx.fillStyle = '#8a7a6a';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Risk (volatility)', ml + cw / 2, H - 8);
+    ctx.save();
+    ctx.translate(14, mt + ch / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Expected return', 0, 0);
+    ctx.restore();
+
+    // Tick labels
+    ctx.fillStyle = '#8a7a6a';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    for (let i = 0; i <= nGrid; i++) {
+      const vol = minVol + (maxVol - minVol) * i / nGrid;
+      ctx.fillText(vol.toFixed(1), ml + (cw / nGrid) * i, mt + ch + 18);
+    }
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= nGrid; i++) {
+      const ret = minRet + (maxRet - minRet) * i / nGrid;
+      ctx.fillText((ret * 100).toFixed(1) + '%', ml - 6, mt + ch - (ch / nGrid) * i + 4);
+    }
+
+    function drawCurve(pts, color, lineWidth, dash) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.setLineDash(dash || []);
+      ctx.beginPath();
+      for (let i = 0; i < pts.length; i++) {
+        const x = toX(pts[i].vol);
+        const y = toY(pts[i].ret);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    drawCurve(nonrebalPts, 'rgba(200,96,128,0.85)', 2, [6, 4]);
+    drawCurve(rebalPts, '#1D9E75', 2.5);
+
+    // Endpoints
+    const bond100_r = rebalancedFrontier(0, p);
+    const stock100_r = rebalancedFrontier(1, p);
+
+    ctx.fillStyle = '#d4b896';
+    ctx.beginPath();
+    ctx.arc(toX(bond100_r.vol), toY(bond100_r.ret), 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(toX(stock100_r.vol), toY(stock100_r.ret), 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#d4b896';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('100% bonds', toX(bond100_r.vol) + 8, toY(bond100_r.ret) + 4);
+    ctx.textAlign = 'right';
+    ctx.fillText('100% stocks', toX(stock100_r.vol) - 8, toY(stock100_r.ret) + 4);
+
+    // Rebalancing bonus annotation
+    const mid_r = rebalancedFrontier(0.5, p);
+    const mid_nr = nonrebalancedFrontier(0.5, p);
+    const gap = Math.abs(mid_r.vol - mid_nr.vol);
+    if (gap > 0.05) {
+      const midX = (toX(mid_r.vol) + toX(mid_nr.vol)) / 2;
+      const midY = (toY(mid_r.ret) + toY(mid_nr.ret)) / 2;
+      ctx.strokeStyle = 'rgba(212,184,150,0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(toX(mid_r.vol), toY(mid_r.ret));
+      ctx.lineTo(toX(mid_nr.vol), toY(mid_nr.ret));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(212,184,150,0.5)';
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('rebalancing', midX, midY - 8);
+      ctx.fillText('bonus', midX, midY + 4);
+    }
+
+    // Allocation markers
+    ctx.fillStyle = 'rgba(29,158,117,0.6)';
+    ctx.font = '9px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    for (let pct = 0; pct <= 100; pct += 20) {
+      if (pct === 0 || pct === 100) continue;
+      const w = pct / 100;
+      const pt = rebalancedFrontier(w, p);
+      ctx.beginPath();
+      ctx.arc(toX(pt.vol), toY(pt.ret), 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillText(pct + '%', toX(pt.vol), toY(pt.ret) - 8);
+    }
+  }
+
+  function updateLabels() {
+    vCorr.textContent = parseFloat(sCorr.value).toFixed(2);
+    vSr.textContent = parseFloat(sSr.value).toFixed(1) + '%';
+    vBr.textContent = parseFloat(sBr.value).toFixed(1) + '%';
+    vSv.textContent = parseFloat(sSv.value).toFixed(1);
+    vBv.textContent = parseFloat(sBv.value).toFixed(1);
+  }
+
+  let animStart = 0;
+  const animDuration = 300;
+
+  function animate(timestamp) {
+    if (!animStart) animStart = timestamp;
+    const elapsed = timestamp - animStart;
+    const t = Math.min(1, elapsed / animDuration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const interp = lerpParams(currentParams, targetParams, eased);
+    draw(interp);
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      currentParams = { ...targetParams };
+      animating = false;
+    }
+  }
+
+  function onSliderChange() {
+    updateLabels();
+    targetParams = getParams();
+    if (!animating) {
+      animating = true;
+      animStart = 0;
+      requestAnimationFrame(animate);
+    }
+  }
+
+  [sCorr, sSr, sBr, sSv, sBv].forEach(s => {
+    s.addEventListener('input', onSliderChange);
+  });
+
+  window.addEventListener('resize', () => draw(currentParams));
+  updateLabels();
+  draw(currentParams);
+})();
+</script>
+
+<div class="lightbox" id="lightbox">
+  <span class="lightbox-close">&times;</span>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+(function () {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+
+  document.querySelectorAll('.screenshot-item img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lb.classList.add('is-open');
+    });
+  });
+
+  lb.addEventListener('click', function (e) {
+    if (e.target !== lbImg) {
+      lb.classList.remove('is-open');
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') lb.classList.remove('is-open');
+  });
+})();
+</script>
+
+<script src="portfolio-nav.js"></script>
+</body>
+</html>

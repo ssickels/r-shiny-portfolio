@@ -7,3 +7,7 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Precomputed simulation data (large .rds files, regenerate with scripts/precompute_frontier.R)
+# Tracked in git since they're needed for deployment to shinyapps.io
+# data/precomputed/*.rds

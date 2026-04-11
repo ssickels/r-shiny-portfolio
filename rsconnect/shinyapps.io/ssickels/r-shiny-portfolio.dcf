@@ -1,0 +1,10 @@
+name: r-shiny-portfolio
+title:
+username: ssickels
+account: ssickels
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17107196
+bundleId: 11837378
+url: https://ssickels.shinyapps.io/r-shiny-portfolio/
+version: 1

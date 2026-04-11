@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>How It Works — Monte Carlo Portfolio Simulator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+
+.page-wrap{max-width:740px;margin:0 auto;padding:72px 24px 60px}
+
+.page-header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
+.page-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
+
+section{margin-bottom:44px}
+section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section h3{font-size:0.95rem;font-weight:400;color:#f0e6d8;margin-bottom:10px;margin-top:20px}
+section p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem}
+section p:last-child{margin-bottom:0}
+em{color:#f0e6d8;font-style:italic}
+strong{color:#f0e6d8;font-weight:500}
+
+.callout{border-left:3px solid #1D9E75;padding:14px 20px;margin:20px 0;color:rgba(200,185,160,0.65);font-size:0.95rem;line-height:1.7}
+
+.flow-box{border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:24px 28px;margin:24px 0;background:rgba(255,255,255,0.03)}
+.flow-step{display:flex;gap:16px;margin-bottom:14px;align-items:flex-start}
+.flow-step:last-child{margin-bottom:0}
+.flow-num{font-size:0.82rem;font-weight:600;color:#1D9E75;background:rgba(29,158,117,0.12);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.flow-step p{margin:0;font-size:0.95rem;color:#c4b5a0;line-height:1.6}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:20px 0}
+@media(max-width:600px){.two-col{grid-template-columns:1fr}}
+.col-box{border:1px solid rgba(200,185,160,0.12);border-radius:8px;padding:18px 20px;background:rgba(255,255,255,0.02)}
+.col-box h4{font-size:0.78rem;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px}
+.col-box.gets-right h4{color:#1D9E75}
+.col-box.gets-wrong h4{color:#c86080}
+.col-box ul{list-style:none;padding:0}
+.col-box li{padding:4px 0;font-size:0.9rem;color:#c4b5a0;padding-left:16px;position:relative}
+.col-box li::before{content:'';position:absolute;left:0;top:11px;width:6px;height:6px;border-radius:50%}
+.col-box.gets-right li::before{background:rgba(29,158,117,0.5)}
+.col-box.gets-wrong li::before{background:rgba(200,96,128,0.5)}
+
+table{width:100%;border-collapse:collapse;font-size:0.88rem;margin-top:12px}
+th{text-align:left;padding:8px 12px;border-bottom:1px solid rgba(200,185,160,0.15);color:rgba(200,185,160,0.45);font-weight:500;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em}
+td{padding:8px 12px;border-bottom:1px solid rgba(200,185,160,0.08);vertical-align:top;line-height:1.55;color:#c4b5a0}
+tr:last-child td{border-bottom:none}
+td:first-child{color:rgba(200,185,160,0.55);white-space:nowrap;width:34%}
+
+code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;background:rgba(200,185,160,0.08);padding:1px 5px;border-radius:3px}
+
+.sim-link{display:inline-block;margin-top:24px;padding:9px 20px;border:1px solid rgba(200,185,160,0.2);border-radius:6px;color:rgba(200,185,160,0.55);text-decoration:none;font-size:0.9rem;transition:border-color 0.15s,color 0.15s}
+.sim-link:hover{border-color:#1D9E75;color:#f0e6d8}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <div class="page-header">
+    <h1>How It Works</h1>
+    <p>The Metropolis-Hastings algorithm, correlated price paths, and what
+       this model does and doesn't capture.</p>
+  </div>
+
+  <section>
+    <h2>What is Metropolis-Hastings?</h2>
+    <p>Metropolis-Hastings (MH) is a Markov chain Monte Carlo (MCMC) algorithm.
+       It generates a sequence of samples from a probability distribution that
+       may be difficult to sample from directly. The core idea is simple:</p>
+
+    <div class="flow-box">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <p><strong>Propose</strong> a new state by perturbing the current one.
+           In this simulator, the proposal is drawn from a multivariate normal
+           distribution centered on the current price, with a covariance matrix
+           that encodes the stock-bond correlation.</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <p><strong>Evaluate</strong> the proposal. Compare the probability of the
+           proposed price under the target distribution to the probability of the
+           current price. The target distribution is a normal with the specified
+           mean and standard deviation for each asset.</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <p><strong>Accept or reject.</strong> If the new price is more probable,
+           always accept. If less probable, accept with probability equal to the
+           density ratio. If rejected, the chain stays at the current value.
+           This guarantees the chain's stationary distribution matches the target.</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <p><strong>Repeat</strong> for each timestep. The result is a correlated
+           random walk that respects the target distribution while exhibiting
+           realistic short-term persistence &mdash; prices don't jump erratically
+           from step to step.</p>
+      </div>
+    </div>
+
+    <p>The key property: over long runs, the histogram of visited prices converges
+       to the target distribution. But the <em>path</em> through those prices has
+       temporal structure &mdash; each price depends on the previous one, which is
+       exactly what makes it useful for simulating market behavior.</p>
+  </section>
+
+  <section>
+    <h2>How this simulator uses it</h2>
+    <p>Each simulation run generates two correlated price series (stocks and bonds)
+       using the MH algorithm. The steps are:</p>
+
+    <h3>Price generation</h3>
+    <p>At day <em>t</em>, the current prices <code>[s_t, b_t]</code> are
+       the chain state. A proposal <code>[s*, b*]</code> is drawn from a bivariate
+       normal centered at <code>[s_t, b_t]</code> with covariance matrix determined
+       by the asset volatilities, correlation, and proposal step divisor. Each asset's
+       acceptance is evaluated independently against its marginal target density.</p>
+
+    <h3>Interest/drift</h3>
+    <p>After the MH chain generates the base price paths, compound interest is
+       added as a deterministic drift: <code>price_t += mean * ((1 + rate)^(t/period) - 1)</code>.
+       This separates the stochastic volatility from the expected growth, making
+       both independently controllable.</p>
+
+    <h3>Portfolio accounting</h3>
+    <p>For each price path, two portfolios are tracked simultaneously:</p>
+    <p><strong>Rebalanced:</strong> At every rebalance interval, the portfolio is
+       reset to the target allocation (e.g., 60/40). Overweight assets are sold,
+       underweight assets are bought, keeping total value unchanged.</p>
+    <p><strong>Non-rebalanced:</strong> Same initial allocation, but left to drift.
+       If stocks outperform, the portfolio gradually becomes stock-heavy. This is
+       the "do nothing" baseline.</p>
+
+    <h3>Summary statistics</h3>
+    <p>Annualized gain and rolling standard deviation are computed for each simulation.
+       The "Gain vs SD" plot shows the cloud of all sim outcomes plus the mean
+       (point estimate). The frontier sweep repeats this at each allocation from
+       0% to 100% stocks, tracing out the efficient frontier.</p>
+  </section>
+
+  <section>
+    <h2>What the model captures</h2>
+    <div class="two-col">
+      <div class="col-box gets-right">
+        <h4>Gets right</h4>
+        <ul>
+          <li>Random-walk price behavior with temporal persistence</li>
+          <li>Correlated asset returns (tunable)</li>
+          <li>Non-negative prices (proposals below threshold are rejected)</li>
+          <li>Deterministic drift (compound interest/growth)</li>
+          <li>Mechanical rebalancing vs. drift comparison</li>
+          <li>Distribution of outcomes, not just expected values</li>
+        </ul>
+      </div>
+      <div class="col-box gets-wrong">
+        <h4>Gets wrong</h4>
+        <ul>
+          <li>Stationarity &mdash; real markets have regime changes</li>
+          <li>No volatility clustering (GARCH-like effects)</li>
+          <li>Thin tails &mdash; real returns are fat-tailed</li>
+          <li>No mean reversion or momentum effects</li>
+          <li>Fixed correlation &mdash; real correlations spike in crises</li>
+          <li>No transaction costs, taxes, or bid-ask spreads</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why simplify?</h2>
+    <p>The limitations above are deliberate, not accidental. The goal isn't to
+       predict real market outcomes &mdash; it's to isolate the <em>mechanical effect
+       of rebalancing</em> from the noise of market-specific dynamics.</p>
+    <div class="callout">
+      By holding the statistical properties constant, we can see what rebalancing
+      does in a "fair" environment &mdash; one where neither asset has a structural
+      advantage from regime changes, momentum, or crisis correlations. The
+      rebalancing benefit (or cost) that emerges is purely a function of
+      volatility, correlation, and return differential.
+    </div>
+    <p>Adding realistic features (fat tails, regime switching, stochastic
+       volatility) would make the model more accurate but also make it harder
+       to attribute outcomes to any single cause. The simplicity is the point.</p>
+  </section>
+
+  <section>
+    <h2>Key parameters</h2>
+    <table>
+      <thead><tr><th>Parameter</th><th>Role</th><th>Default</th></tr></thead>
+      <tbody>
+        <tr><td>nSims</td><td>Independent simulation runs. More = smoother estimates.</td><td>500</td></tr>
+        <tr><td>n_timesteps</td><td>Length of each run. ~1 trading day per step.</td><td>1000</td></tr>
+        <tr><td>perc_stocks</td><td>Target stock allocation (remainder in bonds).</td><td>60%</td></tr>
+        <tr><td>rebal_interval</td><td>Days between rebalancing events.</td><td>100</td></tr>
+        <tr><td>s_sd / b_sd</td><td>Price volatility per asset. Asymmetric by default.</td><td>6 / 3</td></tr>
+        <tr><td>s_b_corr</td><td>Correlation between stock and bond returns.</td><td>0.7</td></tr>
+        <tr><td>s_int / b_int</td><td>Compound growth rate per interest period.</td><td>0.06 / 0.02</td></tr>
+        <tr><td>propStepDivisor</td><td>Controls MH proposal width. Larger = smaller steps.</td><td>20</td></tr>
+        <tr><td>widthVal</td><td>Rolling window for SD calculation.</td><td>600</td></tr>
+        <tr><td>int_period</td><td>Days per compounding period (~1 year).</td><td>300</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <a href="/monte-carlo.html" class="sim-link">&larr; Open the simulator</a>
+
+</div>
+
+<script src="portfolio-nav.js"></script>
+</body>
+</html>

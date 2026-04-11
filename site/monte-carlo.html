@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Monte Carlo Portfolio Simulator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
+
+.page-wrap{max-width:1100px;margin:0 auto;padding:54px 24px 40px}
+
+.page-header{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.6rem;font-weight:400;margin-bottom:6px;color:#f0e6d8}
+.page-header p{color:rgba(200,185,160,0.55);font-size:1rem;line-height:1.6}
+
+.sim-frame-wrap{background:#f7f7f5;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)}
+.sim-frame-wrap iframe{display:block;width:100%;height:calc(100vh - 200px);min-height:600px;border:none}
+
+.sim-note{margin-top:12px;font-size:0.82rem;color:rgba(200,185,160,0.4);line-height:1.5}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <h1>Monte Carlo Portfolio Simulator</h1>
+    <p>Simulated stock &amp; bond price paths exploring rebalancing strategies
+       and the efficient frontier. The distribution of outcomes tells a more
+       honest story than any single point estimate.</p>
+  </div>
+
+  <div class="sim-frame-wrap">
+    <iframe src="https://ssickels.shinyapps.io/r-shiny-portfolio/"
+            title="Monte Carlo Portfolio Simulator"
+            loading="lazy"
+            allow="fullscreen"></iframe>
+  </div>
+
+  <p class="sim-note">Simulation runs on a remote R server. Initial load and
+     longer runs (especially the frontier sweep) may take a few minutes.</p>
+</div>
+
+<script src="portfolio-nav.js"></script>
+</body>
+</html>

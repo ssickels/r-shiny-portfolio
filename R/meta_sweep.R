@@ -11,9 +11,12 @@ run_meta_sweep <- function(perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd,
                            s.b.corr, init.inv, rebal.interval,
                            s.int, b.int, int.period,
                            propStepDivisor, nSims, nSimsToRecord,
-                           widthVal, progress_callback = NULL) {
+                           widthVal, max_cloud_sims = Inf,
+                           progress_callback = NULL) {
 
-  results <- list()
+  summary_results <- list()
+  cloud_results <- list()
+  point_est_results <- list()
 
   for (k in seq_along(perc.stocks.vec)) {
     alloc <- perc.stocks.vec[k]
@@ -38,8 +41,9 @@ run_meta_sweep <- function(perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd,
       widthVal = widthVal, progress_callback = sim_cb
     )
 
+    # Summary row (existing frontier data)
     pe <- res$gainsVsSD.point.estDf
-    results[[k]] <- data.frame(
+    summary_results[[k]] <- data.frame(
       allocation = alloc,
       rebal_gain = pe$gain[pe$type == "rebal"],
       rebal_sd = pe$sd[pe$type == "rebal"],
@@ -48,7 +52,24 @@ run_meta_sweep <- function(perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd,
       s.int = s.int,
       b.int = b.int
     )
+
+    # Per-allocation cloud data (individual sim results, sampled if needed)
+    cloud_df <- res$gainVsSDDf
+    if (max_cloud_sims > 0 && max(cloud_df$sim) > max_cloud_sims) {
+      keep_sims <- sample(unique(cloud_df$sim), max_cloud_sims)
+      cloud_df <- cloud_df[cloud_df$sim %in% keep_sims, ]
+    }
+    cloud_df$allocation <- alloc
+    cloud_results[[k]] <- cloud_df
+
+    # Per-allocation point estimates
+    pe$allocation <- alloc
+    point_est_results[[k]] <- pe
   }
 
-  do.call(rbind, results)
+  list(
+    summary = do.call(rbind, summary_results),
+    cloud = do.call(rbind, cloud_results),
+    point_estimates = do.call(rbind, point_est_results)
+  )
 }

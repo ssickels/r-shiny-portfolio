@@ -2,87 +2,143 @@
 
 fluidPage(
   useShinyjs(),
-  titlePanel("Monte Carlo Portfolio Simulator"),
+  tags$head(tags$link(rel = "stylesheet", href = "custom.css")),
 
   sidebarLayout(
     sidebarPanel(
       width = 3,
 
-      # --- Asset Distributions ---
-      h4("Asset Distributions"),
-      numericInput("s_mean", "Stock Mean Price", value = 10, min = 0.1, step = 0.5),
-      numericInput("s_sd", "Stock Std Dev", value = 6, min = 0.1, step = 0.5),
-      numericInput("b_mean", "Bond Mean Price", value = 10, min = 0.1, step = 0.5),
-      numericInput("b_sd", "Bond Std Dev", value = 6, min = 0.1, step = 0.5),
-      sliderInput("s_b_corr", "Stock-Bond Correlation", min = -1, max = 1,
-                  value = 0.7, step = 0.05),
+      # --- Simulation ---
+      h4("Simulation"),
+      sliderInput("nSims", "Number of Simulations",
+                  min = 100, max = 1500, value = 500, step = 100),
+      sliderInput("n_timesteps", "Time Horizon (days)",
+                  min = 250, max = 2000, value = 1000, step = 250),
 
       hr(),
 
-      # --- Portfolio Settings ---
-      h4("Portfolio Settings"),
-      numericInput("init_inv", "Initial Investment ($)", value = 1000, min = 1, step = 100),
-      sliderInput("perc_stocks", "Stock Allocation (%)", min = 0, max = 100,
-                  value = 60, step = 1),
-      numericInput("rebal_interval", "Rebalance Interval (timesteps)", value = 100,
-                   min = 1, step = 10),
+      # --- Portfolio ---
+      h4("Portfolio"),
+      sliderInput("perc_stocks", "Stock Allocation (%)",
+                  min = 0, max = 100, value = 60, step = 10),
+      sliderInput("rebal_interval", "Rebalance Interval",
+                  min = 10, max = 500, value = 100, step = 10),
 
       hr(),
 
-      # --- Growth / Interest ---
-      h4("Growth / Interest"),
-      numericInput("s_int", "Stock Interest Rate", value = 0.04, min = 0, max = 1, step = 0.005),
-      numericInput("b_int", "Bond Interest Rate", value = 0.04, min = 0, max = 1, step = 0.005),
-      numericInput("int_period", "Interest Period (timesteps)", value = 300, min = 1, step = 50),
-
-      hr(),
-
-      # --- Simulation Settings ---
-      h4("Simulation Settings"),
-      numericInput("n_timesteps", "Number of Timesteps", value = 1000, min = 100, step = 100),
-      numericInput("nSims", "Number of Simulations", value = 30, min = 1, step = 10),
-      numericInput("nSimsToRecord", "Sims to Record (full trajectories)", value = 5,
-                   min = 1, step = 1),
-      numericInput("propStepDivisor", "Proposal Step Divisor", value = 20, min = 1, step = 1),
-      numericInput("widthVal", "Rolling Window Width", value = 600, min = 10, step = 50),
+      # --- Market Assumptions (collapsible) ---
+      tags$details(
+        tags$summary(
+          style = "cursor:pointer; color:#6b5b4f; font-size:15px; font-weight:500;",
+          "Market assumptions"
+        ),
+        div(style = "padding-top:8px;",
+          sliderInput("s_sd", "Stock Volatility (SD)",
+                      min = 1, max = 15, value = 6, step = 0.5),
+          sliderInput("b_sd", "Bond Volatility (SD)",
+                      min = 1, max = 15, value = 3, step = 0.5),
+          sliderInput("s_b_corr", "Stock-Bond Correlation",
+                      min = -1, max = 1, value = 0.7, step = 0.05),
+          sliderInput("s_int", "Stock Interest Rate",
+                      min = 0, max = 0.2, value = 0.06, step = 0.005),
+          sliderInput("b_int", "Bond Interest Rate",
+                      min = 0, max = 0.2, value = 0.02, step = 0.005)
+        )
+      ),
 
       hr(),
 
       # --- Actions ---
-      actionButton("run_single", "Run Simulation", class = "btn-primary btn-block"),
-
-      hr(),
-
-      # --- Frontier Sweep ---
-      h4("Frontier Sweep"),
-      textInput("sweep_allocs", "Allocations (comma-separated %)",
-                value = "0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100"),
-      actionButton("run_sweep", "Run Frontier Sweep", class = "btn-success btn-block"),
-
-      hr(),
-
-      # --- Sim Explorer ---
-      h4("Sim Explorer"),
-      numericInput("simSel", "Selected Simulation #", value = 1, min = 1, step = 1)
+      actionButton("run_single", "Run Single Allocation", class = "btn-primary btn-block"),
+      actionButton("restore_precomputed", "Restore precomputed data",
+                    class = "btn-link btn-block restore-link")
     ),
 
     mainPanel(
       width = 9,
+
+      # --- Status banner ---
+      uiOutput("data_status_banner"),
+
       tabsetPanel(
         id = "main_tabs",
-        tabPanel("Gain vs SD", plotOutput("plot_gain_sd", height = "600px")),
-        tabPanel("Trajectories", plotOutput("plot_trajectories", height = "600px")),
-        tabPanel("Cost Profiles", plotOutput("plot_costs", height = "600px")),
-        tabPanel("Final Densities", plotOutput("plot_densities", height = "600px")),
-        tabPanel("Rebal Delta", plotOutput("plot_delta", height = "600px")),
-        tabPanel("Single Sim Explorer", plotOutput("plot_explorer", height = "800px")),
-        tabPanel("Efficient Frontier", plotOutput("plot_frontier", height = "600px")),
-        tabPanel("Summary",
-                 h4("Point Estimates"),
-                 tableOutput("summary_table"),
-                 hr(),
-                 h4("Simulation Parameters"),
-                 verbatimTextOutput("params_text")
+
+        # --- Single Allocation tab ---
+        tabPanel("Single Allocation",
+          tabsetPanel(
+            id = "single_tabs", type = "pills",
+            tabPanel("Gain vs SD",
+              plotlyOutput("plot_gain_sd", height = "600px"),
+              uiOutput("callout_gain_sd")
+            ),
+            tabPanel("Final Densities",
+              plotlyOutput("plot_densities", height = "600px"),
+              uiOutput("callout_densities")
+            ),
+            tabPanel("Trajectories",
+              plotlyOutput("plot_trajectories", height = "600px"),
+              uiOutput("callout_trajectories")
+            ),
+            tabPanel("Cost Profiles",
+              plotlyOutput("plot_costs", height = "600px"),
+              uiOutput("callout_costs")
+            ),
+            tabPanel("Single Sim Explorer",
+              div(class = "sim-explorer-nav",
+                actionButton("sim_prev", label = NULL,
+                             icon = icon("arrow-left"), class = "btn-sm"),
+                tags$span(class = "sim-label",
+                          textOutput("sim_explorer_label", inline = TRUE)),
+                actionButton("sim_next", label = NULL,
+                             icon = icon("arrow-right"), class = "btn-sm")
+              ),
+              plotlyOutput("plot_explorer", height = "800px"),
+              uiOutput("callout_explorer")
+            ),
+            tabPanel("Summary",
+                     h4("Point Estimates"),
+                     tableOutput("summary_table"),
+                     hr(),
+                     h4("Simulation Parameters"),
+                     verbatimTextOutput("params_text")
+            )
+          )
+        ),
+
+        # --- Frontier Sweep tab ---
+        tabPanel("Frontier Sweep",
+          tabsetPanel(
+            id = "frontier_tabs", type = "pills",
+            tabPanel("Frontier Explorer",
+              fluidRow(
+                column(2, actionButton("frontier_prev", label = NULL,
+                                       icon = icon("arrow-left"), class = "btn-sm")),
+                column(8, align = "center",
+                       tags$strong(textOutput("frontier_alloc_label", inline = TRUE))),
+                column(2, align = "right",
+                       actionButton("frontier_next", label = NULL,
+                                    icon = icon("arrow-right"), class = "btn-sm"))
+              ),
+              fluidRow(
+                column(12, align = "center", style = "margin-top:6px; margin-bottom:4px;",
+                  tags$span(style = "font-size:14px; color:#6b5b4f; margin-right:8px;",
+                            "Precomputed sims:"),
+                  actionButton("nsim_500", "500",
+                               class = "btn-sm", style = "margin:0 2px;"),
+                  actionButton("nsim_2000", "2,000",
+                               class = "btn-sm", style = "margin:0 2px;"),
+                  actionButton("nsim_5000", "5,000",
+                               class = "btn-sm", style = "margin:0 2px;")
+                )
+              ),
+              plotlyOutput("plot_frontier_explorer", height = "600px"),
+              uiOutput("callout_frontier_explorer")
+            ),
+            tabPanel("Efficient Frontier",
+              plotlyOutput("plot_frontier", height = "600px"),
+              uiOutput("callout_frontier")
+            )
+          )
         )
       )
     )

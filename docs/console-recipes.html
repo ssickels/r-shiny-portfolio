@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Console Recipes — Monte Carlo Portfolio Simulator</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-dim: #8b949e;
+    --accent-blue: #58a6ff;
+    --accent-green: #3fb950;
+    --accent-purple: #bc8cff;
+    --accent-orange: #d29922;
+    --accent-teal: #39d2c0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem 2rem 4rem;
+    line-height: 1.6;
+  }
+  h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 0.95rem; margin-bottom: 2rem; }
+  h2 { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.15rem; }
+  p.desc { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 0.75rem; }
+
+  /* Tabs */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+  .tab-btn {
+    padding: 0.6rem 1.6rem;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+  .tab-panel { display: none; padding-top: 1.5rem; }
+  .tab-panel.active { display: block; }
+
+  /* Code blocks */
+  .code-block {
+    position: relative;
+    margin-bottom: 1.75rem;
+  }
+  .code-block pre {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    color: var(--text);
+    tab-size: 2;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(110,118,129,0.2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .copy-btn:hover { background: rgba(110,118,129,0.4); color: var(--text); }
+  .copy-btn.copied { background: rgba(63,185,80,0.2); color: var(--accent-green); border-color: var(--accent-green); }
+
+  /* Step headers */
+  .step {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-top: 2rem;
+    margin-bottom: 0.35rem;
+  }
+  .step-num {
+    background: var(--accent-blue);
+    color: var(--bg);
+    font-size: 0.72rem;
+    font-weight: 700;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-num.green { background: var(--accent-green); }
+  .step-num.purple { background: var(--accent-purple); }
+  .step-num.orange { background: var(--accent-orange); }
+  .step-num.teal { background: var(--accent-teal); }
+
+  /* Syntax highlighting */
+  .kw { color: #ff7b72; }
+  .fn { color: #d2a8ff; }
+  .str { color: #a5d6ff; }
+  .num { color: #79c0ff; }
+  .cmt { color: #8b949e; font-style: italic; }
+  .op { color: #c9d1d9; }
+  .var { color: #ffa657; }
+
+  /* Copy-all button */
+  .copy-all-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+  }
+  .copy-all-btn {
+    background: rgba(88,166,255,0.1);
+    border: 1px solid var(--accent-blue);
+    border-radius: 6px;
+    color: var(--accent-blue);
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .copy-all-btn:hover { background: rgba(88,166,255,0.2); }
+  .copy-all-btn.copied { background: rgba(63,185,80,0.15); color: var(--accent-green); border-color: var(--accent-green); }
+
+  hr.sep { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+</style>
+</head>
+<body>
+
+<h1>Console Recipes</h1>
+<p class="subtitle">Copy-paste these into an R console to run simulations step-by-step, inspecting each intermediate result.</p>
+
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="single">Single Simulation</button>
+  <button class="tab-btn" data-tab="sweep">Frontier Sweep</button>
+</div>
+
+<!-- ===================== SINGLE SIMULATION ===================== -->
+<div class="tab-panel active" id="tab-single">
+
+<div class="copy-all-bar">
+  <button class="copy-all-btn" data-target="single">Copy entire recipe</button>
+</div>
+
+<div class="step"><div class="step-num">1</div><h2>Load dependencies &amp; source files</h2></div>
+<p class="desc">Only the packages that the extracted functions actually use. No Shiny needed.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="fn">library</span>(mvtnorm)      <span class="cmt"># rmvnorm</span>
+<span class="fn">library</span>(truncnorm)    <span class="cmt"># rtruncnorm</span>
+<span class="fn">library</span>(zoo)          <span class="cmt"># rollapply</span>
+
+<span class="fn">source</span>(<span class="str">"R/helpers.R"</span>)
+<span class="fn">source</span>(<span class="str">"R/simulation_engine.R"</span>)</pre>
+</div>
+
+<div class="step"><div class="step-num">2</div><h2>Define parameters</h2></div>
+<p class="desc">These match the Shiny UI defaults — tweak any of them.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="cmt"># Asset distributions</span>
+<span class="var">s.mean</span> <span class="op">&lt;-</span> <span class="num">10</span>        <span class="cmt"># stock mean price</span>
+<span class="var">s.sd</span>   <span class="op">&lt;-</span> <span class="num">6</span>         <span class="cmt"># stock std dev</span>
+<span class="var">b.mean</span> <span class="op">&lt;-</span> <span class="num">10</span>        <span class="cmt"># bond mean price</span>
+<span class="var">b.sd</span>   <span class="op">&lt;-</span> <span class="num">6</span>         <span class="cmt"># bond std dev</span>
+<span class="var">s.b.corr</span> <span class="op">&lt;-</span> <span class="num">0.7</span>    <span class="cmt"># stock-bond correlation</span>
+
+<span class="cmt"># Portfolio</span>
+<span class="var">init.inv</span>       <span class="op">&lt;-</span> <span class="num">1000</span>   <span class="cmt"># initial investment ($)</span>
+<span class="var">perc.stocks</span>    <span class="op">&lt;-</span> <span class="fn">clamp_pct_to_fraction</span>(<span class="num">60</span>)  <span class="cmt"># 60% stocks</span>
+<span class="var">rebal.interval</span> <span class="op">&lt;-</span> <span class="num">100</span>    <span class="cmt"># rebalance every 100 timesteps</span>
+
+<span class="cmt"># Growth / interest</span>
+<span class="var">s.int</span>      <span class="op">&lt;-</span> <span class="num">0.04</span>
+<span class="var">b.int</span>      <span class="op">&lt;-</span> <span class="num">0.04</span>
+<span class="var">int.period</span> <span class="op">&lt;-</span> <span class="num">300</span>
+
+<span class="cmt"># Simulation</span>
+<span class="var">n</span>              <span class="op">&lt;-</span> <span class="num">1000</span> <span class="op">-</span> <span class="num">1</span>   <span class="cmt"># run_simulation subtracts 1 internally; do it here</span>
+<span class="var">nSims</span>          <span class="op">&lt;-</span> <span class="num">30</span>
+<span class="var">nSimsToRecord</span>  <span class="op">&lt;-</span> <span class="num">5</span>
+<span class="var">propStepDivisor</span> <span class="op">&lt;-</span> <span class="num">20</span>
+<span class="var">widthVal</span>       <span class="op">&lt;-</span> <span class="num">600</span>
+
+<span class="fn">set.seed</span>(<span class="num">100</span>)  <span class="cmt"># reproducibility</span></pre>
+</div>
+
+<div class="step"><div class="step-num purple">3</div><h2>Build covariance matrix</h2></div>
+<p class="desc">The 2&times;2 proposal distribution for the Metropolis sampler.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="var">s.b.cov</span> <span class="op">&lt;-</span> <span class="fn">build_covariance_matrix</span>(s.sd, b.sd, s.b.corr, propStepDivisor)
+s.b.cov           <span class="cmt"># inspect: should be 2×2 symmetric positive-definite</span></pre>
+</div>
+
+<div class="step"><div class="step-num purple">4</div><h2>Build interest vectors</h2></div>
+<p class="desc">Time-varying mean cost vectors incorporating compound interest growth.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="var">interest</span> <span class="op">&lt;-</span> <span class="fn">build_interest_vectors</span>(n, s.mean, b.mean, s.int, b.int, int.period)
+
+<span class="fn">str</span>(interest)                   <span class="cmt"># list of 3: s.mean.vec, b.mean.vec, mean.vecDf</span>
+<span class="fn">head</span>(interest$mean.vecDf)       <span class="cmt"># tidy data frame of mean costs over time</span>
+<span class="fn">plot</span>(interest$s.mean.vec, <span class="var">type</span> <span class="op">=</span> <span class="str">"l"</span>, <span class="var">main</span> <span class="op">=</span> <span class="str">"Stock mean over time"</span>)</pre>
+</div>
+
+<div class="step"><div class="step-num purple">5</div><h2>Run simulation loop</h2></div>
+<p class="desc">The heavy computation — runs all nSims Metropolis simulations.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="var">arrays</span> <span class="op">&lt;-</span> <span class="fn">simulate_portfolios</span>(
+  <span class="var">n</span> <span class="op">=</span> n, <span class="var">nSims</span> <span class="op">=</span> nSims, <span class="var">nSimsToRecord</span> <span class="op">=</span> nSimsToRecord,
+  <span class="var">s.mean</span> <span class="op">=</span> s.mean, <span class="var">b.mean</span> <span class="op">=</span> b.mean, <span class="var">s.sd</span> <span class="op">=</span> s.sd, <span class="var">b.sd</span> <span class="op">=</span> b.sd,
+  <span class="var">s.mean.vec</span> <span class="op">=</span> interest$s.mean.vec,
+  <span class="var">b.mean.vec</span> <span class="op">=</span> interest$b.mean.vec,
+  <span class="var">init.inv</span> <span class="op">=</span> init.inv, <span class="var">perc.stocks</span> <span class="op">=</span> perc.stocks,
+  <span class="var">rebal.interval</span> <span class="op">=</span> rebal.interval, <span class="var">s.b.cov</span> <span class="op">=</span> s.b.cov
+)
+
+<span class="fn">names</span>(arrays)                              <span class="cmt"># 7 arrays</span>
+<span class="fn">dim</span>(arrays$costs)                           <span class="cmt"># n × 2 × nSims</span>
+<span class="fn">dim</span>(arrays$value.rebal.tot)                 <span class="cmt"># n × nSims</span>
+<span class="fn">matplot</span>(arrays$value.rebal.tot, <span class="var">type</span> <span class="op">=</span> <span class="str">"l"</span>, <span class="var">main</span> <span class="op">=</span> <span class="str">"Rebalanced totals"</span>)</pre>
+</div>
+
+<div class="step"><div class="step-num orange">6</div><h2>Build tidy data frames</h2></div>
+<p class="desc">Reshape raw arrays into ggplot-friendly data frames.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="var">dfs</span> <span class="op">&lt;-</span> <span class="fn">build_result_dataframes</span>(n, nSims, nSimsToRecord, arrays)
+
+<span class="fn">names</span>(dfs)          <span class="cmt"># costsDf, valueDf, sharesDf, value.totDf, deltaDf</span>
+<span class="fn">head</span>(dfs$costsDf)
+<span class="fn">head</span>(dfs$deltaDf)   <span class="cmt"># rebalanced vs non-rebalanced final values</span>
+<span class="fn">summary</span>(dfs$value.totDf)</pre>
+</div>
+
+<div class="step"><div class="step-num orange">7</div><h2>Compute rolling standard deviation</h2></div>
+<p class="desc">Measures trajectory volatility — one SD value per simulation.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="var">rolling</span> <span class="op">&lt;-</span> <span class="fn">compute_rolling_sd</span>(
+  arrays$value.rebal.tot, arrays$value.nonrebal.tot,
+  n, nSims, widthVal
+)
+
+rolling$errorSD.rebal     <span class="cmt"># one value per sim</span>
+rolling$errorSD.nonrebal</pre>
+</div>
+
+<div class="step"><div class="step-num orange">8</div><h2>Compute gain summary</h2></div>
+<p class="desc">Annualized gains and the final gain-vs-SD scatter + point estimates.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="var">gains</span> <span class="op">&lt;-</span> <span class="fn">compute_gain_summary</span>(
+  arrays$value.rebal.tot, arrays$value.nonrebal.tot,
+  rolling$errorSD.rebal, rolling$errorSD.nonrebal,
+  init.inv, n, nSims, int.period
+)
+
+gains$gainsVsSD.point.estDf   <span class="cmt"># 2-row summary: rebal vs nonrebal</span>
+<span class="fn">head</span>(gains$gainVsSDDf)         <span class="cmt"># per-sim scatter data</span></pre>
+</div>
+
+<div class="step"><div class="step-num green">9</div><h2>Format for display</h2></div>
+<p class="desc">The same formatting the Shiny app applies — now callable directly.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="fn">format_summary_table</span>(gains$gainsVsSD.point.estDf)
+
+<span class="var">params</span> <span class="op">&lt;-</span> <span class="fn">list</span>(
+  <span class="var">n</span> <span class="op">=</span> n, <span class="var">s.mean</span> <span class="op">=</span> s.mean, <span class="var">s.sd</span> <span class="op">=</span> s.sd, <span class="var">b.mean</span> <span class="op">=</span> b.mean, <span class="var">b.sd</span> <span class="op">=</span> b.sd,
+  <span class="var">s.b.corr</span> <span class="op">=</span> s.b.corr, <span class="var">init.inv</span> <span class="op">=</span> init.inv, <span class="var">perc.stocks</span> <span class="op">=</span> perc.stocks,
+  <span class="var">rebal.interval</span> <span class="op">=</span> rebal.interval, <span class="var">s.int</span> <span class="op">=</span> s.int, <span class="var">b.int</span> <span class="op">=</span> b.int,
+  <span class="var">int.period</span> <span class="op">=</span> int.period, <span class="var">propStepDivisor</span> <span class="op">=</span> propStepDivisor,
+  <span class="var">nSims</span> <span class="op">=</span> nSims, <span class="var">nSimsToRecord</span> <span class="op">=</span> nSimsToRecord, <span class="var">widthVal</span> <span class="op">=</span> widthVal
+)
+<span class="fn">cat</span>(<span class="fn">format_params_summary</span>(params))</pre>
+</div>
+
+<hr class="sep">
+
+<div class="step"><div class="step-num">&#x26A1;</div><h2>Shortcut: run_simulation() does steps 3–8 in one call</h2></div>
+<p class="desc">If you don't need to inspect intermediates, use the coordinator directly.</p>
+<div class="code-block" data-section="single">
+<button class="copy-btn">Copy</button>
+<pre><span class="fn">library</span>(mvtnorm); <span class="fn">library</span>(truncnorm); <span class="fn">library</span>(zoo)
+<span class="fn">source</span>(<span class="str">"R/helpers.R"</span>); <span class="fn">source</span>(<span class="str">"R/simulation_engine.R"</span>)
+
+<span class="fn">set.seed</span>(<span class="num">100</span>)
+<span class="var">result</span> <span class="op">&lt;-</span> <span class="fn">run_simulation</span>(
+  <span class="var">n</span> <span class="op">=</span> <span class="num">1000</span>, <span class="var">s.mean</span> <span class="op">=</span> <span class="num">10</span>, <span class="var">s.sd</span> <span class="op">=</span> <span class="num">6</span>, <span class="var">b.mean</span> <span class="op">=</span> <span class="num">10</span>, <span class="var">b.sd</span> <span class="op">=</span> <span class="num">6</span>,
+  <span class="var">s.b.corr</span> <span class="op">=</span> <span class="num">0.7</span>, <span class="var">init.inv</span> <span class="op">=</span> <span class="num">1000</span>,
+  <span class="var">perc.stocks</span> <span class="op">=</span> <span class="fn">clamp_pct_to_fraction</span>(<span class="num">60</span>),
+  <span class="var">rebal.interval</span> <span class="op">=</span> <span class="num">100</span>,
+  <span class="var">s.int</span> <span class="op">=</span> <span class="num">0.04</span>, <span class="var">b.int</span> <span class="op">=</span> <span class="num">0.04</span>, <span class="var">int.period</span> <span class="op">=</span> <span class="num">300</span>,
+  <span class="var">propStepDivisor</span> <span class="op">=</span> <span class="num">20</span>, <span class="var">nSims</span> <span class="op">=</span> <span class="num">30</span>, <span class="var">nSimsToRecord</span> <span class="op">=</span> <span class="num">5</span>,
+  <span class="var">widthVal</span> <span class="op">=</span> <span class="num">600</span>
+)
+
+<span class="fn">names</span>(result)                                <span class="cmt"># all 9 elements</span>
+<span class="fn">format_summary_table</span>(result$gainsVsSD.point.estDf)
+<span class="fn">cat</span>(<span class="fn">format_params_summary</span>(result$params))</pre>
+</div>
+
+</div>
+
+<!-- ===================== FRONTIER SWEEP ===================== -->
+<div class="tab-panel" id="tab-sweep">
+
+<div class="copy-all-bar">
+  <button class="copy-all-btn" data-target="sweep">Copy entire recipe</button>
+</div>
+
+<div class="step"><div class="step-num">1</div><h2>Load dependencies &amp; source files</h2></div>
+<p class="desc">The sweep also needs meta_sweep.R.</p>
+<div class="code-block" data-section="sweep">
+<button class="copy-btn">Copy</button>
+<pre><span class="fn">library</span>(mvtnorm)
+<span class="fn">library</span>(truncnorm)
+<span class="fn">library</span>(zoo)
+
+<span class="fn">source</span>(<span class="str">"R/helpers.R"</span>)
+<span class="fn">source</span>(<span class="str">"R/simulation_engine.R"</span>)
+<span class="fn">source</span>(<span class="str">"R/meta_sweep.R"</span>)</pre>
+</div>
+
+<div class="step"><div class="step-num">2</div><h2>Parse allocations</h2></div>
+<p class="desc">Convert the same comma-separated string the UI uses into a fraction vector.</p>
+<div class="code-block" data-section="sweep">
+<button class="copy-btn">Copy</button>
+<pre><span class="var">alloc_fracs</span> <span class="op">&lt;-</span> <span class="fn">parse_allocation_string</span>(<span class="str">"0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100"</span>)
+alloc_fracs   <span class="cmt"># numeric vector of fractions</span></pre>
+</div>
+
+<div class="step"><div class="step-num teal">3</div><h2>Run the frontier sweep</h2></div>
+<p class="desc">Loops over each allocation, runs a full simulation, and collects point estimates. This will take a while for many allocations &times; many sims.</p>
+<div class="code-block" data-section="sweep">
+<button class="copy-btn">Copy</button>
+<pre><span class="fn">set.seed</span>(<span class="num">100</span>)
+<span class="var">sweep</span> <span class="op">&lt;-</span> <span class="fn">run_meta_sweep</span>(
+  <span class="var">perc.stocks.vec</span> <span class="op">=</span> alloc_fracs,
+  <span class="var">n</span> <span class="op">=</span> <span class="num">1000</span>,
+  <span class="var">s.mean</span> <span class="op">=</span> <span class="num">10</span>, <span class="var">s.sd</span> <span class="op">=</span> <span class="num">6</span>,
+  <span class="var">b.mean</span> <span class="op">=</span> <span class="num">10</span>, <span class="var">b.sd</span> <span class="op">=</span> <span class="num">6</span>,
+  <span class="var">s.b.corr</span> <span class="op">=</span> <span class="num">0.7</span>,
+  <span class="var">init.inv</span> <span class="op">=</span> <span class="num">1000</span>,
+  <span class="var">rebal.interval</span> <span class="op">=</span> <span class="num">100</span>,
+  <span class="var">s.int</span> <span class="op">=</span> <span class="num">0.04</span>, <span class="var">b.int</span> <span class="op">=</span> <span class="num">0.04</span>, <span class="var">int.period</span> <span class="op">=</span> <span class="num">300</span>,
+  <span class="var">propStepDivisor</span> <span class="op">=</span> <span class="num">20</span>,
+  <span class="var">nSims</span> <span class="op">=</span> <span class="num">30</span>, <span class="var">nSimsToRecord</span> <span class="op">=</span> <span class="num">5</span>,
+  <span class="var">widthVal</span> <span class="op">=</span> <span class="num">600</span>,
+  <span class="var">progress_callback</span> <span class="op">=</span> <span class="kw">function</span>(alloc_i, total_allocs, sim_i, total_sims, msg) {
+    <span class="kw">if</span> (sim_i <span class="op">==</span> total_sims) <span class="fn">cat</span>(msg, <span class="str">"\n"</span>)  <span class="cmt"># print once per allocation</span>
+  }
+)</pre>
+</div>
+
+<div class="step"><div class="step-num">4</div><h2>Inspect results</h2></div>
+<p class="desc">The sweep returns a list; extract the <code>summary</code> data frame (one row per allocation).</p>
+<div class="code-block" data-section="sweep">
+<button class="copy-btn">Copy</button>
+<pre><span class="fn">names</span>(sweep)          <span class="cmt"># summary, cloud, point_estimates</span>
+<span class="var">frontier</span> <span class="op">&lt;-</span> sweep$summary
+frontier               <span class="cmt"># allocation, rebal_gain, rebal_sd, nonrebal_gain, nonrebal_sd, s.int, b.int</span>
+
+<span class="cmt"># Quick frontier plot without Shiny</span>
+<span class="fn">plot</span>(frontier$rebal_sd, frontier$rebal_gain,
+     <span class="var">type</span> <span class="op">=</span> <span class="str">"b"</span>, <span class="var">pch</span> <span class="op">=</span> <span class="num">19</span>, <span class="var">col</span> <span class="op">=</span> <span class="str">"steelblue"</span>,
+     <span class="var">xlab</span> <span class="op">=</span> <span class="str">"Std Dev"</span>, <span class="var">ylab</span> <span class="op">=</span> <span class="str">"Annualized Gain"</span>,
+     <span class="var">main</span> <span class="op">=</span> <span class="str">"Efficient Frontier (Rebalanced)"</span>)
+<span class="fn">text</span>(frontier$rebal_sd, frontier$rebal_gain,
+     <span class="fn">paste0</span>(<span class="fn">round</span>(frontier$allocation <span class="op">*</span> <span class="num">100</span>), <span class="str">"%"</span>),
+     <span class="var">pos</span> <span class="op">=</span> <span class="num">3</span>, <span class="var">cex</span> <span class="op">=</span> <span class="num">0.8</span>)</pre>
+</div>
+
+<hr class="sep">
+
+<div class="step"><div class="step-num">&#x26A1;</div><h2>Inspect a single allocation in detail</h2></div>
+<p class="desc">Pull out one allocation from the sweep and run it step-by-step to inspect intermediates.</p>
+<div class="code-block" data-section="sweep">
+<button class="copy-btn">Copy</button>
+<pre><span class="cmt"># Pick an allocation of interest from the sweep results</span>
+<span class="var">alloc</span> <span class="op">&lt;-</span> <span class="num">0.6</span>   <span class="cmt"># 60% stocks</span>
+
+<span class="fn">set.seed</span>(<span class="num">100</span>)
+<span class="var">detail</span> <span class="op">&lt;-</span> <span class="fn">run_simulation</span>(
+  <span class="var">n</span> <span class="op">=</span> <span class="num">1000</span>, <span class="var">s.mean</span> <span class="op">=</span> <span class="num">10</span>, <span class="var">s.sd</span> <span class="op">=</span> <span class="num">6</span>, <span class="var">b.mean</span> <span class="op">=</span> <span class="num">10</span>, <span class="var">b.sd</span> <span class="op">=</span> <span class="num">6</span>,
+  <span class="var">s.b.corr</span> <span class="op">=</span> <span class="num">0.7</span>, <span class="var">init.inv</span> <span class="op">=</span> <span class="num">1000</span>, <span class="var">perc.stocks</span> <span class="op">=</span> alloc,
+  <span class="var">rebal.interval</span> <span class="op">=</span> <span class="num">100</span>,
+  <span class="var">s.int</span> <span class="op">=</span> <span class="num">0.04</span>, <span class="var">b.int</span> <span class="op">=</span> <span class="num">0.04</span>, <span class="var">int.period</span> <span class="op">=</span> <span class="num">300</span>,
+  <span class="var">propStepDivisor</span> <span class="op">=</span> <span class="num">20</span>, <span class="var">nSims</span> <span class="op">=</span> <span class="num">30</span>, <span class="var">nSimsToRecord</span> <span class="op">=</span> <span class="num">5</span>,
+  <span class="var">widthVal</span> <span class="op">=</span> <span class="num">600</span>
+)
+
+<span class="fn">head</span>(detail$costsDf)
+<span class="fn">head</span>(detail$deltaDf)
+<span class="fn">format_summary_table</span>(detail$gainsVsSD.point.estDf)</pre>
+</div>
+
+</div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// Extract plain text from a <pre> with HTML spans
+function getPlainText(pre) {
+  return pre.textContent;
+}
+
+// Copy individual block
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pre = btn.parentElement.querySelector('pre');
+    navigator.clipboard.writeText(getPlainText(pre)).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+    });
+  });
+});
+
+// Copy entire recipe (all blocks in one tab)
+document.querySelectorAll('.copy-all-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.target;
+    const blocks = document.querySelectorAll(`#tab-${target} .code-block[data-section="${target}"] pre`);
+    const allCode = Array.from(blocks).map(pre => getPlainText(pre)).join('\n\n');
+    navigator.clipboard.writeText(allCode).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy entire recipe'; btn.classList.remove('copied'); }, 1500);
+    });
+  });
+});
+</script>
+</body>
+</html>

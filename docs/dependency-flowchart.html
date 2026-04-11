@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Function Dependency Flowchart — Monte Carlo Portfolio Simulator</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-dim: #8b949e;
+    --accent-blue: #58a6ff;
+    --accent-green: #3fb950;
+    --accent-purple: #bc8cff;
+    --accent-orange: #d29922;
+    --accent-red: #f85149;
+    --accent-teal: #39d2c0;
+    --accent-pink: #f778ba;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* SVG canvas */
+  .flowchart-container {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
+  svg {
+    display: block;
+    margin: 0 auto;
+  }
+  svg text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    display: none;
+    background: #1c2129;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    max-width: 380px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 100;
+    pointer-events: none;
+  }
+  .tooltip .tt-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+  .tooltip .tt-section {
+    margin-top: 0.35rem;
+  }
+  .tooltip .tt-label {
+    font-weight: 600;
+    color: var(--accent-blue);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .tooltip code {
+    background: rgba(110,118,129,0.15);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  /* Tabs */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    padding: 0.6rem 1.4rem;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--accent-blue);
+    border-bottom-color: var(--accent-blue);
+  }
+  .tab-panel { display: none; padding-top: 2rem; }
+  .tab-panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<h1>Function Dependency Flowchart</h1>
+<p class="subtitle">Monte Carlo Portfolio Simulator — data flow through extracted functions</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#58a6ff"></div> User parameters</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3fb950"></div> Helper functions</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#bc8cff"></div> Simulation engine</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#d29922"></div> Post-processing</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#f85149"></div> Presentation</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#39d2c0"></div> Meta-sweep (frontier)</div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="single">Single Simulation</button>
+  <button class="tab-btn" data-tab="sweep">Frontier Sweep</button>
+</div>
+
+<!-- ============ SINGLE SIMULATION TAB ============ -->
+<div class="tab-panel active" id="tab-single">
+<div class="flowchart-container">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 1240" width="960" height="1240">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#8b949e" stroke-width="1.2"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#58a6ff" stroke-width="1.2"/>
+    </marker>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ── ROW 0: User params ── -->
+  <g class="node" data-id="params">
+    <rect x="180" y="30" width="600" height="54" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+    <text x="480" y="53" text-anchor="middle" fill="#58a6ff" font-size="13" font-weight="600">User Parameters</text>
+    <text x="480" y="72" text-anchor="middle" fill="#8b949e" font-size="11">s.mean  s.sd  b.mean  b.sd  s.b.corr  init.inv  perc.stocks  rebal.interval  s.int  b.int  int.period  propStepDivisor  nSims  nSimsToRecord  widthVal</text>
+  </g>
+
+  <!-- arrows from params down -->
+  <line x1="300" y1="84" x2="300" y2="130" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="480" y1="84" x2="480" y2="130" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="660" y1="84" x2="660" y2="130" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- ── ROW 1: Three parallel init functions ── -->
+  <!-- clamp_pct_to_fraction -->
+  <g class="node" data-id="clamp">
+    <rect x="60" y="134" width="220" height="52" rx="8" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
+    <text x="170" y="157" text-anchor="middle" fill="#3fb950" font-size="12" font-weight="600">clamp_pct_to_fraction()</text>
+    <text x="170" y="174" text-anchor="middle" fill="#8b949e" font-size="10">perc_stocks → perc</text>
+  </g>
+
+  <!-- build_covariance_matrix -->
+  <g class="node" data-id="cov">
+    <rect x="320" y="134" width="260" height="52" rx="8" fill="#161b22" stroke="#bc8cff" stroke-width="1.5"/>
+    <text x="450" y="157" text-anchor="middle" fill="#bc8cff" font-size="12" font-weight="600">build_covariance_matrix()</text>
+    <text x="450" y="174" text-anchor="middle" fill="#8b949e" font-size="10">s.sd, b.sd, s.b.corr, propStepDivisor → s.b.cov</text>
+  </g>
+
+  <!-- build_interest_vectors -->
+  <g class="node" data-id="interest">
+    <rect x="620" y="134" width="270" height="52" rx="8" fill="#161b22" stroke="#bc8cff" stroke-width="1.5"/>
+    <text x="755" y="157" text-anchor="middle" fill="#bc8cff" font-size="12" font-weight="600">build_interest_vectors()</text>
+    <text x="755" y="174" text-anchor="middle" fill="#8b949e" font-size="10">n, s.mean, b.mean, s.int, b.int, int.period</text>
+  </g>
+
+  <!-- arrows down from row 1 into simulate_portfolios -->
+  <line x1="170" y1="186" x2="170" y2="240" stroke="#8b949e" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="170" y1="240" x2="420" y2="280" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <line x1="450" y1="186" x2="450" y2="240" stroke="#8b949e" stroke-width="1"/>
+  <line x1="450" y1="240" x2="480" y2="280" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <line x1="755" y1="186" x2="755" y2="240" stroke="#8b949e" stroke-width="1"/>
+  <line x1="755" y1="240" x2="540" y2="280" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- label on interest output -->
+  <text x="800" y="210" fill="#8b949e" font-size="9" font-style="italic">s.mean.vec</text>
+  <text x="800" y="222" fill="#8b949e" font-size="9" font-style="italic">b.mean.vec</text>
+  <text x="800" y="234" fill="#8b949e" font-size="9" font-style="italic">mean.vecDf</text>
+
+  <!-- label on clamp output -->
+  <text x="100" y="210" fill="#8b949e" font-size="9" font-style="italic">perc (fraction)</text>
+
+  <!-- label on cov output -->
+  <text x="385" y="210" fill="#8b949e" font-size="9" font-style="italic">s.b.cov (2×2 matrix)</text>
+
+  <!-- params directly into simulate too -->
+  <line x1="480" y1="84" x2="480" y2="106" stroke="#58a6ff" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#arrow-blue)"/>
+  <text x="490" y="114" fill="#58a6ff" font-size="8">n, s.mean, b.mean, s.sd, b.sd, init.inv, nSims, nSimsToRecord, rebal.interval</text>
+
+  <!-- ── ROW 2: simulate_portfolios ── -->
+  <g class="node" data-id="sim">
+    <rect x="230" y="280" width="500" height="68" rx="8" fill="#161b22" stroke="#bc8cff" stroke-width="2"/>
+    <text x="480" y="305" text-anchor="middle" fill="#bc8cff" font-size="14" font-weight="700">simulate_portfolios()</text>
+    <text x="480" y="322" text-anchor="middle" fill="#8b949e" font-size="10">n, nSims, nSimsToRecord, s.mean, b.mean, s.sd, b.sd,</text>
+    <text x="480" y="336" text-anchor="middle" fill="#8b949e" font-size="10">s.mean.vec, b.mean.vec, init.inv, perc.stocks, rebal.interval, s.b.cov</text>
+  </g>
+
+  <!-- output label for simulate_portfolios -->
+  <rect x="310" y="360" width="340" height="40" rx="6" fill="#1c2129" stroke="#30363d" stroke-width="1"/>
+  <text x="480" y="377" text-anchor="middle" fill="#c9d1d9" font-size="10" font-weight="500">Returns list  <tspan font-family="monospace" font-size="9.5" fill="#bc8cff">arrays</tspan></text>
+  <text x="480" y="391" text-anchor="middle" fill="#8b949e" font-size="9">costs · value.rebal.tot · value.nonrebal.tot · value.rebal · value.nonrebal · shares.rebal · shares.nonrebal</text>
+
+  <!-- arrows from simulate down to two consumers -->
+  <line x1="380" y1="400" x2="250" y2="460" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="580" y1="400" x2="700" y2="460" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- ── ROW 3: build_result_dataframes & compute_rolling_sd (parallel) ── -->
+  <g class="node" data-id="dfs">
+    <rect x="60" y="464" width="340" height="56" rx="8" fill="#161b22" stroke="#d29922" stroke-width="1.5"/>
+    <text x="230" y="487" text-anchor="middle" fill="#d29922" font-size="12" font-weight="600">build_result_dataframes()</text>
+    <text x="230" y="505" text-anchor="middle" fill="#8b949e" font-size="10">n, nSims, nSimsToRecord, arrays</text>
+  </g>
+
+  <g class="node" data-id="rolling">
+    <rect x="560" y="464" width="340" height="56" rx="8" fill="#161b22" stroke="#d29922" stroke-width="1.5"/>
+    <text x="730" y="487" text-anchor="middle" fill="#d29922" font-size="12" font-weight="600">compute_rolling_sd()</text>
+    <text x="730" y="505" text-anchor="middle" fill="#8b949e" font-size="10">value.rebal.tot, value.nonrebal.tot, n, nSims, widthVal</text>
+  </g>
+
+  <!-- output labels -->
+  <text x="230" y="540" text-anchor="middle" fill="#8b949e" font-size="9" font-style="italic">costsDf · valueDf · sharesDf · value.totDf · deltaDf</text>
+
+  <text x="730" y="540" text-anchor="middle" fill="#8b949e" font-size="9" font-style="italic">errorSD.rebal · errorSD.nonrebal</text>
+
+  <!-- arrows from rolling down to compute_gain_summary -->
+  <line x1="730" y1="548" x2="580" y2="600" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- arrays also feeds gain summary (for value.rebal.tot[n,]) -->
+  <line x1="480" y1="400" x2="480" y2="440" stroke="#8b949e" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="480" y1="440" x2="480" y2="600" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="490" y="575" fill="#8b949e" font-size="8" font-style="italic">value.rebal.tot, value.nonrebal.tot</text>
+
+  <!-- ── ROW 4: compute_gain_summary ── -->
+  <g class="node" data-id="gains">
+    <rect x="280" y="600" width="420" height="56" rx="8" fill="#161b22" stroke="#d29922" stroke-width="1.5"/>
+    <text x="490" y="623" text-anchor="middle" fill="#d29922" font-size="12" font-weight="600">compute_gain_summary()</text>
+    <text x="490" y="641" text-anchor="middle" fill="#8b949e" font-size="10">value.rebal.tot, value.nonrebal.tot, errorSD.*, init.inv, n, nSims, int.period</text>
+  </g>
+
+  <text x="490" y="678" text-anchor="middle" fill="#8b949e" font-size="9" font-style="italic">gainVsSDDf · gainsVsSD.point.estDf</text>
+
+  <!-- ── ROW 5: Coordinator run_simulation() box ── -->
+  <rect x="120" y="710" width="720" height="50" rx="10" fill="none" stroke="#8b949e" stroke-width="1" stroke-dasharray="6,4"/>
+  <text x="480" y="731" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="500">run_simulation()  —  coordinator calling steps 1→6, returns combined result list</text>
+  <text x="480" y="748" text-anchor="middle" fill="#8b949e" font-size="9">costsDf · valueDf · sharesDf · value.totDf · gainVsSDDf · gainsVsSD.point.estDf · deltaDf · mean.vecDf · params</text>
+
+  <line x1="490" y1="685" x2="490" y2="710" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="230" y1="548" x2="230" y2="710" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- ── ROW 6: Presentation layer ── -->
+  <line x1="300" y1="760" x2="300" y2="810" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="480" y1="760" x2="480" y2="810" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="660" y1="760" x2="660" y2="810" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <g class="node" data-id="fmt_table">
+    <rect x="120" y="814" width="240" height="48" rx="8" fill="#161b22" stroke="#f85149" stroke-width="1.5"/>
+    <text x="240" y="835" text-anchor="middle" fill="#f85149" font-size="12" font-weight="600">format_summary_table()</text>
+    <text x="240" y="851" text-anchor="middle" fill="#8b949e" font-size="10">gainsVsSD.point.estDf → display table</text>
+  </g>
+
+  <g class="node" data-id="fmt_params">
+    <rect x="390" y="814" width="240" height="48" rx="8" fill="#161b22" stroke="#f85149" stroke-width="1.5"/>
+    <text x="510" y="835" text-anchor="middle" fill="#f85149" font-size="12" font-weight="600">format_params_summary()</text>
+    <text x="510" y="851" text-anchor="middle" fill="#8b949e" font-size="10">params → formatted text</text>
+  </g>
+
+  <g class="node" data-id="plots">
+    <rect x="660" y="814" width="200" height="48" rx="8" fill="#161b22" stroke="#f85149" stroke-width="1.5"/>
+    <text x="760" y="835" text-anchor="middle" fill="#f85149" font-size="12" font-weight="600">plot_*() functions</text>
+    <text x="760" y="851" text-anchor="middle" fill="#8b949e" font-size="10">8 plot renderers</text>
+  </g>
+</svg>
+</div>
+</div>
+
+<!-- ============ FRONTIER SWEEP TAB ============ -->
+<div class="tab-panel" id="tab-sweep">
+<div class="flowchart-container">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 1120" width="960" height="1120">
+  <defs>
+    <marker id="arrow2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#8b949e" stroke-width="1.2"/>
+    </marker>
+  </defs>
+
+  <!-- ── ROW 0: User params ── -->
+  <g class="node" data-id="sweep-params">
+    <rect x="130" y="30" width="700" height="54" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+    <text x="480" y="53" text-anchor="middle" fill="#58a6ff" font-size="13" font-weight="600">User Parameters</text>
+    <text x="480" y="72" text-anchor="middle" fill="#8b949e" font-size="11">sweep_allocs (string)  +  all single-sim params (n, s.mean, s.sd, b.mean, b.sd, ...)</text>
+  </g>
+
+  <line x1="300" y1="84" x2="300" y2="136" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow2)"/>
+  <line x1="660" y1="84" x2="660" y2="136" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow2)"/>
+
+  <!-- ── ROW 1: parse_allocation_string ── -->
+  <g class="node" data-id="parse">
+    <rect x="120" y="140" width="280" height="52" rx="8" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
+    <text x="260" y="162" text-anchor="middle" fill="#3fb950" font-size="12" font-weight="600">parse_allocation_string()</text>
+    <text x="260" y="179" text-anchor="middle" fill="#8b949e" font-size="10">sweep_allocs → alloc_fracs vector</text>
+  </g>
+
+  <!-- clamp inside parse -->
+  <text x="260" y="210" text-anchor="middle" fill="#3fb950" font-size="9" font-style="italic">calls clamp_pct_to_fraction() internally</text>
+
+  <!-- other params pass through -->
+  <g class="node" data-id="sweep-other">
+    <rect x="500" y="140" width="340" height="52" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="1"/>
+    <text x="670" y="162" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="500">Remaining params (pass-through)</text>
+    <text x="670" y="179" text-anchor="middle" fill="#8b949e" font-size="10">n, s.mean, s.sd, b.mean, b.sd, s.b.corr, init.inv, ...</text>
+  </g>
+
+  <!-- arrows into run_meta_sweep -->
+  <line x1="260" y1="218" x2="380" y2="270" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow2)"/>
+  <line x1="670" y1="192" x2="580" y2="270" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow2)"/>
+
+  <!-- ── ROW 2: run_meta_sweep ── -->
+  <g class="node" data-id="meta_sweep">
+    <rect x="230" y="274" width="500" height="56" rx="8" fill="#161b22" stroke="#39d2c0" stroke-width="2"/>
+    <text x="480" y="298" text-anchor="middle" fill="#39d2c0" font-size="14" font-weight="700">run_meta_sweep()</text>
+    <text x="480" y="316" text-anchor="middle" fill="#8b949e" font-size="10">perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd, s.b.corr, init.inv, ...</text>
+  </g>
+
+  <!-- loop annotation -->
+  <rect x="770" y="280" width="150" height="44" rx="6" fill="#1c2129" stroke="#39d2c0" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="845" y="299" text-anchor="middle" fill="#39d2c0" font-size="10" font-weight="600">for each allocation</text>
+  <text x="845" y="314" text-anchor="middle" fill="#8b949e" font-size="9">in perc.stocks.vec</text>
+  <line x1="730" y1="302" x2="770" y2="302" stroke="#39d2c0" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- arrow into run_simulation -->
+  <line x1="480" y1="330" x2="480" y2="385" stroke="#39d2c0" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+  <!-- ── ROW 3: run_simulation (expanded) ── -->
+  <rect x="130" y="390" width="700" height="370" rx="12" fill="rgba(188,140,255,0.04)" stroke="#bc8cff" stroke-width="1" stroke-dasharray="6,4"/>
+  <text x="480" y="416" text-anchor="middle" fill="#bc8cff" font-size="13" font-weight="600">run_simulation()  —  one iteration per allocation</text>
+
+  <!-- sub-functions inside run_simulation -->
+  <g class="node" data-id="cov2">
+    <rect x="155" y="434" width="210" height="38" rx="6" fill="#161b22" stroke="#bc8cff" stroke-width="1"/>
+    <text x="260" y="458" text-anchor="middle" fill="#bc8cff" font-size="10.5" font-weight="600">build_covariance_matrix()</text>
+  </g>
+  <g class="node" data-id="int2">
+    <rect x="555" y="434" width="210" height="38" rx="6" fill="#161b22" stroke="#bc8cff" stroke-width="1"/>
+    <text x="660" y="458" text-anchor="middle" fill="#bc8cff" font-size="10.5" font-weight="600">build_interest_vectors()</text>
+  </g>
+  <line x1="260" y1="472" x2="400" y2="500" stroke="#8b949e" stroke-width="0.8" marker-end="url(#arrow2)"/>
+  <line x1="660" y1="472" x2="560" y2="500" stroke="#8b949e" stroke-width="0.8" marker-end="url(#arrow2)"/>
+
+  <g class="node" data-id="sim2">
+    <rect x="305" y="500" width="350" height="38" rx="6" fill="#161b22" stroke="#bc8cff" stroke-width="1.5"/>
+    <text x="480" y="524" text-anchor="middle" fill="#bc8cff" font-size="11" font-weight="700">simulate_portfolios()</text>
+  </g>
+  <line x1="380" y1="538" x2="280" y2="564" stroke="#8b949e" stroke-width="0.8" marker-end="url(#arrow2)"/>
+  <line x1="580" y1="538" x2="680" y2="564" stroke="#8b949e" stroke-width="0.8" marker-end="url(#arrow2)"/>
+
+  <g class="node" data-id="dfs2">
+    <rect x="155" y="564" width="230" height="38" rx="6" fill="#161b22" stroke="#d29922" stroke-width="1"/>
+    <text x="270" y="588" text-anchor="middle" fill="#d29922" font-size="10.5" font-weight="600">build_result_dataframes()</text>
+  </g>
+  <g class="node" data-id="roll2">
+    <rect x="580" y="564" width="210" height="38" rx="6" fill="#161b22" stroke="#d29922" stroke-width="1"/>
+    <text x="685" y="588" text-anchor="middle" fill="#d29922" font-size="10.5" font-weight="600">compute_rolling_sd()</text>
+  </g>
+  <line x1="685" y1="602" x2="580" y2="632" stroke="#8b949e" stroke-width="0.8" marker-end="url(#arrow2)"/>
+  <line x1="480" y1="538" x2="480" y2="632" stroke="#8b949e" stroke-width="0.8" stroke-dasharray="3,2" marker-end="url(#arrow2)"/>
+
+  <g class="node" data-id="gains2">
+    <rect x="330" y="632" width="280" height="38" rx="6" fill="#161b22" stroke="#d29922" stroke-width="1"/>
+    <text x="470" y="656" text-anchor="middle" fill="#d29922" font-size="10.5" font-weight="600">compute_gain_summary()</text>
+  </g>
+
+  <!-- output from run_simulation inside sweep -->
+  <line x1="470" y1="670" x2="470" y2="700" stroke="#8b949e" stroke-width="0.8" marker-end="url(#arrow2)"/>
+  <text x="480" y="714" text-anchor="middle" fill="#8b949e" font-size="9" font-style="italic">gainsVsSD.point.estDf + gainVsSDDf (cloud, sampled)</text>
+  <text x="480" y="728" text-anchor="middle" fill="#8b949e" font-size="9" font-style="italic">extracted per allocation</text>
+
+  <!-- arrow from run_simulation box back to meta_sweep collector -->
+  <line x1="480" y1="760" x2="480" y2="810" stroke="#39d2c0" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+  <!-- loop-back arrow -->
+  <path d="M 830 390 L 830 760 Q 830 775 815 775 L 735 775" fill="none" stroke="#39d2c0" stroke-width="1" stroke-dasharray="5,3"/>
+  <text x="845" y="580" fill="#39d2c0" font-size="9" transform="rotate(90, 845, 580)">repeat for each allocation</text>
+
+  <!-- ── ROW 4: Aggregated result (list with 3 components) ── -->
+  <g class="node" data-id="sweep_result">
+    <rect x="200" y="814" width="560" height="68" rx="8" fill="#161b22" stroke="#39d2c0" stroke-width="1.5"/>
+    <text x="480" y="835" text-anchor="middle" fill="#39d2c0" font-size="12" font-weight="600">Aggregated sweep result  <tspan font-family="monospace" font-size="10.5">list(summary, cloud, point_estimates)</tspan></text>
+    <text x="480" y="852" text-anchor="middle" fill="#8b949e" font-size="10">summary: allocation · rebal_gain · rebal_sd · nonrebal_gain · nonrebal_sd · s.int · b.int</text>
+    <text x="480" y="866" text-anchor="middle" fill="#8b949e" font-size="10">cloud: gain · sd · sim · type · allocation  |  point_estimates: sd · gain · type · allocation</text>
+  </g>
+
+  <!-- arrows to two plot functions -->
+  <line x1="380" y1="882" x2="260" y2="930" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow2)"/>
+  <line x1="580" y1="882" x2="700" y2="930" stroke="#8b949e" stroke-width="1" marker-end="url(#arrow2)"/>
+
+  <g class="node" data-id="frontier_plot">
+    <rect x="120" y="934" width="280" height="48" rx="8" fill="#161b22" stroke="#f85149" stroke-width="1.5"/>
+    <text x="260" y="955" text-anchor="middle" fill="#f85149" font-size="12" font-weight="600">plot_efficient_frontier()</text>
+    <text x="260" y="971" text-anchor="middle" fill="#8b949e" font-size="10">gain-vs-SD curve (uses summary)</text>
+  </g>
+
+  <g class="node" data-id="frontier_explorer">
+    <rect x="560" y="934" width="280" height="48" rx="8" fill="#161b22" stroke="#f85149" stroke-width="1.5"/>
+    <text x="700" y="955" text-anchor="middle" fill="#f85149" font-size="12" font-weight="600">plot_frontier_explorer()</text>
+    <text x="700" y="971" text-anchor="middle" fill="#8b949e" font-size="10">cloud + frontier per allocation</text>
+  </g>
+
+  <!-- navigation annotation -->
+  <rect x="580" y="994" width="240" height="32" rx="6" fill="#1c2129" stroke="#f85149" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="700" y="1015" text-anchor="middle" fill="#f85149" font-size="9" font-weight="500">prev/next buttons step through allocations</text>
+</svg>
+</div>
+</div>
+
+<!-- Tooltip element -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// Tooltip data
+const tips = {
+  params: {
+    title: 'User Parameters',
+    desc: 'All inputs from the Shiny UI sidebar. These are the starting point for both single simulation and frontier sweep workflows.',
+    inputs: 'Shiny input$ values',
+    outputs: 'Numeric scalars passed to downstream functions'
+  },
+  clamp: {
+    title: 'clamp_pct_to_fraction(pct)',
+    desc: 'Converts a percentage (0–100 scale) to a fraction clamped to (0.000001, 0.999999). Vectorized.',
+    inputs: '<code>pct</code> — numeric, e.g. <code>60</code>',
+    outputs: '<code>0.6</code> — a fraction'
+  },
+  cov: {
+    title: 'build_covariance_matrix(s.sd, b.sd, s.b.corr, propStepDivisor)',
+    desc: 'Constructs the 2×2 stock-bond covariance matrix used as the Metropolis proposal distribution.',
+    inputs: '<code>s.sd</code>, <code>b.sd</code>, <code>s.b.corr</code>, <code>propStepDivisor</code>',
+    outputs: '<code>s.b.cov</code> — 2×2 numeric matrix'
+  },
+  interest: {
+    title: 'build_interest_vectors(n, s.mean, b.mean, s.int, b.int, int.period)',
+    desc: 'Builds time-varying mean cost vectors that incorporate compound interest growth.',
+    inputs: '<code>n</code>, <code>s.mean</code>, <code>b.mean</code>, <code>s.int</code>, <code>b.int</code>, <code>int.period</code>',
+    outputs: '<code>s.mean.vec</code>, <code>b.mean.vec</code> (numeric vectors), <code>mean.vecDf</code> (data frame)'
+  },
+  sim: {
+    title: 'simulate_portfolios(...)',
+    desc: 'The core simulation loop. Runs nSims Metropolis-Hastings simulations of stock/bond cost paths, then computes rebalanced and non-rebalanced portfolio values.',
+    inputs: '<code>n</code>, <code>nSims</code>, <code>nSimsToRecord</code>, <code>s.mean</code>, <code>b.mean</code>, <code>s.sd</code>, <code>b.sd</code>, <code>s.mean.vec</code>, <code>b.mean.vec</code>, <code>init.inv</code>, <code>perc.stocks</code>, <code>rebal.interval</code>, <code>s.b.cov</code>',
+    outputs: 'List of 7 arrays: <code>costs</code>, <code>value.rebal.tot</code>, <code>value.nonrebal.tot</code>, <code>value.rebal</code>, <code>value.nonrebal</code>, <code>shares.rebal</code>, <code>shares.nonrebal</code>'
+  },
+  dfs: {
+    title: 'build_result_dataframes(n, nSims, nSimsToRecord, arrays)',
+    desc: 'Reshapes the raw simulation arrays into tidy data frames suitable for ggplot2.',
+    inputs: '<code>n</code>, <code>nSims</code>, <code>nSimsToRecord</code>, <code>arrays</code> (list from simulate_portfolios)',
+    outputs: '5 data frames: <code>costsDf</code>, <code>valueDf</code>, <code>sharesDf</code>, <code>value.totDf</code>, <code>deltaDf</code>'
+  },
+  rolling: {
+    title: 'compute_rolling_sd(value.rebal.tot, value.nonrebal.tot, n, nSims, widthVal)',
+    desc: 'Computes rolling standard deviation of portfolio value using zoo::rollapply, measuring trajectory volatility.',
+    inputs: 'Total value matrices (n × nSims), <code>widthVal</code>',
+    outputs: '<code>errorSD.rebal</code>, <code>errorSD.nonrebal</code> — numeric vectors (length nSims)'
+  },
+  gains: {
+    title: 'compute_gain_summary(...)',
+    desc: 'Computes annualized gains and assembles the gain-vs-SD scatter and point estimate data frames.',
+    inputs: 'Total value matrices, errorSD vectors, <code>init.inv</code>, <code>n</code>, <code>nSims</code>, <code>int.period</code>',
+    outputs: '<code>gainVsSDDf</code> (per-sim scatter), <code>gainsVsSD.point.estDf</code> (2-row summary)'
+  },
+  fmt_table: {
+    title: 'format_summary_table(df)',
+    desc: 'Formats the point estimate data frame for display: converts gain to percentage string, rounds SD, renames columns.',
+    inputs: '<code>df</code> — gainsVsSD.point.estDf (columns: sd, gain, type)',
+    outputs: 'Data frame with columns: Std Dev, Annualized Gain, Strategy'
+  },
+  fmt_params: {
+    title: 'format_params_summary(params)',
+    desc: 'Formats the simulation params list as a human-readable multi-line string.',
+    inputs: '<code>params</code> — named list from result$params',
+    outputs: 'Single character string'
+  },
+  plots: {
+    title: 'plot_*() functions',
+    desc: 'Eight ggplot2-based plot renderers: gain_vs_sd, trajectories, cost_profiles, final_densities, rebal_delta, single_sim_explorer, efficient_frontier, frontier_explorer.',
+    inputs: 'The full result list from run_simulation() or sweep result list',
+    outputs: 'ggplot objects rendered in Shiny'
+  },
+  parse: {
+    title: 'parse_allocation_string(alloc_string)',
+    desc: 'Splits a comma-separated string of percentages, removes NAs, and converts to clamped fractions via clamp_pct_to_fraction().',
+    inputs: '<code>alloc_string</code> — e.g. <code>"20, 40, 60, 80"</code>',
+    outputs: 'Numeric vector: <code>c(0.20, 0.40, 0.60, 0.80)</code>'
+  },
+  meta_sweep: {
+    title: 'run_meta_sweep(perc.stocks.vec, ..., max_cloud_sims)',
+    desc: 'Loops over a vector of stock allocations, calling run_simulation() for each. Collects point estimates, individual sim results (cloud, sampled to max_cloud_sims), and per-allocation point estimates into a list.',
+    inputs: '<code>perc.stocks.vec</code> + all run_simulation() params + <code>max_cloud_sims</code> (default 500)',
+    outputs: 'List with 3 components: <code>summary</code> (frontier df), <code>cloud</code> (per-sim gain/sd with allocation), <code>point_estimates</code> (per-alloc means with allocation)'
+  },
+  sweep_result: {
+    title: 'Aggregated sweep result',
+    desc: 'A list with three data frames: summary (one row per allocation, frontier data), cloud (individual sim gain/sd results sampled to max_cloud_sims per allocation), and point_estimates (mean gain/sd per allocation and type).',
+    inputs: 'Assembled by run_meta_sweep()',
+    outputs: 'Consumed by plot_efficient_frontier() and plot_frontier_explorer()'
+  },
+  frontier_plot: {
+    title: 'plot_efficient_frontier(sweep_result$summary)',
+    desc: 'Plots the efficient frontier: gain vs. SD across allocations for both rebalanced and non-rebalanced strategies.',
+    inputs: '<code>summary</code> data frame from sweep result list',
+    outputs: 'ggplot object'
+  },
+  frontier_explorer: {
+    title: 'plot_frontier_explorer(sweep_data, alloc_index)',
+    desc: 'For a selected allocation, shows the cloud of individual sim results overlaid on the full frontier. Uses consistent axis limits across all allocations for comparability. Includes allocation % labels on frontier points.',
+    inputs: 'Full sweep result list + <code>alloc_index</code> (integer, selected via prev/next buttons)',
+    outputs: 'ggplot object with cloud + frontier overlay'
+  },
+  // duplicates for sweep tab
+  'sweep-params': {
+    title: 'User Parameters (Sweep)',
+    desc: 'The sweep_allocs string plus all standard simulation parameters from the Shiny sidebar.',
+    inputs: 'Shiny input$ values',
+    outputs: 'Passed to parse_allocation_string() and run_meta_sweep()'
+  },
+  'sweep-other': {
+    title: 'Pass-through Parameters',
+    desc: 'These parameters are passed directly from the UI into run_meta_sweep(), which forwards them to each run_simulation() call.',
+    inputs: 'All standard simulation params',
+    outputs: 'Forwarded unchanged'
+  },
+  cov2: {
+    title: 'build_covariance_matrix()',
+    desc: 'Called once per allocation inside run_simulation(). Same function as in single-sim flow.',
+    inputs: '<code>s.sd</code>, <code>b.sd</code>, <code>s.b.corr</code>, <code>propStepDivisor</code>',
+    outputs: '2×2 covariance matrix'
+  },
+  int2: {
+    title: 'build_interest_vectors()',
+    desc: 'Called once per allocation inside run_simulation(). Same function as in single-sim flow.',
+    inputs: '<code>n</code>, <code>s.mean</code>, <code>b.mean</code>, <code>s.int</code>, <code>b.int</code>, <code>int.period</code>',
+    outputs: 'Interest-adjusted mean vectors + data frame'
+  },
+  sim2: {
+    title: 'simulate_portfolios()',
+    desc: 'The heavy computation. Called once per allocation with a different perc.stocks value each time.',
+    inputs: 'All simulation params + covariance matrix + interest vectors',
+    outputs: 'List of 7 raw arrays'
+  },
+  dfs2: {
+    title: 'build_result_dataframes()',
+    desc: 'Converts arrays to tidy data frames. Called per allocation.',
+    inputs: '<code>n</code>, <code>nSims</code>, <code>nSimsToRecord</code>, <code>arrays</code>',
+    outputs: '5 data frames'
+  },
+  roll2: {
+    title: 'compute_rolling_sd()',
+    desc: 'Computes rolling SD per allocation. Called inside run_simulation().',
+    inputs: 'Total value matrices, <code>n</code>, <code>nSims</code>, <code>widthVal</code>',
+    outputs: 'errorSD vectors'
+  },
+  gains2: {
+    title: 'compute_gain_summary()',
+    desc: 'Both outputs from this function are collected by run_meta_sweep(): point estimates for the frontier, and individual sim results (gainVsSDDf) for the cloud display.',
+    inputs: 'Value matrices, errorSD vectors, <code>init.inv</code>, <code>n</code>, <code>nSims</code>, <code>int.period</code>',
+    outputs: '<code>gainVsSDDf</code> (per-sim scatter, sampled to max_cloud_sims) + <code>gainsVsSD.point.estDf</code> (2-row summary)'
+  }
+};
+
+// Tooltip behavior
+const tooltip = document.getElementById('tooltip');
+
+document.querySelectorAll('.node').forEach(node => {
+  node.style.cursor = 'pointer';
+
+  node.addEventListener('mouseenter', (e) => {
+    const id = node.dataset.id;
+    const data = tips[id];
+    if (!data) return;
+
+    let html = `<div class="tt-title">${data.title}</div>`;
+    html += `<div>${data.desc}</div>`;
+    if (data.inputs) html += `<div class="tt-section"><span class="tt-label">Inputs:</span> ${data.inputs}</div>`;
+    if (data.outputs) html += `<div class="tt-section"><span class="tt-label">Returns:</span> ${data.outputs}</div>`;
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+  });
+
+  node.addEventListener('mousemove', (e) => {
+    const pad = 16;
+    let x = e.clientX + pad;
+    let y = e.clientY + pad;
+    // Keep tooltip on screen
+    const rect = tooltip.getBoundingClientRect();
+    if (x + rect.width > window.innerWidth - pad) x = e.clientX - rect.width - pad;
+    if (y + rect.height > window.innerHeight - pad) y = e.clientY - rect.height - pad;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  });
+
+  node.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+  });
+
+  // Highlight on hover
+  const rect = node.querySelector('rect');
+  if (rect) {
+    const origFill = rect.getAttribute('fill');
+    node.addEventListener('mouseenter', () => { rect.setAttribute('fill', '#1c2533'); });
+    node.addEventListener('mouseleave', () => { rect.setAttribute('fill', origFill); });
+  }
+});
+</script>
+</body>
+</html>

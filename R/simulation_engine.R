@@ -1,42 +1,27 @@
 # simulation_engine.R — Core MCMC portfolio simulation
 
-#' Run a single portfolio simulation across multiple sims
-#'
-#' @param n             Number of timesteps
-#' @param s.mean        Stock cost mean
-#' @param s.sd          Stock cost standard deviation
-#' @param b.mean        Bond cost mean
-#' @param b.sd          Bond cost standard deviation
-#' @param s.b.corr      Stock-bond correlation
-#' @param init.inv      Initial investment ($)
-#' @param perc.stocks   Fraction allocated to stocks (0-1)
-#' @param rebal.interval Rebalance every N timesteps
-#' @param s.int         Stock interest rate
-#' @param b.int         Bond interest rate
-#' @param int.period    Interest compounding period
-#' @param propStepDivisor  Proposal step divisor (larger = slower exploration)
-#' @param nSims         Total number of simulations
-#' @param nSimsToRecord Number of sims to record full trajectories for
-#' @param widthVal      Rolling window width for SD calculations
-#' @param progress_callback  Optional function(i, total, msg) for progress
-#' @return A named list with data frames and echoed params
-run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
-                           init.inv, perc.stocks, rebal.interval,
-                           s.int, b.int, int.period,
-                           propStepDivisor, nSims, nSimsToRecord,
-                           widthVal, progress_callback = NULL) {
-
-  # Avoid rebalance on the last timestep
-
-  n <- n - 1
-
-  # Compose interest covariance matrix
+#' Build the 2x2 stock-bond covariance matrix
+#' @param s.sd Stock cost standard deviation
+#' @param b.sd Bond cost standard deviation
+#' @param s.b.corr Stock-bond correlation
+#' @param propStepDivisor Proposal step divisor
+#' @return 2x2 covariance matrix
+build_covariance_matrix <- function(s.sd, b.sd, s.b.corr, propStepDivisor) {
   sdVec <- c(s.sd, b.sd) / propStepDivisor
   sdM <- diag(sdVec)
   rho <- matrix(c(1, rep(s.b.corr, 2), 1), ncol = 2)
-  s.b.cov <- sdM %*% rho %*% sdM
+  sdM %*% rho %*% sdM
+}
 
-  # Create increasing mean interest vectors
+#' Build increasing mean interest vectors
+#' @param n Number of timesteps
+#' @param s.mean Stock cost mean
+#' @param b.mean Bond cost mean
+#' @param s.int Stock interest rate
+#' @param b.int Bond interest rate
+#' @param int.period Interest compounding period
+#' @return List with s.mean.vec, b.mean.vec, mean.vecDf
+build_interest_vectors <- function(n, s.mean, b.mean, s.int, b.int, int.period) {
   s.int.vec <- sapply(1:n, function(x) (1 + s.int)^((x - 1) / int.period)) - 1
   b.int.vec <- sapply(1:n, function(x) (1 + b.int)^((x - 1) / int.period)) - 1
 
@@ -49,6 +34,29 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
     val = c(stocks = s.mean.vec, bonds = b.mean.vec)
   )
 
+  list(s.mean.vec = s.mean.vec, b.mean.vec = b.mean.vec, mean.vecDf = mean.vecDf)
+}
+
+#' Run the core portfolio simulation loop
+#' @param n Number of timesteps
+#' @param nSims Total number of simulations
+#' @param nSimsToRecord Number of sims to record full trajectories
+#' @param s.mean Stock cost mean
+#' @param b.mean Bond cost mean
+#' @param s.sd Stock cost standard deviation
+#' @param b.sd Bond cost standard deviation
+#' @param s.mean.vec Stock mean vector with interest
+#' @param b.mean.vec Bond mean vector with interest
+#' @param init.inv Initial investment
+#' @param perc.stocks Fraction allocated to stocks (0-1)
+#' @param rebal.interval Rebalance every N timesteps
+#' @param s.b.cov 2x2 covariance matrix
+#' @param progress_callback Optional function(i, total, msg)
+#' @return List of raw arrays: costs, value.rebal.tot, value.nonrebal.tot,
+#'   value.rebal, value.nonrebal, shares.rebal, shares.nonrebal
+simulate_portfolios <- function(n, nSims, nSimsToRecord, s.mean, b.mean, s.sd, b.sd,
+                                s.mean.vec, b.mean.vec, init.inv, perc.stocks,
+                                rebal.interval, s.b.cov, progress_callback = NULL) {
   # Initialize arrays
   shares.rebal <- array(dim = c(n, 2, nSimsToRecord))
   shares.nonrebal <- array(dim = c(n, 2, nSimsToRecord))
@@ -155,7 +163,26 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
     value.nonrebal.final[, j] <- value.nonrebal.tmp[n, ]
   }
 
-  # --- Build data frames ---
+  list(
+    costs = costs,
+    value.rebal.tot = value.rebal.tot,
+    value.nonrebal.tot = value.nonrebal.tot,
+    value.rebal = value.rebal,
+    value.nonrebal = value.nonrebal,
+    shares.rebal = shares.rebal,
+    shares.nonrebal = shares.nonrebal
+  )
+}
+
+#' Convert raw simulation arrays into tidy data frames
+#' @param n Number of timesteps
+#' @param nSims Total number of simulations
+#' @param nSimsToRecord Number of recorded sims
+#' @param arrays List of raw arrays from simulate_portfolios()
+#' @return List with costsDf, valueDf, sharesDf, value.totDf, deltaDf
+build_result_dataframes <- function(n, nSims, nSimsToRecord, arrays) {
+  value.rebal.tot <- arrays$value.rebal.tot
+  value.nonrebal.tot <- arrays$value.nonrebal.tot
 
   # Total value trajectories
   value.rebal.totDf <- data.frame(
@@ -178,14 +205,14 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
     class = rep(rep(c("stocks", "bonds"), each = n), nSimsToRecord),
     sim = rep(1:nSimsToRecord, each = n * 2),
     type = rep("rebal", n * nSimsToRecord * 2),
-    val = as.vector(value.rebal)
+    val = as.vector(arrays$value.rebal)
   )
   value.nonrebalDf <- data.frame(
     time = rep(1:n, nSimsToRecord * 2),
     class = rep(rep(c("stocks", "bonds"), each = n), nSimsToRecord),
     sim = rep(1:nSimsToRecord, each = n * 2),
     type = rep("nonrebal", n * nSimsToRecord * 2),
-    val = as.vector(value.nonrebal)
+    val = as.vector(arrays$value.nonrebal)
   )
   valueDf <- rbind(value.rebalDf, value.nonrebalDf)
 
@@ -195,14 +222,14 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
     class = rep(rep(c("stocks", "bonds"), each = n), nSimsToRecord),
     sim = rep(1:nSimsToRecord, each = n * 2),
     type = rep("rebal", n * nSimsToRecord * 2),
-    shares = as.vector(shares.rebal)
+    shares = as.vector(arrays$shares.rebal)
   )
   shares.nonrebalDf <- data.frame(
     time = rep(1:n, nSimsToRecord * 2),
     class = rep(rep(c("stocks", "bonds"), each = n), nSimsToRecord),
     sim = rep(1:nSimsToRecord, each = n * 2),
     type = rep("nonrebal", n * nSimsToRecord * 2),
-    shares = as.vector(shares.nonrebal)
+    shares = as.vector(arrays$shares.nonrebal)
   )
   sharesDf <- rbind(shares.rebalDf, shares.nonrebalDf)
 
@@ -211,7 +238,7 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
     time = rep(1:n, nSims * 2),
     class = rep(rep(c("stocks", "bonds"), each = n), nSims),
     sim = rep(1:nSims, each = n * 2),
-    cost = as.vector(costs)
+    cost = as.vector(arrays$costs)
   )
 
   # Delta at final time
@@ -221,7 +248,23 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
   )
   deltaDf$delta <- deltaDf$rebal - deltaDf$nonrebal
 
-  # Rolling SD calculations
+  list(
+    costsDf = costsDf,
+    valueDf = valueDf,
+    sharesDf = sharesDf,
+    value.totDf = value.totDf,
+    deltaDf = deltaDf
+  )
+}
+
+#' Compute rolling standard deviation for rebalanced and non-rebalanced portfolios
+#' @param value.rebal.tot Matrix of rebalanced total values (n x nSims)
+#' @param value.nonrebal.tot Matrix of non-rebalanced total values (n x nSims)
+#' @param n Number of timesteps
+#' @param nSims Total number of simulations
+#' @param widthVal Rolling window width
+#' @return List with errorSD.rebal and errorSD.nonrebal vectors
+compute_rolling_sd <- function(value.rebal.tot, value.nonrebal.tot, n, nSims, widthVal) {
   mean.rebal.mat <- matrix(nrow = n - widthVal + 1, ncol = nSims)
   error.rebal.mat <- matrix(nrow = n - widthVal + 1, ncol = nSims)
   errorSD.rebal <- vector(length = nSims)
@@ -244,7 +287,22 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
     errorSD.nonrebal[j] <- sd(error.nonrebal.mat[, j])
   }
 
-  # Gain calculations
+  list(errorSD.rebal = errorSD.rebal, errorSD.nonrebal = errorSD.nonrebal)
+}
+
+#' Compute gain-vs-SD summary data frames
+#' @param value.rebal.tot Matrix of rebalanced total values (n x nSims)
+#' @param value.nonrebal.tot Matrix of non-rebalanced total values (n x nSims)
+#' @param errorSD.rebal Rebalanced rolling SD vector
+#' @param errorSD.nonrebal Non-rebalanced rolling SD vector
+#' @param init.inv Initial investment
+#' @param n Number of timesteps
+#' @param nSims Total number of simulations
+#' @param int.period Interest compounding period
+#' @return List with gainVsSDDf and gainsVsSD.point.estDf
+compute_gain_summary <- function(value.rebal.tot, value.nonrebal.tot,
+                                 errorSD.rebal, errorSD.nonrebal,
+                                 init.inv, n, nSims, int.period) {
   gain.rebal <- value.rebal.tot[n, ] - init.inv
   gain.rebal <- annualizeFn(init.inv, gain.rebal, n, int.period)
 
@@ -267,16 +325,83 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
     type = c("rebal", "nonrebal")
   )
 
-  # Return structured result
+  list(gainVsSDDf = gainVsSDDf, gainsVsSD.point.estDf = gainsVsSD.point.estDf)
+}
+
+#' Run a single portfolio simulation across multiple sims
+#'
+#' Coordinator function that calls sub-functions in sequence.
+#' Signature and return value are identical to the original.
+#'
+#' @param n             Number of timesteps
+#' @param s.mean        Stock cost mean
+#' @param s.sd          Stock cost standard deviation
+#' @param b.mean        Bond cost mean
+#' @param b.sd          Bond cost standard deviation
+#' @param s.b.corr      Stock-bond correlation
+#' @param init.inv      Initial investment ($)
+#' @param perc.stocks   Fraction allocated to stocks (0-1)
+#' @param rebal.interval Rebalance every N timesteps
+#' @param s.int         Stock interest rate
+#' @param b.int         Bond interest rate
+#' @param int.period    Interest compounding period
+#' @param propStepDivisor  Proposal step divisor (larger = slower exploration)
+#' @param nSims         Total number of simulations
+#' @param nSimsToRecord Number of sims to record full trajectories for
+#' @param widthVal      Rolling window width for SD calculations
+#' @param progress_callback  Optional function(i, total, msg) for progress
+#' @return A named list with data frames and echoed params
+run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
+                           init.inv, perc.stocks, rebal.interval,
+                           s.int, b.int, int.period,
+                           propStepDivisor, nSims, nSimsToRecord,
+                           widthVal, progress_callback = NULL) {
+
+  # Avoid rebalance on the last timestep
+  n <- n - 1
+
+  # Step 1: Covariance matrix
+  s.b.cov <- build_covariance_matrix(s.sd, b.sd, s.b.corr, propStepDivisor)
+
+  # Step 2: Interest vectors
+  interest <- build_interest_vectors(n, s.mean, b.mean, s.int, b.int, int.period)
+
+  # Step 3: Core simulation loop
+  arrays <- simulate_portfolios(
+    n = n, nSims = nSims, nSimsToRecord = nSimsToRecord,
+    s.mean = s.mean, b.mean = b.mean, s.sd = s.sd, b.sd = b.sd,
+    s.mean.vec = interest$s.mean.vec, b.mean.vec = interest$b.mean.vec,
+    init.inv = init.inv, perc.stocks = perc.stocks,
+    rebal.interval = rebal.interval, s.b.cov = s.b.cov,
+    progress_callback = progress_callback
+  )
+
+  # Step 4: Build tidy data frames
+  dfs <- build_result_dataframes(n, nSims, nSimsToRecord, arrays)
+
+  # Step 5: Rolling SD
+  rolling <- compute_rolling_sd(
+    arrays$value.rebal.tot, arrays$value.nonrebal.tot,
+    n, nSims, widthVal
+  )
+
+  # Step 6: Gain summary
+  gains <- compute_gain_summary(
+    arrays$value.rebal.tot, arrays$value.nonrebal.tot,
+    rolling$errorSD.rebal, rolling$errorSD.nonrebal,
+    init.inv, n, nSims, int.period
+  )
+
+  # Return structured result (identical shape to original)
   list(
-    costsDf = costsDf,
-    valueDf = valueDf,
-    sharesDf = sharesDf,
-    value.totDf = value.totDf,
-    gainVsSDDf = gainVsSDDf,
-    gainsVsSD.point.estDf = gainsVsSD.point.estDf,
-    deltaDf = deltaDf,
-    mean.vecDf = mean.vecDf,
+    costsDf = dfs$costsDf,
+    valueDf = dfs$valueDf,
+    sharesDf = dfs$sharesDf,
+    value.totDf = dfs$value.totDf,
+    gainVsSDDf = gains$gainVsSDDf,
+    gainsVsSD.point.estDf = gains$gainsVsSD.point.estDf,
+    deltaDf = dfs$deltaDf,
+    mean.vecDf = interest$mean.vecDf,
     params = list(
       n = n, s.mean = s.mean, s.sd = s.sd, b.mean = b.mean, b.sd = b.sd,
       s.b.corr = s.b.corr, init.inv = init.inv, perc.stocks = perc.stocks,

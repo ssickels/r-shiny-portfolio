@@ -1,0 +1,320 @@
+/* custom.css — Monte Carlo Portfolio Simulator Shiny theme */
+
+/* Page background — force 16px base over Bootstrap's 14px */
+body {
+  background-color: #f5f0e8 !important;
+  color: #3b2f2f !important;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 16px !important;
+}
+
+/* Sidebar */
+.well {
+  background-color: #faf8f4;
+  border: 1px solid #d4cabb;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 15px;
+}
+
+/* Section headings in sidebar */
+.well h4 {
+  color: #3b2f2f;
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.well h4:first-child {
+  margin-top: 0;
+}
+
+/* Horizontal rules in sidebar */
+.well hr {
+  border-color: #d4cabb;
+  margin: 12px 0;
+}
+
+/* Slider labels */
+.control-label {
+  color: #6b5b4f;
+  font-size: 15px !important;
+}
+
+/* Slider value display */
+.irs--shiny .irs-min, .irs--shiny .irs-max,
+.irs--shiny .irs-single, .irs--shiny .irs-from, .irs--shiny .irs-to {
+  font-size: 13px !important;
+}
+
+/* Run button */
+.btn-primary {
+  background-color: #1D9E75 !important;
+  border-color: #1D9E75 !important;
+  color: #fff !important;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 16px !important;
+  transition: background-color 0.15s;
+}
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #178a65 !important;
+  border-color: #178a65 !important;
+}
+
+/* Precomputed dropdown button */
+.btn-success {
+  background-color: #6b5b4f !important;
+  border-color: #6b5b4f !important;
+  color: #faf8f4 !important;
+  font-size: 14px;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+/* Details/summary triangle for Market Assumptions */
+.well details summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.well details summary::-webkit-details-marker {
+  display: none;
+}
+.well details summary::before {
+  content: '\25B6';
+  font-size: 10px;
+  color: #6b5b4f;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.well details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+/* Sim explorer nav bar */
+.sim-explorer-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 6px 0;
+}
+.sim-explorer-nav .sim-label {
+  font-size: 16px;
+  color: #3b2f2f;
+  font-weight: 500;
+  min-width: 140px;
+  text-align: center;
+}
+
+/* Collapsible panel styling */
+.panel {
+  border-color: #d4cabb;
+  background-color: #faf8f4;
+  box-shadow: none;
+}
+.panel-default > .panel-heading {
+  background-color: #f5f0e8;
+  border-color: #d4cabb;
+  color: #6b5b4f;
+  cursor: pointer;
+  font-size: 15px;
+}
+.panel-body {
+  background-color: #faf8f4;
+}
+
+/* Top-level tabset */
+.nav-tabs {
+  border-bottom: 2px solid #d4cabb;
+}
+.nav-tabs > li > a {
+  color: #6b5b4f;
+  font-size: 16px !important;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: 8px 16px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.nav-tabs > li > a:hover {
+  color: #3b2f2f;
+  border-color: #d4cabb;
+  background: transparent;
+}
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+  color: #3b2f2f;
+  font-weight: 500;
+  border: none;
+  border-bottom: 2px solid #1D9E75;
+  background: transparent;
+}
+
+/* Sub-tabs (pills) */
+.nav-pills > li > a {
+  color: #6b5b4f;
+  font-size: 15px !important;
+  border-radius: 4px;
+  padding: 5px 12px;
+}
+.nav-pills > li.active > a,
+.nav-pills > li.active > a:hover,
+.nav-pills > li.active > a:focus {
+  background-color: #1D9E75;
+  color: #fff;
+}
+
+/* Tab content area */
+.tab-content {
+  padding-top: 12px;
+}
+
+/* Summary table */
+.table {
+  color: #3b2f2f;
+  font-size: 15px;
+}
+.table > thead > tr > th {
+  border-bottom-color: #d4cabb;
+  color: #6b5b4f;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.table > tbody > tr > td {
+  border-top-color: #e8e0d4;
+  color: #3b2f2f;
+}
+
+/* Verbatim output */
+pre {
+  background-color: #faf8f4;
+  border-color: #d4cabb;
+  color: #3b2f2f;
+  font-size: 14px;
+}
+
+/* Frontier explorer nav arrows */
+.btn-sm {
+  border-radius: 4px;
+}
+
+/* nSim selector buttons */
+#nsim_500, #nsim_2000, #nsim_5000 {
+  background-color: #faf8f4;
+  border: 1px solid #d4cabb;
+  color: #6b5b4f;
+  font-size: 14px;
+  padding: 3px 12px;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+#nsim_500:hover, #nsim_2000:hover, #nsim_5000:hover {
+  border-color: #1D9E75;
+  color: #3b2f2f;
+}
+#nsim_500.nsim-active, #nsim_2000.nsim-active, #nsim_5000.nsim-active {
+  background-color: #1D9E75;
+  border-color: #1D9E75;
+  color: #fff;
+}
+
+/* Select input (precomputed dropdown) */
+.selectize-input {
+  background-color: #faf8f4 !important;
+  border-color: #d4cabb !important;
+  color: #3b2f2f;
+}
+
+/* Data status banner */
+.data-status-banner {
+  background-color: #f0ebe0;
+  border: 1px solid #d4cabb;
+  border-radius: 6px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  font-size: 15px !important;
+  color: #6b5b4f;
+  line-height: 1.5;
+}
+
+/* Restore precomputed link */
+.restore-link {
+  color: #6b5b4f !important;
+  font-size: 14px !important;
+  text-decoration: underline !important;
+  padding: 4px 0 !important;
+  margin-top: 6px !important;
+  background: none !important;
+  border: none !important;
+}
+.restore-link:hover {
+  color: #1D9E75 !important;
+}
+
+/* Modal styling */
+.modal-content {
+  border-radius: 8px;
+}
+.modal-header {
+  border-bottom-color: #d4cabb;
+}
+.modal-title {
+  color: #3b2f2f;
+  font-weight: 500;
+  font-size: 18px;
+}
+.modal-body {
+  color: #3b2f2f;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.modal-footer {
+  border-top-color: #d4cabb;
+}
+
+/* Plotly toolbar tweaks */
+.plotly .modebar {
+  top: 4px !important;
+  right: 4px !important;
+}
+.plotly .modebar-btn {
+  font-size: 14px !important;
+}
+
+/* Form controls */
+.form-control {
+  border-color: #d4cabb;
+  color: #3b2f2f;
+  font-size: 15px;
+}
+.form-control:focus {
+  border-color: #1D9E75;
+  box-shadow: 0 0 0 2px rgba(29, 158, 117, 0.15);
+}
+
+/* Frontier allocation label */
+.frontier-alloc-label {
+  font-size: 16px;
+}
+
+/* Plot callout boxes */
+.plot-callout {
+  background-color: #f0ebe0;
+  border: 1px solid #d4cabb;
+  border-radius: 6px;
+  padding: 10px 16px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #6b5b4f;
+  line-height: 1.5;
+}
