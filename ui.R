@@ -119,25 +119,72 @@ fluidPage(
           tabsetPanel(
             id = "frontier_tabs", type = "pills",
             tabPanel("Frontier Explorer",
-              fluidRow(
-                column(2, actionButton("frontier_prev", label = NULL,
-                                       icon = icon("arrow-left"), class = "btn-sm")),
-                column(8, align = "center",
-                       tags$strong(textOutput("frontier_alloc_label", inline = TRUE))),
-                column(2, align = "right",
-                       actionButton("frontier_next", label = NULL,
-                                    icon = icon("arrow-right"), class = "btn-sm"))
+              div(class = "frontier-alloc-nav",
+                actionButton("frontier_prev", label = NULL,
+                             icon = icon("arrow-left"), class = "btn-sm"),
+                tags$strong(class = "frontier-alloc-label",
+                            textOutput("frontier_alloc_label", inline = TRUE)),
+                actionButton("frontier_next", label = NULL,
+                             icon = icon("arrow-right"), class = "btn-sm")
               ),
-              fluidRow(
-                column(12, align = "center", style = "margin-top:6px; margin-bottom:4px;",
-                  tags$span(style = "font-size:14px; color:#6b5b4f; margin-right:8px;",
-                            "Precomputed sims:"),
-                  actionButton("nsim_500", "500",
-                               class = "btn-sm", style = "margin:0 2px;"),
-                  actionButton("nsim_2000", "2,000",
-                               class = "btn-sm", style = "margin:0 2px;"),
-                  actionButton("nsim_5000", "5,000",
-                               class = "btn-sm", style = "margin:0 2px;")
+              div(class = "scenario-toggle-row",
+                style = "text-align:center; margin-top:6px; margin-bottom:10px;",
+                actionLink("scenario_toggle",
+                  label = "Explore alternative correlations and rebalancing intervals",
+                  class = "scenario-toggle-link"),
+                shinyjs::hidden(
+                  actionButton("scenario_pin", label = NULL,
+                    icon = icon("thumbtack"), class = "btn-sm scenario-pin-btn",
+                    title = "Pin grid open")
+                )
+              ),
+              shinyjs::hidden(
+                div(id = "scenario_grid_panel",
+                  style = "text-align:center; margin-bottom:4px;",
+                  tags$table(class = "scenario-grid",
+                    tags$tr(
+                      tags$th(""),
+                      tags$th(colspan = "3",
+                              style = "text-align:center; font-weight:400; padding-bottom:1px;",
+                              "Rebalance interval")
+                    ),
+                    tags$tr(
+                      tags$th("Corr", style = "text-align:right; padding-right:6px;"),
+                      tags$th("25"),
+                      tags$th("100"),
+                      tags$th("300")
+                    ),
+                    tags$tr(
+                      tags$th("0.7", style = "text-align:right; padding-right:6px;"),
+                      tags$td(actionButton("scenario_070_25", "\u2022", class = "btn-sm scenario-btn")),
+                      tags$td(actionButton("scenario_070_100", "\u2022", class = "btn-sm scenario-btn")),
+                      tags$td(actionButton("scenario_070_300", "\u2022", class = "btn-sm scenario-btn"))
+                    ),
+                    tags$tr(
+                      tags$th("0.3", style = "text-align:right; padding-right:6px;"),
+                      tags$td(actionButton("scenario_030_25", "\u2022", class = "btn-sm scenario-btn")),
+                      tags$td(actionButton("scenario_030_100", "\u2022", class = "btn-sm scenario-btn")),
+                      tags$td(actionButton("scenario_030_300", "\u2022", class = "btn-sm scenario-btn"))
+                    ),
+                    tags$tr(
+                      tags$th("0.0", style = "text-align:right; padding-right:6px;"),
+                      tags$td(actionButton("scenario_000_25", "\u2022", class = "btn-sm scenario-btn")),
+                      tags$td(actionButton("scenario_000_100", "\u2022", class = "btn-sm scenario-btn")),
+                      tags$td(actionButton("scenario_000_300", "\u2022", class = "btn-sm scenario-btn"))
+                    ),
+                    tags$tr(
+                      tags$th("\u22120.3", style = "text-align:right; padding-right:6px;"),
+                      tags$td(actionButton("scenario_n030_25", "\u2022", class = "btn-sm scenario-btn")),
+                      tags$td(actionButton("scenario_n030_100", "\u2022", class = "btn-sm scenario-btn")),
+                      tags$td(actionButton("scenario_n030_300", "\u2022", class = "btn-sm scenario-btn"))
+                    )
+                  ),
+                  div(style = "margin-top:4px; font-size:12px; color:#9a8e82;",
+                    tags$span("Also: default scenario at "),
+                    actionButton("nsim_500", "500", class = "btn-sm nsim-alt-btn"),
+                    actionButton("nsim_2000", "2,000", class = "btn-sm nsim-alt-btn"),
+                    tags$span(" sims")
+                  )
                 )
               ),
               plotlyOutput("plot_frontier_explorer", height = "600px"),

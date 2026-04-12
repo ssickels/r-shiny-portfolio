@@ -115,6 +115,22 @@ body {
   text-align: center;
 }
 
+/* Frontier allocation nav bar */
+.frontier-alloc-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 6px 0;
+}
+.frontier-alloc-nav .frontier-alloc-label {
+  font-size: 16px;
+  color: #3b2f2f;
+  font-weight: 500;
+  text-align: center;
+}
+
 /* Collapsible panel styling */
 .panel {
   border-color: #d4cabb;
@@ -209,23 +225,100 @@ pre {
   border-radius: 4px;
 }
 
-/* nSim selector buttons */
-#nsim_500, #nsim_2000, #nsim_5000 {
-  background-color: #faf8f4;
-  border: 1px solid #d4cabb;
-  color: #6b5b4f;
-  font-size: 14px;
-  padding: 3px 12px;
+/* Scenario grid */
+.scenario-grid {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+.scenario-grid th {
+  font-size: 11px;
+  color: #9a8e82;
+  font-weight: 400;
+  padding: 2px 6px;
+  text-align: center;
+}
+.scenario-grid td {
+  padding: 2px;
+  text-align: center;
+}
+.scenario-btn {
+  background-color: #faf8f4 !important;
+  border: 1px solid #d4cabb !important;
+  color: #6b5b4f !important;
+  font-size: 11px !important;
+  padding: 3px 10px !important;
+  min-width: 32px;
   transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
-#nsim_500:hover, #nsim_2000:hover, #nsim_5000:hover {
-  border-color: #1D9E75;
-  color: #3b2f2f;
+.scenario-btn:hover {
+  border-color: #1D9E75 !important;
+  color: #3b2f2f !important;
 }
-#nsim_500.nsim-active, #nsim_2000.nsim-active, #nsim_5000.nsim-active {
-  background-color: #1D9E75;
-  border-color: #1D9E75;
-  color: #fff;
+.scenario-btn.scenario-active {
+  background-color: #1D9E75 !important;
+  border-color: #1D9E75 !important;
+  color: #fff !important;
+}
+
+/* Scenario toggle link */
+.scenario-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.scenario-toggle-link {
+  font-size: 14px !important;
+  color: #9a8e82 !important;
+  text-decoration: none !important;
+}
+.scenario-toggle-link::before {
+  content: '\25B8 ';
+}
+.scenario-toggle-link.open::before {
+  content: '\25BE ';
+}
+.scenario-toggle-link:hover {
+  color: #6b5b4f !important;
+}
+
+/* Scenario pin button */
+.scenario-pin-btn {
+  background-color: #faf8f4 !important;
+  border: 1px solid #d4cabb !important;
+  color: #6b5b4f !important;
+  font-size: 12px !important;
+  padding: 2px 7px !important;
+  border-radius: 4px;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.scenario-pin-btn:hover {
+  border-color: #6b5b4f !important;
+  color: #3b2f2f !important;
+}
+.scenario-pin-btn.pinned {
+  background-color: #6b5b4f !important;
+  border-color: #6b5b4f !important;
+  color: #fff !important;
+}
+
+/* nSim alt buttons (secondary row) */
+.nsim-alt-btn {
+  background-color: #faf8f4 !important;
+  border: 1px solid #d4cabb !important;
+  color: #9a8e82 !important;
+  font-size: 11px !important;
+  padding: 1px 6px !important;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.nsim-alt-btn:hover {
+  border-color: #1D9E75 !important;
+  color: #6b5b4f !important;
+}
+.nsim-alt-btn.nsim-alt-active {
+  background-color: #1D9E75 !important;
+  border-color: #1D9E75 !important;
+  color: #fff !important;
 }
 
 /* Select input (precomputed dropdown) */

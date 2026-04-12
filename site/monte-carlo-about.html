@@ -8,7 +8,7 @@
 <meta property="og:description" content="What the simulator does, why distributions matter more than point estimates, and the motivating questions behind the project."/>
 <meta property="og:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
 <meta property="og:type" content="website"/>
-<meta property="og:url" content="https://stevessite.com/portfolio/monte-carlo-about.html"/>
+<meta property="og:url" content="https://stevessite.com/monte-carlo-about.html"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="About — Monte Carlo Portfolio Simulator"/>
 <meta name="twitter:description" content="What the simulator does, why distributions matter more than point estimates, and the motivating questions behind the project."/>
@@ -209,11 +209,13 @@ a[style]{color:#1D9E75 !important}
     <p>On the other hand, the simulator does model correlation between stock and
        bond returns &mdash; a genuinely important factor. Decorrelation is a key source
        of diversification benefit, and you can explore it directly via the
-       stock&ndash;bond correlation parameter.</p>
+       stock&ndash;bond correlation parameter. The scenario grid on the Frontier
+       Explorer tab lets you quickly compare precomputed results across four
+       correlation levels and three rebalancing intervals.</p>
   </section>
 
   <section>
-    <h2>The efficient frontier</h2>
+    <h2 id="frontier">The efficient frontier</h2>
     <p>Imagine plotting every possible stock/bond mix on a chart &mdash; risk on the
        horizontal axis, expected return on the vertical. Most of those points are
        <em>dominated</em> &mdash; meaning there's some other mix that offers either

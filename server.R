@@ -20,7 +20,39 @@ function(input, output, session) {
   sim_result <- reactiveVal(NULL)
   sweep_result <- reactiveVal(NULL)
   frontier_alloc_index <- reactiveVal(1)
-  active_nsim <- reactiveVal("2000")  # tracks which precomputed tier is loaded
+  active_scenario <- reactiveVal("corr070_rebal100")  # tracks which precomputed scenario is loaded
+  scenario_grid_open <- reactiveVal(FALSE)
+  scenario_pinned <- reactiveVal(FALSE)
+
+  # Helper: collapse the scenario grid
+  collapse_grid <- function() {
+    shinyjs::hide("scenario_grid_panel", anim = TRUE, animType = "slide", time = 0.2)
+    shinyjs::hide("scenario_pin", anim = TRUE, animType = "fade", time = 0.15)
+    shinyjs::removeClass("scenario_toggle", "open")
+    scenario_grid_open(FALSE)
+  }
+
+  # Toggle scenario grid visibility
+  observeEvent(input$scenario_toggle, {
+    if (scenario_grid_open()) {
+      collapse_grid()
+      scenario_pinned(FALSE)
+      shinyjs::removeClass("scenario_pin", "pinned")
+    } else {
+      shinyjs::show("scenario_grid_panel", anim = TRUE, animType = "slide", time = 0.2)
+      shinyjs::show("scenario_pin", anim = TRUE, animType = "fade", time = 0.15)
+      shinyjs::addClass("scenario_toggle", "open")
+      scenario_grid_open(TRUE)
+    }
+  })
+
+  # Pin/unpin scenario grid
+  observeEvent(input$scenario_pin, {
+    pinned <- !scenario_pinned()
+    scenario_pinned(pinned)
+    shinyjs::toggleClass("scenario_pin", "pinned")
+    if (!pinned) collapse_grid()
+  })
   # Cloud alpha is driven by the UI slider (input$cloud_alpha)
   # Highlight the label when cloud is fully hidden
   observe({
@@ -49,7 +81,7 @@ function(input, output, session) {
   # --- Auto-load precomputed data on startup ---
   observe({
     single_path <- "data/precomputed/single_n200.rds"
-    frontier_path <- "data/precomputed/frontier_n2000.rds"
+    frontier_path <- "data/precomputed/frontier_corr070_rebal100_n5000.rds"
 
     if (file.exists(single_path)) {
       sim_result(readRDS(single_path))
@@ -61,33 +93,80 @@ function(input, output, session) {
     }
   }) |> bindEvent(TRUE, once = TRUE)
 
-  # --- Load precomputed frontier via nSim buttons ---
-  load_precomputed_frontier <- function(n) {
-    fname <- paste0("data/precomputed/frontier_n", n, ".rds")
+  # --- Load precomputed frontier via scenario grid ---
+  load_scenario <- function(corr_str, rebal) {
+    fname <- sprintf("data/precomputed/frontier_corr%s_rebal%d_n5000.rds", corr_str, rebal)
     if (file.exists(fname)) {
       data <- readRDS(fname)
       sweep_result(data)
       sweep_source("precomputed")
-      active_nsim(as.character(n))
-      # Keep current allocation index if valid, otherwise reset
+      active_scenario(paste0("corr", corr_str, "_rebal", rebal))
       n_allocs <- length(unique(data$point_estimates$allocation))
       if (frontier_alloc_index() > n_allocs) frontier_alloc_index(1)
+      if (!scenario_pinned()) collapse_grid()
     }
   }
 
-  observeEvent(input$nsim_500,  load_precomputed_frontier(500))
-  observeEvent(input$nsim_2000, load_precomputed_frontier(2000))
-  observeEvent(input$nsim_5000, load_precomputed_frontier(5000))
+  # Scenario grid button observers
+  scenarios <- expand.grid(
+    corr = c("070", "030", "000", "n030"),
+    rebal = c(25, 100, 300), stringsAsFactors = FALSE
+  )
+  for (i in seq_len(nrow(scenarios))) {
+    local({
+      cs <- scenarios$corr[i]; rb <- scenarios$rebal[i]
+      observeEvent(input[[paste0("scenario_", cs, "_", rb)]], {
+        load_scenario(cs, rb)
+      })
+    })
+  }
 
-  # Highlight active nSim button
+  # nSim alt buttons (500 / 2,000 at default scenario)
+  observeEvent(input$nsim_500, {
+    fname <- "data/precomputed/frontier_n500.rds"
+    if (file.exists(fname)) {
+      data <- readRDS(fname)
+      sweep_result(data)
+      sweep_source("precomputed")
+      active_scenario("corr070_rebal100_n500")
+      n_allocs <- length(unique(data$point_estimates$allocation))
+      if (frontier_alloc_index() > n_allocs) frontier_alloc_index(1)
+      if (!scenario_pinned()) collapse_grid()
+    }
+  })
+  observeEvent(input$nsim_2000, {
+    fname <- "data/precomputed/frontier_n2000.rds"
+    if (file.exists(fname)) {
+      data <- readRDS(fname)
+      sweep_result(data)
+      sweep_source("precomputed")
+      active_scenario("corr070_rebal100_n2000")
+      n_allocs <- length(unique(data$point_estimates$allocation))
+      if (frontier_alloc_index() > n_allocs) frontier_alloc_index(1)
+      if (!scenario_pinned()) collapse_grid()
+    }
+  })
+
+  # Highlight active scenario button
   observe({
-    current <- active_nsim()
-    for (n in c("500", "2000", "5000")) {
-      btn_id <- paste0("nsim_", n)
-      if (n == current) {
-        shinyjs::addClass(btn_id, "nsim-active")
+    current <- active_scenario()
+    # Grid buttons
+    for (i in seq_len(nrow(scenarios))) {
+      btn_id <- paste0("scenario_", scenarios$corr[i], "_", scenarios$rebal[i])
+      scenario_key <- paste0("corr", scenarios$corr[i], "_rebal", scenarios$rebal[i])
+      if (startsWith(current, scenario_key)) {
+        shinyjs::addClass(btn_id, "scenario-active")
       } else {
-        shinyjs::removeClass(btn_id, "nsim-active")
+        shinyjs::removeClass(btn_id, "scenario-active")
+      }
+    }
+    # nSim alt buttons
+    for (n in c("500", "2000")) {
+      btn_id <- paste0("nsim_", n)
+      if (endsWith(current, paste0("_n", n))) {
+        shinyjs::addClass(btn_id, "nsim-alt-active")
+      } else {
+        shinyjs::removeClass(btn_id, "nsim-alt-active")
       }
     }
   })
@@ -95,7 +174,7 @@ function(input, output, session) {
   # --- Restore precomputed data ---
   observeEvent(input$restore_precomputed, {
     single_path <- "data/precomputed/single_n200.rds"
-    frontier_path <- "data/precomputed/frontier_n2000.rds"
+    frontier_path <- "data/precomputed/frontier_corr070_rebal100_n5000.rds"
 
     if (file.exists(single_path)) {
       sim_result(readRDS(single_path))
@@ -104,7 +183,7 @@ function(input, output, session) {
     if (file.exists(frontier_path)) {
       sweep_result(readRDS(frontier_path))
       sweep_source("precomputed")
-      active_nsim("2000")
+      active_scenario("corr070_rebal100")
       frontier_alloc_index(1)
     }
   })
@@ -136,7 +215,7 @@ function(input, output, session) {
         msg <- paste0("Showing precomputed results (", nsims,
                        " sims, 60/40 allocation). ",
                        "Adjust parameters and run your own, or switch to Frontier Sweep ",
-                       "to explore precomputed tiers.")
+                       "to explore precomputed scenarios.")
       } else {
         msg <- paste0("Showing custom simulation results (", nsims, " sims).")
       }
@@ -146,10 +225,28 @@ function(input, output, session) {
       if (is.null(sw)) return(NULL)
       nsims <- nrow(sw$cloud) / length(unique(sw$cloud$allocation)) / 2
       if (src == "precomputed") {
-        msg <- paste0("Showing precomputed frontier (",
-                       format(round(nsims), big.mark = ","),
-                       " sims per allocation). ",
-                       "Use the buttons above the plot to switch between 500 / 2,000 / 5,000 sim tiers.")
+        sc <- active_scenario()
+        if (grepl("^corr", sc)) {
+          base <- sub("_n\\d+$", "", sc)
+          parts <- regmatches(base, regexec("corr(n?\\d+)_rebal(\\d+)", base))[[1]]
+          corr_val <- if (substr(parts[2], 1, 1) == "n") {
+            paste0("\u2212", as.numeric(sub("n", "", parts[2])) / 100)
+          } else {
+            as.character(as.numeric(parts[2]) / 100)
+          }
+          nsim_str <- if (grepl("_n\\d+$", sc)) {
+            format(as.numeric(sub(".*_n", "", sc)), big.mark = ",")
+          } else {
+            "5,000"
+          }
+          msg <- paste0("Showing precomputed frontier (", nsim_str,
+                         " sims, correlation ", corr_val,
+                         ", rebalance every ", parts[3], " days).")
+        } else {
+          msg <- paste0("Showing precomputed frontier (",
+                         format(round(nsims), big.mark = ","),
+                         " sims per allocation).")
+        }
       } else {
         msg <- paste0("Showing custom frontier sweep results (",
                        format(round(nsims), big.mark = ","), " sims per allocation).")
@@ -260,7 +357,7 @@ function(input, output, session) {
       })
 
       frontier_alloc_index(1)
-      active_nsim("")
+      active_scenario("")
     } else {
       withProgress(message = "Running simulation...", value = 0, {
         set.seed(100)
@@ -373,6 +470,7 @@ function(input, output, session) {
 
   # Capture zoom/pan events from plotly
   observe({
+    req(sweep_result())
     ev <- event_data("plotly_relayout", source = "frontier_src")
     req(ev)
     # Zoom sets xaxis.range[0]/[1] and yaxis.range[0]/[1]

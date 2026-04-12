@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Getting Started — Monte Carlo Portfolio Simulator</title>
+<meta property="og:title" content="Getting Started — Monte Carlo Portfolio Simulator"/>
+<meta property="og:description" content="A quick orientation for the Monte Carlo Portfolio Simulator — what you're looking at and how to explore it."/>
+<meta property="og:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://stevessite.com/monte-carlo-guide.html"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Getting Started — Monte Carlo Portfolio Simulator"/>
+<meta name="twitter:description" content="A quick orientation for the Monte Carlo Portfolio Simulator — what you're looking at and how to explore it."/>
+<meta name="twitter:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+
+.page-wrap{max-width:740px;margin:0 auto;padding:72px 24px 60px}
+
+.page-header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
+.page-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
+
+.flow-box{border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:24px 28px;margin:24px 0;background:rgba(255,255,255,0.03)}
+.flow-step{display:flex;gap:16px;margin-bottom:20px;align-items:flex-start}
+.flow-step:last-child{margin-bottom:0}
+.flow-num{font-size:0.82rem;font-weight:600;color:#1D9E75;background:rgba(29,158,117,0.12);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.flow-step .step-content{flex:1}
+.flow-step h3{font-size:0.97rem;font-weight:500;color:#f0e6d8;margin-bottom:6px}
+.flow-step p{margin:0;font-size:0.95rem;color:#c4b5a0;line-height:1.65}
+.flow-step ul{margin:8px 0 0;padding-left:20px;list-style:none}
+.flow-step li{padding:4px 0;font-size:0.95rem;color:#c4b5a0;line-height:1.6;position:relative;padding-left:14px}
+.flow-step li::before{content:'';position:absolute;left:0;top:12px;width:5px;height:5px;border-radius:50%;background:rgba(29,158,117,0.5)}
+.flow-step a{color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3);transition:border-color 0.15s}
+.flow-step a:hover{border-color:#1D9E75}
+
+em{color:#f0e6d8;font-style:italic}
+strong{color:#f0e6d8;font-weight:500}
+
+.callout{border-left:3px solid #1D9E75;padding:14px 20px;margin:32px 0;color:rgba(200,185,160,0.65);font-size:0.95rem;line-height:1.7}
+.callout a{color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3);transition:border-color 0.15s}
+.callout a:hover{border-color:#1D9E75}
+
+.sim-link{display:inline-block;margin-top:24px;padding:9px 20px;border:1px solid rgba(200,185,160,0.2);border-radius:6px;color:rgba(200,185,160,0.55);text-decoration:none;font-size:0.9rem;transition:border-color 0.15s,color 0.15s}
+.sim-link:hover{border-color:#1D9E75;color:#f0e6d8}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <div class="page-header">
+    <h1>Getting Started</h1>
+    <p>A quick orientation for the <a href="/monte-carlo.html" style="color:#1D9E75;border-bottom:1px solid rgba(29,158,117,0.3)">Monte Carlo Portfolio Simulator</a>.</p>
+  </div>
+
+  <div class="flow-box">
+
+    <div class="flow-step">
+      <div class="flow-num">1</div>
+      <div class="step-content">
+        <h3>Two tabs, two questions</h3>
+        <p>The simulator has two main tabs:</p>
+        <ul>
+          <li><strong>Single Allocation</strong> &mdash; runs many simulations at
+              one stock/bond split. How wide is the range of outcomes for this mix?</li>
+          <li><strong>Frontier Sweep</strong> &mdash; runs simulations across
+              <em>every</em> split and maps out the
+              <a href="/monte-carlo-about.html#frontier">efficient frontier</a>,
+              the curve of best achievable return at every level of risk.
+              How does the tradeoff shift across all allocations?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-num">2</div>
+      <div class="step-content">
+        <h3>Single Allocation: the spread at one mix</h3>
+        <p>This is what opens first. The Gain vs SD plot shows a cloud of outcomes &mdash;
+           each dot is one simulation, with separate dots for the rebalanced and
+           non-rebalanced strategies
+           (the <a href="/monte-carlo-about.html">About</a> page explains why both
+           matter). The sub-tabs show the same simulations from different angles:</p>
+        <ul>
+          <li><strong>Final Densities</strong> &mdash; distribution of ending portfolio values</li>
+          <li><strong>Trajectories</strong> &mdash; portfolio value paths over time</li>
+          <li><strong>Cost Profiles</strong> &mdash; rebalancing transaction costs</li>
+          <li><strong>Single Sim Explorer</strong> &mdash; unpack the machinery behind any individual run</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-num">3</div>
+      <div class="step-content">
+        <h3>Frontier Sweep: the big picture</h3>
+        <p>Switch to the Frontier Sweep tab to see all allocations at once, preloaded
+           with a 5,000-sim sweep. Two frontier curves (rebalanced vs. non-rebalanced)
+           show how rebalancing shifts the tradeoff.</p>
+        <ul>
+          <li><strong>&larr; &rarr; arrows</strong> &mdash; step from 0% stocks to
+              100% and watch the highlighted cloud move along the curve</li>
+          <li><strong>Scenario grid</strong> &mdash; click &ldquo;Explore alternative
+              correlations and rebalancing intervals&rdquo; to compare across four
+              correlation levels and three rebalancing intervals. Try negative
+              correlation to see the frontier reshape.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-num">4</div>
+      <div class="step-content">
+        <h3>Zoom and adjust the view</h3>
+        <ul>
+          <li><strong>Zoom</strong> &mdash; drag a rectangle on any plot. On the
+              Frontier Explorer, the zoom persists as you step through allocations.</li>
+          <li><strong>Cloud Opacity</strong> &mdash; fade the simulation cloud to
+              isolate point estimates, or increase it to study the full distribution.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-num">5</div>
+      <div class="step-content">
+        <h3>Run your own</h3>
+        <p>Adjust parameters in the sidebar and hit Run. Single Allocation runs one
+           stock/bond split; Frontier Sweep sweeps all allocations. High sim counts
+           take longer &mdash; the app will show a progress bar.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="callout">
+    The spread is the story &mdash; point estimates summarize, but the cloud of
+    outcomes shows you what's actually possible. For more on the methodology,
+    see <a href="/monte-carlo-methodology.html">How It Works</a>. For motivation
+    and context, see <a href="/monte-carlo-about.html">About</a>.
+  </div>
+
+  <a href="/monte-carlo.html" class="sim-link">&larr; Open the simulator</a>
+
+</div>
+
+<script src="portfolio-nav.js"></script>
+</body>
+</html>

@@ -6,6 +6,7 @@
   </button>
   <div id="nav-tabs">
     <a href="/monte-carlo.html" class="nav-tab" data-path="monte-carlo.html">Simulator</a>
+    <a href="/monte-carlo-guide.html" class="nav-tab" data-path="monte-carlo-guide">Guide</a>
     <a href="/monte-carlo-about.html" class="nav-tab" data-path="monte-carlo-about">About</a>
     <a href="/monte-carlo-methodology.html" class="nav-tab" data-path="monte-carlo-methodology">How It Works</a>
   </div>
@@ -24,6 +25,7 @@
     <div class="nav-panel-section">
       <div class="nav-panel-heading">Monte Carlo Simulator</div>
       <a href="https://stevessite.com/monte-carlo.html">Simulator</a>
+      <a href="https://stevessite.com/monte-carlo-guide.html">Getting Started</a>
       <a href="https://stevessite.com/monte-carlo-about.html">About</a>
       <a href="https://stevessite.com/monte-carlo-methodology.html">How It Works</a>
       <a href="https://github.com/ssickels/r-shiny-portfolio" target="_blank" class="nav-panel-github">GitHub ↗</a>

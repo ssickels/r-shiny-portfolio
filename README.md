@@ -6,14 +6,19 @@ An interactive Shiny app that uses Metropolis-Hastings MCMC to simulate correlat
 
 ## What it does
 
-The simulator generates thousands of correlated stock/bond price paths using a Metropolis-Hastings sampler, then computes portfolio values under two strategies: periodic rebalancing back to a target allocation, and buy-and-hold (no rebalancing). By sweeping across allocations from 0% to 100% stocks, it traces out *two* efficient frontiers — one for each strategy — revealing how rebalancing reshapes the risk-return tradeoff. The emphasis is on distributions, not point estimates: every plot shows the full spread of outcomes.
+The simulator generates thousands of correlated stock/bond price paths using a Metropolis-Hastings sampler, then computes portfolio values under two strategies: periodic rebalancing back to a target allocation, and buy-and-hold (no rebalancing). The emphasis is on distributions, not point estimates: every plot shows the full spread of outcomes.
+
+Two main modes:
+
+- **Single Allocation** — run many simulations at one stock/bond split. Explore outcomes via gain vs. SD clouds, final-value densities, price trajectories, cost profiles, and a single-sim explorer that unpacks any individual run.
+- **Frontier Sweep** — sweep across all allocations to trace *two* efficient frontiers (rebalanced vs. non-rebalanced), revealing how rebalancing reshapes the risk-return tradeoff. Step through allocations with arrow keys, compare scenarios across correlation levels and rebalancing intervals via a precomputed scenario grid, and adjust cloud opacity or zoom to isolate details.
 
 ## Project history
 
 - **2021–22** — Original R scripts exploring Monte Carlo portfolio simulation (preserved in `original_scripts/`)
 - **2025** — Refactored into modular pure functions; built the Shiny interactive app
 - Functions extracted from Shiny into `R/` modules for console and RStudio use
-- Precomputed frontier datasets at 500 / 2,000 / 5,000 simulations for instant loading
+- Precomputed frontier datasets (5,000 sims each) across 4 correlation levels (−0.3, 0, 0.3, 0.7) and 3 rebalancing intervals (25, 100, 300 days) for instant scenario comparison
 
 ## Documentation
 
@@ -68,7 +73,7 @@ r-shiny-portfolio/
 ├── server.R                   # Shiny server (reactivity + delegation)
 ├── ui.R                       # Shiny UI layout
 ├── global.R                   # App startup (source modules, load precomputed data)
-├── data/precomputed/          # .rds frontier datasets at various sim counts
+├── data/precomputed/          # .rds frontier datasets (correlation × rebalancing grid)
 ├── scripts/                   # Batch scripts (e.g., precompute_scenarios.R)
 ├── original_scripts/          # Legacy monolithic R scripts (2021–22)
 ├── docs/                      # Architecture, flowchart, console recipes
@@ -80,7 +85,7 @@ r-shiny-portfolio/
 
 Companion pages on [stevessite.com](https://stevessite.com):
 
-- [Simulator](https://stevessite.com/portfolio/monte-carlo.html) — Shiny app embed
-- [About](https://stevessite.com/portfolio/monte-carlo-about.html)
-- [How It Works](https://stevessite.com/portfolio/monte-carlo-methodology.html)
-- [Interactive Frontier](https://stevessite.com/portfolio/monte-carlo-frontier.html)
+- [Getting Started](https://stevessite.com/monte-carlo-guide.html)
+- [Simulator](https://stevessite.com/monte-carlo.html) — Shiny app embed
+- [About](https://stevessite.com/monte-carlo-about.html)
+- [How It Works](https://stevessite.com/monte-carlo-methodology.html)
