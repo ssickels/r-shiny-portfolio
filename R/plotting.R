@@ -138,15 +138,21 @@ plot_single_sim_explorer <- function(result, simSel) {
     theme(plot.title = element_text(size = 10))
 
   # Convert each to plotly and stack vertically
-  p1 <- ggplotly(plt.vals) %>% layout(showlegend = TRUE)
-  p2 <- ggplotly(plt.shares) %>% layout(showlegend = FALSE)
-  p3 <- ggplotly(plt.costs) %>% layout(showlegend = FALSE)
+  # Show legend on p1 traces only; hide duplicates from p2/p3
+  p1 <- ggplotly(plt.vals)
+  p2 <- ggplotly(plt.shares)
+  p3 <- ggplotly(plt.costs)
+
+  for (i in seq_along(p2$x$data)) p2$x$data[[i]]$showlegend <- FALSE
+  for (i in seq_along(p3$x$data)) p3$x$data[[i]]$showlegend <- FALSE
 
   subplot(p1, p2, p3, nrows = 3, shareX = TRUE, heights = c(0.5, 0.25, 0.25),
           titleY = TRUE) %>%
     layout(
-      title = list(text = paste("Single Sim Explorer — Sim #", simSel),
-                   font = list(size = 14, color = app_theme$text_color)),
+      showlegend = TRUE,
+      legend = list(orientation = "h", x = 0.5, xanchor = "center", y = 1.02,
+                    font = list(color = app_theme$text_color)),
+      margin = list(t = 40),
       paper_bgcolor = app_theme$panel_bg,
       plot_bgcolor = app_theme$panel_bg
     )
