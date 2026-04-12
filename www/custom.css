@@ -307,6 +307,12 @@ pre {
   font-size: 16px;
 }
 
+/* Cloud opacity slider — warning state when hidden */
+.cloud-hidden-warning .control-label {
+  color: #c07020 !important;
+  font-weight: 600 !important;
+}
+
 /* Plot callout boxes */
 .plot-callout {
   background-color: #f0ebe0;

@@ -52,6 +52,36 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
 
 .sim-link{display:inline-block;margin-top:24px;padding:9px 20px;border:1px solid rgba(200,185,160,0.2);border-radius:6px;color:rgba(200,185,160,0.55);text-decoration:none;font-size:0.9rem;transition:border-color 0.15s,color 0.15s}
 .sim-link:hover{border-color:#1D9E75;color:#f0e6d8}
+
+/* MH Animation Widget */
+.mh-widget-wrap{border:1px solid rgba(200,185,160,0.15);border-radius:8px;overflow:hidden;background:#241c14;margin:28px 0}
+.mh-canvas-wrap{position:relative;background:#241c14;padding:20px 20px 10px}
+.mh-canvas-wrap canvas{display:block;width:100%;background:#241c14;border-radius:4px}
+.mh-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 20px;border-top:1px solid rgba(200,185,160,0.1);background:rgba(20,14,8,0.5)}
+.mh-transport{display:flex;gap:6px;flex-shrink:0}
+.mh-btn{background:rgba(200,185,160,0.1);border:1px solid rgba(200,185,160,0.2);border-radius:5px;color:#c4b5a0;font-size:0.82rem;padding:5px 12px;cursor:pointer;transition:background 0.15s,border-color 0.15s;font-family:system-ui,sans-serif;white-space:nowrap}
+.mh-btn:hover{background:rgba(200,185,160,0.18);border-color:rgba(200,185,160,0.35)}
+.mh-btn:active{background:rgba(200,185,160,0.25)}
+.mh-btn:disabled{opacity:0.3;cursor:not-allowed;pointer-events:auto}
+.mh-btn.active{background:rgba(29,158,117,0.2);border-color:#1D9E75;color:#1D9E75}
+.mh-speed-toggle{display:flex;border:1px solid rgba(200,185,160,0.2);border-radius:5px;overflow:hidden;flex-shrink:0}
+.mh-speed-btn{background:rgba(200,185,160,0.05);border:none;border-right:1px solid rgba(200,185,160,0.15);color:#8a7a6a;font-size:0.78rem;padding:5px 10px;cursor:pointer;transition:background 0.15s,color 0.15s;font-family:system-ui,sans-serif}
+.mh-speed-btn:last-child{border-right:none}
+.mh-speed-btn:hover{background:rgba(200,185,160,0.12)}
+.mh-speed-btn.active,.mh-steps-btn.active{background:rgba(29,158,117,0.15);color:#1D9E75}
+.mh-steps-btn{background:rgba(200,185,160,0.05);border:none;border-right:1px solid rgba(200,185,160,0.15);color:#8a7a6a;font-size:0.78rem;padding:5px 10px;cursor:pointer;transition:background 0.15s,color 0.15s;font-family:system-ui,sans-serif}
+.mh-steps-btn:last-of-type{border-right:none}
+.mh-steps-btn:hover{background:rgba(200,185,160,0.12)}
+.mh-slider-group{flex:1;min-width:160px}
+.mh-slider-group label{display:block;font-size:0.72rem;color:rgba(200,185,160,0.45);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px}
+.mh-slider-group .val{float:right;color:#d4b896;font-size:0.72rem}
+.mh-slider-group input[type=range]{width:100%;accent-color:#d4b896;height:4px;margin:0;-webkit-appearance:none;appearance:none;background:rgba(200,185,160,0.2);border-radius:2px;outline:none}
+.mh-slider-group input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#d4b896;cursor:pointer}
+.mh-slider-group input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#d4b896;border:none;cursor:pointer}
+.mh-slider-group input[type=range]::-moz-range-track{background:rgba(200,185,160,0.2);height:4px;border-radius:2px}
+.mh-stats{padding:10px 20px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.8rem;color:rgba(200,185,160,0.5);font-family:'SF Mono',Consolas,monospace;letter-spacing:0.01em}
+.mh-narration{padding:0 20px 12px;font-size:0.88rem;color:#c4b5a0;line-height:1.55;min-height:0;transition:opacity 0.15s}
+.mh-narration:empty{display:none}
 </style>
 </head>
 <body>
@@ -66,9 +96,18 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
 
   <section>
     <h2>What is Metropolis-Hastings?</h2>
-    <p>Metropolis-Hastings (MH) is a Markov chain Monte Carlo (MCMC) algorithm.
-       It generates a sequence of samples from a probability distribution that
-       may be difficult to sample from directly. The core idea is simple:</p>
+    <p>Metropolis-Hastings (MH) is a Markov chain Monte Carlo (MCMC) algorithm,
+       typically used to sample from probability distributions that lack
+       closed-form solutions &mdash; a common situation in practice. In those
+       settings, MCMC is valued for where the chain converges: the collected
+       samples reveal the shape of a distribution that would otherwise be
+       difficult to characterize. Our use is a bit different. The target
+       distributions here are ordinary normals, easy to work with analytically.
+       We use MH not for what it converges <em>to</em>, but for the paths it
+       traces along the way &mdash; the propose-then-accept/reject mechanism
+       naturally produces price sequences with realistic persistence, where
+       values drift and fluctuate rather than jumping erratically. The core
+       idea is simple:</p>
 
     <div class="flow-box">
       <div class="flow-step">
@@ -89,7 +128,9 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
         <div class="flow-num">3</div>
         <p><strong>Accept or reject.</strong> If the new price is more probable,
            always accept. If less probable, accept with probability equal to the
-           density ratio. If rejected, the chain stays at the current value.
+           density ratio (the probability of the proposed price divided by the
+           probability of the current price &mdash; a number between 0 and 1).
+           If rejected, the chain stays at the current value.
            This guarantees the chain's stationary distribution matches the target.</p>
       </div>
       <div class="flow-step">
@@ -100,6 +141,50 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
            from step to step.</p>
       </div>
     </div>
+
+    <!-- Interactive MH Animation Widget -->
+    <div class="mh-widget-wrap">
+      <div class="mh-canvas-wrap">
+        <canvas id="mh-canvas" width="800" height="400"></canvas>
+      </div>
+      <div class="mh-controls">
+        <div class="mh-transport">
+          <button class="mh-btn" id="mh-left" title="Reset" disabled>|&#9666; Reset</button>
+          <button class="mh-btn" id="mh-play" title="Play">&#9654; Play</button>
+          <button class="mh-btn" id="mh-step" title="Step">&#9654;| Step</button>
+        </div>
+        <div class="mh-speed-toggle">
+          <button class="mh-speed-btn active" data-speed="1">1x</button>
+          <button class="mh-speed-btn" data-speed="2">2x</button>
+        </div>
+        <div class="mh-speed-toggle">
+          <button class="mh-steps-btn active" data-steps="30">30</button>
+          <button class="mh-steps-btn" data-steps="60">60</button>
+          <span style="font-size:0.72rem;color:rgba(200,185,160,0.4);margin-left:2px">steps</span>
+        </div>
+        <div class="mh-slider-group">
+          <label>Proposal step size (<span style="text-transform:none;font-style:italic">&sigma;</span>) <span class="val" id="mh-sigma-val">1.5</span></label>
+          <input type="range" id="mh-sigma" min="0.3" max="6.0" step="0.1" value="1.5">
+        </div>
+      </div>
+      <div class="mh-stats" id="mh-stats">Press Play to start the Metropolis-Hastings sampler.</div>
+      <div class="mh-narration" id="mh-narration"></div>
+    </div>
+
+    <p><strong>Propose:</strong> The gold curve that appears at each step is the
+       proposal distribution &mdash; a normal centered on the current value, with
+       spread controlled by the step size slider. The dashed gold line shows the
+       proposed value drawn from it. This is <em>not</em> the target distribution;
+       proposals are local perturbations, which is what gives the chain its
+       path-like structure.</p>
+
+    <p><strong>Evaluate and accept or reject:</strong> When a proposal lands in a
+       less probable region, the green bar shows the acceptance probability &mdash;
+       the ratio of the proposed density to the current density. A uniform random
+       draw determines the outcome: if it falls in the green zone, the proposal is
+       accepted despite being less probable. This is what allows the chain to
+       occasionally explore lower-probability regions rather than getting trapped
+       at the peak.</p>
 
     <p>The key property: over long runs, the histogram of visited prices converges
        to the target distribution. But the <em>path</em> through those prices has
@@ -210,5 +295,762 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
 </div>
 
 <script src="portfolio-nav.js"></script>
+<script>
+(function(){
+  /* ── DOM refs ── */
+  var canvas = document.getElementById('mh-canvas');
+  var ctx = canvas.getContext('2d');
+  var btnLeft = document.getElementById('mh-left');
+  var btnPlay = document.getElementById('mh-play');
+  var btnStep = document.getElementById('mh-step');
+  var sigmaSlider = document.getElementById('mh-sigma');
+  var sigmaLabel = document.getElementById('mh-sigma-val');
+  var statsEl = document.getElementById('mh-stats');
+  var narrationEl = document.getElementById('mh-narration');
+  var speedBtns = document.querySelectorAll('.mh-speed-btn');
+  var stepsBtns = document.querySelectorAll('.mh-steps-btn');
+
+  /* ── Constants ── */
+  var TARGET_MEAN = 10, TARGET_SD = 3;
+  var Y_MIN = 0, Y_MAX = 20;
+  var TOTAL_STEPS = 30;  // toggled by 30/60 button
+  var EPS = 1e-4;
+
+  /* ── Layout fractions ── */
+  var LEFT_FRAC = 0.12, CENTER_FRAC = 0.60, RIGHT_FRAC = 0.22;
+  var PAD_TOP = 30, PAD_BOT = 24, PAD_LEFT = 6, PAD_RIGHT = 10, GAP = 6;
+
+  /* ── Animation phase durations (ms) at 1x ── */
+  var DUR_SHOW_PROPOSAL = 350, DUR_PROPOSING = 300, DUR_EVALUATING = 500, DUR_DECIDED_ACC = 400, DUR_DECIDED_REJ = 500, DUR_MOVING = 200;
+
+  /* ── State ── */
+  var chain = [];       // {value, proposed, ratio, uDraw, accepted}
+  var histogram = [];   // bin counts, 40 bins over [0,20]
+  var NBINS = 40;
+  var speed = 1;        // 1=1x, 2=2x
+  var playing = false;
+  var stepping = false;      // true when advancing one phase per Step click
+  var waitingForStep = false; // true when phase completed, waiting for next Step click
+  var hasStarted = false;
+  var stepIdx = 0;      // current step being animated (0-based into chain)
+  var phase = 'IDLE';   // IDLE | SHOW_PROPOSAL | PROPOSING | EVALUATING | DECIDED | MOVING | DONE
+  var phaseTime = 0;
+  var phaseDur = 0;
+  var lastTs = 0;
+  var chainComplete = false;
+
+  /* ── Math helpers ── */
+  function dnorm(x, mean, sd) {
+    var z = (x - mean) / sd;
+    return Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI));
+  }
+  function randNormal(mean, sd) {
+    var u1 = Math.random(), u2 = Math.random();
+    return mean + sd * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  /* ── MH chain generation ── */
+  function precomputeChain() {
+    var sigma = parseFloat(sigmaSlider.value);
+    chain = [];
+    histogram = new Array(NBINS).fill(0);
+    var current = TARGET_MEAN;
+    // Record initial position
+    addToHistogram(current);
+    for (var i = 0; i < TOTAL_STEPS; i++) {
+      var proposed = randNormal(current, sigma);
+      var pNew = dnorm(proposed, TARGET_MEAN, TARGET_SD);
+      var pOld = dnorm(current, TARGET_MEAN, TARGET_SD);
+      var ratio = (pOld > 0) ? pNew / pOld : 0;
+      var uDraw = Math.random();
+      var accepted = (uDraw < ratio && proposed > EPS);
+      chain.push({ value: current, proposed: proposed, ratio: Math.min(ratio, 1), uDraw: uDraw, accepted: accepted });
+      current = accepted ? proposed : current;
+    }
+    // Final value for drawing
+    chain.push({ value: current, proposed: current, ratio: 1, uDraw: 0, accepted: true });
+  }
+
+  function addToHistogram(val) {
+    var bin = Math.floor((val - Y_MIN) / (Y_MAX - Y_MIN) * NBINS);
+    if (bin >= 0 && bin < NBINS) histogram[bin]++;
+  }
+
+  /* ── Layout helpers ── */
+  function getLayout() {
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var W = rect.width, H = rect.height;
+    var plotH = H - PAD_TOP - PAD_BOT;
+    var leftW = W * LEFT_FRAC;
+    var centerW = W * CENTER_FRAC;
+    var rightW = W * RIGHT_FRAC;
+    return {
+      W: W, H: H, plotH: plotH,
+      left: { x: PAD_LEFT, w: leftW - PAD_LEFT - GAP },
+      center: { x: leftW, w: centerW },
+      right: { x: leftW + centerW + GAP, w: rightW - PAD_RIGHT - GAP },
+      top: PAD_TOP, bot: H - PAD_BOT
+    };
+  }
+
+  function valToY(lay, v) {
+    return lay.top + lay.plotH * (1 - (v - Y_MIN) / (Y_MAX - Y_MIN));
+  }
+  function yToVal(lay, y) {
+    return Y_MIN + (1 - (y - lay.top) / lay.plotH) * (Y_MAX - Y_MIN);
+  }
+
+  /* ── Drawing functions ── */
+  function drawBackground(lay) {
+    ctx.clearRect(0, 0, lay.W, lay.H);
+    // Horizontal grid lines
+    ctx.strokeStyle = 'rgba(100,85,65,0.25)';
+    ctx.lineWidth = 0.5;
+    for (var v = 0; v <= 20; v += 5) {
+      var y = valToY(lay, v);
+      ctx.beginPath(); ctx.moveTo(lay.left.x, y); ctx.lineTo(lay.right.x + lay.right.w, y); ctx.stroke();
+    }
+    // Y-axis labels
+    ctx.fillStyle = '#8a7a6a';
+    ctx.font = '10px system-ui,sans-serif';
+    ctx.textAlign = 'right';
+    for (var v2 = 0; v2 <= 20; v2 += 5) {
+      ctx.fillText(v2, lay.left.x + lay.left.w + GAP + lay.center.w + GAP - 2, valToY(lay, v2) + 3);
+    }
+    // Panel labels
+    ctx.fillStyle = 'rgba(200,185,160,0.35)';
+    ctx.font = '10px system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Target', lay.left.x + lay.left.w / 2, lay.top - 10);
+    ctx.fillText('Chain Path', lay.center.x + lay.center.w / 2, lay.top - 10);
+    ctx.fillText('Histogram', lay.right.x + lay.right.w / 2, lay.top - 10);
+  }
+
+  function drawTargetDist(lay) {
+    var lx = lay.left.x, lw = lay.left.w;
+    // Draw vertical normal curve
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(29,158,117,0.7)';
+    ctx.fillStyle = 'rgba(29,158,117,0.08)';
+    ctx.lineWidth = 1.5;
+    var maxDens = dnorm(TARGET_MEAN, TARGET_MEAN, TARGET_SD);
+    var first = true;
+    for (var py = lay.top; py <= lay.bot; py += 1) {
+      var val = yToVal(lay, py);
+      var d = dnorm(val, TARGET_MEAN, TARGET_SD);
+      var dx = lx + (d / maxDens) * lw;
+      if (first) { ctx.moveTo(dx, py); first = false; }
+      else ctx.lineTo(dx, py);
+    }
+    ctx.stroke();
+    // Fill
+    ctx.lineTo(lx, lay.bot);
+    ctx.lineTo(lx, lay.top);
+    ctx.closePath();
+    ctx.fill();
+    // Mean line
+    ctx.strokeStyle = 'rgba(29,158,117,0.4)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([3,3]);
+    var my = valToY(lay, TARGET_MEAN);
+    ctx.beginPath(); ctx.moveTo(lx, my); ctx.lineTo(lx + lw, my); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawChainPath(lay) {
+    var cx = lay.center.x, cw = lay.center.w;
+    var completedSteps = getCompletedSteps();
+    if (completedSteps < 1) {
+      // Just draw the starting dot
+      var sy = valToY(lay, TARGET_MEAN);
+      ctx.fillStyle = '#d4b896';
+      ctx.beginPath(); ctx.arc(cx, sy, 4, 0, Math.PI * 2); ctx.fill();
+      return;
+    }
+    // Draw completed chain line segments
+    ctx.strokeStyle = 'rgba(212,184,150,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    var x0 = cx;
+    var y0 = valToY(lay, chain[0].value);
+    ctx.moveTo(x0, y0);
+    for (var i = 0; i < completedSteps; i++) {
+      var nextVal = chain[i].accepted ? chain[i].proposed : chain[i].value;
+      var xn = cx + cw * ((i + 1) / TOTAL_STEPS);
+      var yn = valToY(lay, nextVal);
+      ctx.lineTo(xn, yn);
+    }
+    ctx.stroke();
+
+    // Draw rejection ghosts
+    for (var j = 0; j < completedSteps; j++) {
+      if (!chain[j].accepted) {
+        var gx = cx + cw * ((j + 1) / TOTAL_STEPS);
+        var propClamped = Math.max(Y_MIN, Math.min(Y_MAX, chain[j].proposed));
+        var gy = valToY(lay, propClamped);
+        drawRejectX(gx, gy, 4, 'rgba(200,96,128,0.35)');
+        // Arrow for off-canvas
+        if (chain[j].proposed > Y_MAX) {
+          ctx.fillStyle = 'rgba(200,96,128,0.4)';
+          ctx.beginPath(); ctx.moveTo(gx, lay.top + 2); ctx.lineTo(gx - 4, lay.top + 9); ctx.lineTo(gx + 4, lay.top + 9); ctx.fill();
+        } else if (chain[j].proposed < Y_MIN) {
+          ctx.fillStyle = 'rgba(200,96,128,0.4)';
+          ctx.beginPath(); ctx.moveTo(gx, lay.bot - 2); ctx.lineTo(gx - 4, lay.bot - 9); ctx.lineTo(gx + 4, lay.bot - 9); ctx.fill();
+        }
+      }
+    }
+
+    // Chain dots at each completed position
+    for (var k = 0; k <= completedSteps; k++) {
+      var dotVal = (k === 0) ? chain[0].value : (chain[k-1].accepted ? chain[k-1].proposed : chain[k-1].value);
+      var dx = cx + cw * (k / TOTAL_STEPS);
+      var dy = valToY(lay, dotVal);
+      ctx.fillStyle = '#d4b896';
+      ctx.beginPath(); ctx.arc(dx, dy, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function drawRejectX(x, y, sz, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x - sz, y - sz); ctx.lineTo(x + sz, y + sz); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + sz, y - sz); ctx.lineTo(x - sz, y + sz); ctx.stroke();
+  }
+
+  /* Draw proposal distribution curve at a given x position */
+  function drawProposalDist(lay, atX, centerVal, sigma, alpha) {
+    var maxDens = dnorm(centerVal, centerVal, sigma);
+    var halfW = lay.center.w / TOTAL_STEPS * 0.4; // visual width of the curve
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(212,168,67,' + alpha + ')';
+    ctx.fillStyle = 'rgba(212,168,67,' + (alpha * 0.12) + ')';
+    ctx.lineWidth = 1.2;
+    var pts = [];
+    for (var py = lay.top; py <= lay.bot; py += 1.5) {
+      var val = yToVal(lay, py);
+      var d = dnorm(val, centerVal, sigma);
+      var dx = atX + (d / maxDens) * halfW;
+      pts.push({ x: dx, y: py });
+    }
+    // Stroke the curve
+    ctx.beginPath();
+    for (var i = 0; i < pts.length; i++) {
+      if (i === 0) ctx.moveTo(pts[i].x, pts[i].y);
+      else ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+    // Fill area
+    ctx.lineTo(atX, lay.bot);
+    ctx.lineTo(atX, lay.top);
+    ctx.closePath();
+    ctx.fill();
+    // Mean marker
+    ctx.strokeStyle = 'rgba(212,168,67,' + (alpha * 0.5) + ')';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 2]);
+    var my = valToY(lay, centerVal);
+    ctx.beginPath(); ctx.moveTo(atX - 3, my); ctx.lineTo(atX + halfW, my); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawActiveStep(lay) {
+    if (phase === 'IDLE' || phase === 'DONE' || stepIdx >= chain.length - 1) return;
+    var cx = lay.center.x, cw = lay.center.w;
+    var s = chain[stepIdx];
+    var sigma = parseFloat(sigmaSlider.value);
+    var fromX = cx + cw * (stepIdx / TOTAL_STEPS);
+    var toX = cx + cw * ((stepIdx + 1) / TOTAL_STEPS);
+    var fromY = valToY(lay, s.value);
+    var propClamped = Math.max(Y_MIN, Math.min(Y_MAX, s.proposed));
+    var propY = valToY(lay, propClamped);
+    var t = (phaseDur > 0) ? Math.min(1, phaseTime / phaseDur) : 1;
+
+    if (phase === 'SHOW_PROPOSAL') {
+      // Proposal distribution fades in at current position
+      drawProposalDist(lay, fromX, s.value, sigma, t * 0.8);
+    } else if (phase === 'PROPOSING') {
+      // Keep proposal dist visible, fading out
+      drawProposalDist(lay, fromX, s.value, sigma, 0.8 * (1 - t * 0.6));
+      // Dashed gold line growing from current to proposed
+      ctx.strokeStyle = '#d4a843';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      var curPropY = fromY + (propY - fromY) * t;
+      ctx.lineTo(toX, curPropY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Tan dot at tip of growing line
+      ctx.fillStyle = '#d4b896';
+      ctx.beginPath(); ctx.arc(toX, curPropY, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (phase === 'EVALUATING' || phase === 'DECIDED') {
+      // Full proposal line
+      ctx.strokeStyle = '#d4a843';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(fromX, fromY); ctx.lineTo(toX, propY); ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (s.ratio >= 1) {
+        // Auto-accept label
+        ctx.fillStyle = '#1D9E75';
+        ctx.font = 'bold 11px system-ui,sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('auto \u2713', toX, propY - 12);
+      } else {
+        // Draw acceptance meter
+        drawAcceptMeter(lay, toX + 14, propY, s, t);
+      }
+
+      if (phase === 'DECIDED') {
+        if (s.accepted) {
+          // Green dot replaces tan
+          ctx.fillStyle = '#1D9E75';
+          ctx.beginPath(); ctx.arc(toX, propY, 5, 0, Math.PI * 2); ctx.fill();
+        } else {
+          // Red X replaces tan
+          drawRejectX(toX, propY, 5, '#c86080');
+        }
+      } else {
+        // EVALUATING — tan dot while considering
+        ctx.fillStyle = '#d4b896';
+        ctx.beginPath(); ctx.arc(toX, propY, 4, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (phase === 'MOVING') {
+      // Line extending to next position
+      var nextVal = s.accepted ? s.proposed : s.value;
+      var nextX = cx + cw * ((stepIdx + 1) / TOTAL_STEPS);
+      var nextY = valToY(lay, nextVal);
+      var endX = fromX + (nextX - fromX) * t;
+      // Draw from current chain end
+      var prevEndX = cx + cw * (stepIdx / TOTAL_STEPS);
+      var prevEndY = fromY;
+      ctx.strokeStyle = 'rgba(212,184,150,0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(prevEndX, prevEndY); ctx.lineTo(endX, prevEndY + (nextY - prevEndY) * t); ctx.stroke();
+      // Decided marker fading: green → tan (accepted), red X ghost (rejected)
+      if (s.accepted) {
+        // Green #1D9E75 (29,158,117) fades to tan #d4b896 (212,184,150)
+        var rd = Math.round(29 + 183 * t);
+        var gr = Math.round(158 + 26 * t);
+        var bl = Math.round(117 + 33 * t);
+        ctx.fillStyle = 'rgba(' + rd + ',' + gr + ',' + bl + ',0.7)';
+        ctx.beginPath(); ctx.arc(toX, propY, 4, 0, Math.PI * 2); ctx.fill();
+      } else {
+        drawRejectX(toX, propY, 4, 'rgba(200,96,128,0.35)');
+      }
+    }
+  }
+
+  function drawAcceptMeter(lay, mx, my, s, t) {
+    var mw = 8, mh = 50;
+    var top = my - mh / 2, left = mx;
+    // Background
+    ctx.fillStyle = 'rgba(200,96,128,0.15)';
+    ctx.fillRect(left, top, mw, mh);
+    // Green zone (ratio portion from bottom)
+    var greenH = mh * s.ratio;
+    ctx.fillStyle = 'rgba(29,158,117,0.35)';
+    ctx.fillRect(left, top + mh - greenH, mw, greenH);
+    // Border
+    ctx.strokeStyle = 'rgba(200,185,160,0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(left, top, mw, mh);
+    // Threshold dashed line
+    ctx.strokeStyle = 'rgba(200,185,160,0.4)';
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    var threshY = top + mh - greenH;
+    ctx.moveTo(left - 2, threshY); ctx.lineTo(left + mw + 2, threshY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Uniform draw marker (slides in during EVALUATING, stays during DECIDED)
+    var drawT = (phase === 'EVALUATING') ? Math.min(1, t * 2) : 1;
+    if (drawT > 0.3) {
+      var uY = top + mh * (1 - s.uDraw);
+      var arrowX = left + mw + 3 + (1 - drawT) * 15;
+      ctx.strokeStyle = s.accepted ? '#1D9E75' : '#c86080';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(arrowX + 8, uY); ctx.lineTo(left + mw + 1, uY); ctx.stroke();
+      // Arrow head
+      ctx.fillStyle = s.accepted ? '#1D9E75' : '#c86080';
+      ctx.beginPath();
+      ctx.moveTo(left + mw + 1, uY);
+      ctx.lineTo(left + mw + 5, uY - 3);
+      ctx.lineTo(left + mw + 5, uY + 3);
+      ctx.fill();
+    }
+    // Label
+    ctx.fillStyle = 'rgba(200,185,160,0.5)';
+    ctx.font = '9px system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('p=' + s.ratio.toFixed(2), left + mw / 2, top + mh + 12);
+  }
+
+  function drawHistogram(lay) {
+    var rx = lay.right.x, rw = lay.right.w;
+    var maxCount = Math.max.apply(null, histogram) || 1;
+    var binH = lay.plotH / NBINS;
+    for (var i = 0; i < NBINS; i++) {
+      if (histogram[i] === 0) continue;
+      var barW = (histogram[i] / maxCount) * rw * 0.9;
+      var by = lay.top + lay.plotH - (i + 1) * binH;
+      ctx.fillStyle = 'rgba(212,184,150,0.45)';
+      ctx.fillRect(rx, by, barW, binH - 1);
+    }
+    // Target distribution curve — always visible, brighter when chain complete
+    var targetAlpha = chainComplete ? 0.6 : 0.25;
+    var maxDens = dnorm(TARGET_MEAN, TARGET_MEAN, TARGET_SD);
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(29,158,117,' + targetAlpha + ')';
+    ctx.lineWidth = chainComplete ? 1.5 : 1;
+    var first2 = true;
+    for (var py = lay.top; py <= lay.bot; py += 1) {
+      var val = yToVal(lay, py);
+      var d = dnorm(val, TARGET_MEAN, TARGET_SD);
+      var dx = rx + (d / maxDens) * rw * 0.9;
+      if (first2) { ctx.moveTo(dx, py); first2 = false; }
+      else ctx.lineTo(dx, py);
+    }
+    ctx.stroke();
+  }
+
+  function drawIdleMessage(lay) {
+    if (!hasStarted) {
+      ctx.fillStyle = 'rgba(200,185,160,0.4)';
+      ctx.font = '13px system-ui,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Press Play or Step to start', lay.center.x + lay.center.w / 2, lay.top + lay.plotH / 2);
+    }
+    if (chainComplete) {
+      ctx.fillStyle = 'rgba(29,158,117,0.6)';
+      ctx.font = '12px system-ui,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Chain complete \u2014 histogram vs target', lay.center.x + lay.center.w / 2, lay.bot + 16);
+    }
+  }
+
+  /* ── Main render ── */
+  function render() {
+    var lay = getLayout();
+    drawBackground(lay);
+    drawTargetDist(lay);
+    drawChainPath(lay);
+    drawHistogram(lay);
+    drawActiveStep(lay);
+    drawIdleMessage(lay);
+    updateNarration();
+  }
+
+  /* ── Step tracking ── */
+  function getCompletedSteps() {
+    if (chainComplete) return TOTAL_STEPS;
+    return stepIdx;
+  }
+
+  function isAnimating() {
+    return phase !== 'IDLE' && phase !== 'DONE';
+  }
+
+  /* ── Phase machine ── */
+  function startPhase(p, dur) {
+    phase = p;
+    phaseDur = dur;
+    phaseTime = 0;
+  }
+
+  function speedMult() { return speed === 2 ? 2 : 1; }
+
+  function advancePhase(dt) {
+    if (phase === 'IDLE' || phase === 'DONE') return;
+    if (waitingForStep) return; // frozen, waiting for next Step click
+    phaseTime += dt * speedMult();
+    if (phaseTime < phaseDur) return;
+
+    // Phase animation complete
+    if (stepping) {
+      phaseTime = phaseDur; // clamp so render shows t=1 (end state)
+      waitingForStep = true;
+      updateButtons();
+      return;
+    }
+    transitionPhase();
+  }
+
+  function transitionPhase() {
+    var s = chain[stepIdx];
+    if (phase === 'SHOW_PROPOSAL') {
+      startPhase('PROPOSING', DUR_PROPOSING / speedMult());
+    } else if (phase === 'PROPOSING') {
+      if (s.ratio >= 1) {
+        // Auto-accept, brief flash then decided
+        startPhase('DECIDED', DUR_DECIDED_ACC / speedMult());
+        chain[stepIdx].accepted = true; // already true from precompute
+      } else {
+        startPhase('EVALUATING', DUR_EVALUATING / speedMult());
+      }
+    } else if (phase === 'EVALUATING') {
+      startPhase('DECIDED', (s.accepted ? DUR_DECIDED_ACC : DUR_DECIDED_REJ) / speedMult());
+    } else if (phase === 'DECIDED') {
+      startPhase('MOVING', DUR_MOVING / speedMult());
+    } else if (phase === 'MOVING') {
+      // Complete this step
+      var nextVal = s.accepted ? s.proposed : s.value;
+      addToHistogram(nextVal);
+      stepIdx++;
+      if (stepIdx >= TOTAL_STEPS) {
+        phase = 'DONE';
+        chainComplete = true;
+        playing = false;
+        stepping = false;
+        updateStats();
+        updateButtons();
+        render();
+        return;
+      }
+      if (!playing && !stepping) {
+        // Stopped — wait for next action
+        phase = 'IDLE';
+        updateStats();
+        updateButtons();
+        render();
+        return;
+      }
+      // Continue to next step
+      startPhase('SHOW_PROPOSAL', DUR_SHOW_PROPOSAL / speedMult());
+    }
+  }
+
+  /* ── Animation loop ── */
+  var rafId = null;
+  function loop(ts) {
+    var dt = lastTs ? (ts - lastTs) : 16;
+    lastTs = ts;
+    if (dt > 100) dt = 16; // clamp big gaps
+    if (phase !== 'IDLE' && phase !== 'DONE') {
+      advancePhase(dt);
+    }
+    render();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function startLoop() {
+    if (!rafId) { lastTs = 0; rafId = requestAnimationFrame(loop); }
+  }
+  function stopLoop() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  /* ── Stats ── */
+  function updateStats() {
+    var completed = getCompletedSteps();
+    if (!hasStarted) {
+      statsEl.textContent = 'Press Play or Step to start the Metropolis-Hastings sampler.';
+      return;
+    }
+    var acc = 0, rej = 0;
+    for (var i = 0; i < completed; i++) {
+      if (chain[i].accepted) acc++; else rej++;
+    }
+    var total = acc + rej;
+    var rate = total > 0 ? Math.round(acc / total * 100) : 0;
+    statsEl.textContent = 'Step: ' + completed + '/' + TOTAL_STEPS +
+      ' | Accepted: ' + acc + ' | Rejected: ' + rej +
+      ' | Accept rate: ' + rate + '%';
+    if (chainComplete) {
+      statsEl.textContent += '  \u2014  Chain complete';
+    }
+  }
+
+  /* ── Narration (step mode only) ── */
+  var lastNarration = '';
+  function updateNarration() {
+    var text = '';
+    if (stepping && stepIdx < chain.length - 1) {
+      var s = chain[stepIdx];
+      var sigma = parseFloat(sigmaSlider.value);
+      var cur = s.value.toFixed(1);
+      var prop = s.proposed.toFixed(1);
+      var ratio = s.ratio.toFixed(2);
+      var uDraw = s.uDraw.toFixed(2);
+
+      if (phase === 'SHOW_PROPOSAL') {
+        text = 'The gold curve is the proposal distribution: N(' + cur +
+               ', \u03C3\u2009=\u2009' + sigma.toFixed(1) +
+               '), centered on the current value.';
+      } else if (phase === 'PROPOSING') {
+        text = 'A value of ' + prop +
+               ' is drawn from the proposal distribution \u2014 the dashed gold line shows the proposed move.';
+      } else if (phase === 'EVALUATING') {
+        text = 'Density ratio p\u2009=\u2009' + ratio +
+               ' \u2014 the proposal is less likely than the current position. ' +
+               'A uniform draw (' + uDraw + ') will determine acceptance.';
+      } else if (phase === 'DECIDED') {
+        if (s.ratio >= 1) {
+          text = 'The proposed value (' + prop +
+                 ') is at least as probable as the current value \u2014 automatically accepted.';
+        } else if (s.accepted) {
+          text = 'Uniform draw (' + uDraw + ') < ratio (' + ratio +
+                 ') \u2014 accepted despite being less probable.';
+        } else {
+          text = 'Uniform draw (' + uDraw + ') \u2265 ratio (' + ratio +
+                 ') \u2014 rejected. The chain stays at ' + cur + '.';
+        }
+      } else if (phase === 'MOVING') {
+        if (s.accepted) {
+          text = 'Chain moves to ' + prop + '. Histogram updated.';
+        } else {
+          text = 'Chain stays at ' + cur + '. Histogram records another visit.';
+        }
+      }
+    }
+    if (text !== lastNarration) {
+      narrationEl.textContent = text;
+      lastNarration = text;
+    }
+  }
+
+  /* ── Button state management ── */
+  function updateButtons() {
+    var animating = isAnimating();
+
+    // Left button: ■ Stop while playing+animating, |◂ Reset otherwise
+    if (playing && animating) {
+      btnLeft.innerHTML = '&#9632; Stop';
+      btnLeft.title = 'Stop';
+      btnLeft.disabled = false;
+    } else {
+      btnLeft.innerHTML = '|&#9666; Reset';
+      btnLeft.title = 'Reset';
+      btnLeft.disabled = !hasStarted;
+    }
+
+    // Play: disabled when already playing or chain complete
+    btnPlay.disabled = (playing && animating) || chainComplete;
+
+    // Step: disabled when actively animating (but not when waiting for step) or chain complete
+    btnStep.disabled = (animating && !waitingForStep) || chainComplete;
+  }
+
+  /* ── Controls ── */
+  function doPlay() {
+    if (chainComplete) return;
+    if (chain.length === 0) precomputeChain();
+    hasStarted = true;
+    stepping = false;
+    waitingForStep = false;
+    playing = true;
+    if (phase === 'IDLE') {
+      startPhase('SHOW_PROPOSAL', DUR_SHOW_PROPOSAL / speedMult());
+    }
+    startLoop();
+    updateButtons();
+  }
+
+  function doStop() {
+    playing = false;
+    stepping = false;
+    waitingForStep = false;
+    // Current phase finishes naturally, then phase → IDLE
+    updateButtons();
+  }
+
+  function doStep() {
+    if (chainComplete) return;
+
+    // If waiting for next step click, advance to the next phase
+    if (waitingForStep) {
+      waitingForStep = false;
+      transitionPhase();
+      updateButtons();
+      return;
+    }
+
+    // Don't interrupt an actively animating phase
+    if (isAnimating()) return;
+
+    if (chain.length === 0) precomputeChain();
+    hasStarted = true;
+    stepping = true;
+    playing = false;
+    startPhase('SHOW_PROPOSAL', DUR_SHOW_PROPOSAL);
+    startLoop();
+    updateButtons();
+  }
+
+  function doRestart(keepSigma) {
+    stopLoop();
+    playing = false;
+    stepping = false;
+    waitingForStep = false;
+    hasStarted = false;
+    stepIdx = 0;
+    phase = 'IDLE';
+    chainComplete = false;
+    if (!keepSigma) {
+      sigmaSlider.value = 1.5;
+      sigmaLabel.textContent = '1.5';
+    }
+    precomputeChain();
+    updateStats();
+    updateButtons();
+    startLoop();
+  }
+
+  /* ── Event listeners ── */
+  btnLeft.addEventListener('click', function() {
+    if (btnLeft.disabled) return;
+    if (playing && isAnimating()) {
+      doStop();
+    } else {
+      doRestart();
+    }
+  });
+  btnPlay.addEventListener('click', function() {
+    if (!btnPlay.disabled) doPlay();
+  });
+  btnStep.addEventListener('click', function() {
+    if (!btnStep.disabled) doStep();
+  });
+
+  speedBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      speedBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      speed = parseInt(btn.getAttribute('data-speed'));
+    });
+  });
+
+  stepsBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      stepsBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      TOTAL_STEPS = parseInt(btn.getAttribute('data-steps'));
+      doRestart();
+    });
+  });
+
+  sigmaSlider.addEventListener('input', function() {
+    sigmaLabel.textContent = parseFloat(sigmaSlider.value).toFixed(1);
+    doRestart(true);
+  });
+
+  /* ── Resize ── */
+  window.addEventListener('resize', function() { render(); });
+
+  /* ── Init ── */
+  precomputeChain();
+  render();
+  updateStats();
+  updateButtons();
+  startLoop();
+})();
+</script>
 </body>
 </html>

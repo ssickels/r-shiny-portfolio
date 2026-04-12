@@ -5,9 +5,12 @@
 #'   with a larger outlined marker (useful for screenshots). Set to NULL to disable.
 #' @param show_cloud If FALSE, hides the sim cloud and shows only point estimates
 #'   (useful for "point estimate only" screenshot). Default TRUE.
-plot_gain_vs_sd <- function(result, highlight_sim = NULL, show_cloud = TRUE) {
+plot_gain_vs_sd <- function(result, highlight_sim = NULL, show_cloud = TRUE,
+                            cloud_alpha_override = NULL) {
   p <- result$params
-  cloud_alpha <- if (show_cloud) app_theme$cloud_alpha else 0
+  cloud_alpha <- if (!show_cloud) 0
+                 else if (!is.null(cloud_alpha_override)) cloud_alpha_override
+                 else app_theme$cloud_alpha
   plt <- ggplot(data = result$gainVsSDDf, aes(x = sd, y = gain, color = type)) +
     geom_point(alpha = cloud_alpha) +
     geom_point(data = result$gainsVsSD.point.estDf,
@@ -150,7 +153,8 @@ plot_single_sim_explorer <- function(result, simSel) {
 }
 
 #' Frontier explorer: cloud of sim results per allocation with frontier overlay
-plot_frontier_explorer <- function(sweep_data, alloc_index) {
+plot_frontier_explorer <- function(sweep_data, alloc_index, show_cloud = TRUE,
+                                   cloud_alpha_override = NULL) {
   allocs <- sort(unique(sweep_data$point_estimates$allocation))
   current_alloc <- allocs[alloc_index]
 
@@ -176,11 +180,15 @@ plot_frontier_explorer <- function(sweep_data, alloc_index) {
   # Allocation labels on rebal frontier points only (avoid clutter)
   rebal_pe <- all_pe[all_pe$type == "rebal", ]
 
+  cloud_alpha <- if (!show_cloud) 0
+                 else if (!is.null(cloud_alpha_override)) cloud_alpha_override
+                 else app_theme$cloud_alpha
+
   # Use a single color aesthetic throughout so ggplotly merges legends cleanly
   ggplot() +
     # Cloud of individual sim results for current allocation
     geom_point(data = current_cloud, aes(x = sd, y = gain, color = type),
-               alpha = app_theme$cloud_alpha) +
+               alpha = cloud_alpha) +
     # Frontier lines connecting point estimates by type
     geom_line(data = all_pe[all_pe$type == "rebal", ],
               aes(x = sd, y = gain),

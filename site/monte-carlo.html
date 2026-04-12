@@ -18,6 +18,10 @@ body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-s
 .sim-frame-wrap iframe{display:block;width:100%;height:calc(100vh - 200px);min-height:600px;border:none}
 
 .sim-note{margin-top:12px;font-size:0.82rem;color:rgba(200,185,160,0.4);line-height:1.5}
+
+.mobile-banner{display:none;background:rgba(192,112,32,0.15);border:1px solid rgba(192,112,32,0.3);border-radius:8px;padding:14px 20px;margin-bottom:20px;font-size:0.92rem;color:#e8ddd0;line-height:1.6;position:relative}
+.mobile-banner-close{position:absolute;top:8px;right:12px;background:none;border:none;color:rgba(200,185,160,0.5);font-size:20px;cursor:pointer;line-height:1;padding:0}
+.mobile-banner-close:hover{color:#e8ddd0}
 </style>
 </head>
 <body>
@@ -28,6 +32,12 @@ body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-s
     <p>Simulated stock &amp; bond price paths exploring rebalancing strategies
        and the efficient frontier. The distribution of outcomes tells a more
        honest story than any single point estimate.</p>
+  </div>
+
+  <div class="mobile-banner" id="mobile-banner">
+    <button class="mobile-banner-close" id="mobile-close">&times;</button>
+    This simulator is designed for larger screens. For the best experience,
+    try it on a laptop or desktop.
   </div>
 
   <div class="sim-frame-wrap">
@@ -41,6 +51,16 @@ body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-s
      longer runs (especially the frontier sweep) may take a few minutes.</p>
 </div>
 
+<script>
+(function () {
+  if (window.innerWidth < 768) {
+    document.getElementById('mobile-banner').style.display = 'block';
+  }
+  document.getElementById('mobile-close').addEventListener('click', function () {
+    document.getElementById('mobile-banner').style.display = 'none';
+  });
+})();
+</script>
 <script src="portfolio-nav.js"></script>
 </body>
 </html>

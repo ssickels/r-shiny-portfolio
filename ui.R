@@ -26,6 +26,13 @@ fluidPage(
 
       hr(),
 
+      # --- Display ---
+      h4("Display"),
+      sliderInput("cloud_alpha", "Cloud Opacity",
+                  min = 0, max = 0.30, value = 0.08, step = 0.01),
+
+      hr(),
+
       # --- Market Assumptions (collapsible) ---
       tags$details(
         tags$summary(
@@ -51,6 +58,8 @@ fluidPage(
       # --- Actions ---
       actionButton("run_single", "Run Single Allocation", class = "btn-primary btn-block"),
       actionButton("restore_precomputed", "Restore precomputed data",
+                    class = "btn-link btn-block restore-link"),
+      actionButton("reset_defaults", "Reset to defaults",
                     class = "btn-link btn-block restore-link")
     ),
 

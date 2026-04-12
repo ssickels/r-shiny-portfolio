@@ -21,6 +21,17 @@ function(input, output, session) {
   sweep_result <- reactiveVal(NULL)
   frontier_alloc_index <- reactiveVal(1)
   active_nsim <- reactiveVal("2000")  # tracks which precomputed tier is loaded
+  # Cloud alpha is driven by the UI slider (input$cloud_alpha)
+  # Highlight the label when cloud is fully hidden
+  observe({
+    alpha <- input$cloud_alpha
+    req(!is.null(alpha))
+    if (alpha == 0) {
+      shinyjs::runjs("$('#cloud_alpha').closest('.form-group').addClass('cloud-hidden-warning')")
+    } else {
+      shinyjs::runjs("$('#cloud_alpha').closest('.form-group').removeClass('cloud-hidden-warning')")
+    }
+  })
 
   # Data source tracking: "precomputed" or "custom"
   single_source <- reactiveVal("precomputed")
@@ -87,6 +98,20 @@ function(input, output, session) {
       active_nsim("2000")
       frontier_alloc_index(1)
     }
+  })
+
+  # --- Reset all sliders to defaults ---
+  observeEvent(input$reset_defaults, {
+    updateSliderInput(session, "nSims", value = 500)
+    updateSliderInput(session, "n_timesteps", value = 1000)
+    updateSliderInput(session, "perc_stocks", value = 60)
+    updateSliderInput(session, "rebal_interval", value = 100)
+    updateSliderInput(session, "cloud_alpha", value = 0.08)
+    updateSliderInput(session, "s_sd", value = 6)
+    updateSliderInput(session, "b_sd", value = 3)
+    updateSliderInput(session, "s_b_corr", value = 0.7)
+    updateSliderInput(session, "s_int", value = 0.06)
+    updateSliderInput(session, "b_int", value = 0.02)
   })
 
   # --- Status banner ---
@@ -259,12 +284,12 @@ function(input, output, session) {
     shinyjs::enable("run_single")
   })
 
-  # --- Plotly config: just the download button ---
+  # --- Plotly config: download + reset axes ---
   plotly_clean <- function(p) {
     config(p, displayModeBar = TRUE,
            modeBarButtonsToRemove = c("zoom2d", "pan2d", "select2d", "lasso2d",
                                        "zoomIn2d", "zoomOut2d", "autoScale2d",
-                                       "resetScale2d", "hoverClosestCartesian",
+                                       "hoverClosestCartesian",
                                        "hoverCompareCartesian", "toggleSpikelines"),
            displaylogo = FALSE)
   }
@@ -275,7 +300,8 @@ function(input, output, session) {
     req(sim_result())
     plotly_clean(ggplotly(plot_gain_vs_sd(sim_result(),
       highlight_sim = screenshot_highlight_sim,
-      show_cloud = !screenshot_hide_cloud)))
+      show_cloud = !screenshot_hide_cloud,
+      cloud_alpha_override = input$cloud_alpha)))
   })
 
   output$plot_trajectories <- renderPlotly({
@@ -333,6 +359,25 @@ function(input, output, session) {
 
   # --- Frontier Explorer ---
 
+  # Store zoom state so it persists across allocation steps
+  frontier_zoom <- reactiveValues(x = NULL, y = NULL)
+
+  # Capture zoom/pan events from plotly
+  observe({
+    ev <- event_data("plotly_relayout", source = "frontier_src")
+    req(ev)
+    # Zoom sets xaxis.range[0]/[1] and yaxis.range[0]/[1]
+    if (!is.null(ev[["xaxis.range[0]"]])) {
+      frontier_zoom$x <- c(ev[["xaxis.range[0]"]], ev[["xaxis.range[1]"]])
+      frontier_zoom$y <- c(ev[["yaxis.range[0]"]], ev[["yaxis.range[1]"]])
+    }
+    # Double-click or reset axes fires autosize or xaxis.autorange
+    if (isTRUE(ev[["xaxis.autorange"]]) || !is.null(ev[["autosize"]])) {
+      frontier_zoom$x <- NULL
+      frontier_zoom$y <- NULL
+    }
+  })
+
   observeEvent(input$frontier_prev, {
     idx <- frontier_alloc_index()
     if (idx > 1) frontier_alloc_index(idx - 1)
@@ -348,9 +393,21 @@ function(input, output, session) {
 
   output$plot_frontier_explorer <- renderPlotly({
     req(sweep_result())
-    plotly_clean(ggplotly(
-      plot_frontier_explorer(sweep_result(), frontier_alloc_index())
-    ))
+    p <- plotly_clean(ggplotly(
+      plot_frontier_explorer(sweep_result(), frontier_alloc_index(),
+                             show_cloud = TRUE,
+                             cloud_alpha_override = input$cloud_alpha),
+      source = "frontier_src"
+    ) %>% event_register("plotly_relayout"))
+
+    # Reapply saved zoom if present
+    if (!is.null(frontier_zoom$x)) {
+      p <- p %>% layout(
+        xaxis = list(range = frontier_zoom$x),
+        yaxis = list(range = frontier_zoom$y)
+      )
+    }
+    p
   })
 
   output$frontier_alloc_label <- renderText({
@@ -452,7 +509,11 @@ function(input, output, session) {
        distribution of outcomes for the selected allocation &mdash; every dot is one
        simulation. The <strong>connected points</strong> along the frontier lines are
        point estimates (means), which trace the efficient frontier. The gap between the
-       rebalanced and non-rebalanced frontiers is the rebalancing benefit."
+       rebalanced and non-rebalanced frontiers is the rebalancing benefit.
+       See the <strong>Efficient Frontier</strong> tab for just the point estimates
+       (from a 5,000-sim run). You can zoom in by dragging a box on the plot;
+       the zoom is preserved as you step through allocations. Use the
+       <strong>Cloud Opacity</strong> slider to fade or hide the cloud."
     )
   })
 
@@ -462,6 +523,7 @@ function(input, output, session) {
     callout(
       "The efficient frontier: each point is a <strong>point estimate</strong>
        (mean gain and mean SD across all simulations) for one stock/bond allocation.
+       These are from a precomputed run of 5,000 simulations per allocation.
        These are summary statistics &mdash; the Frontier Explorer tab shows the full
        distributions from which they&rsquo;re derived. Two curves are shown: one for the
        rebalanced strategy and one for non-rebalanced. Where rebalancing shifts the

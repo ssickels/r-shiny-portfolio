@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture &amp; Refactoring — Monte Carlo Portfolio Simulator</title>
+<style>
+  :root {
+    --bg: #1a1410;
+    --card: #231e18;
+    --border: rgba(200,185,160,0.15);
+    --text: #c4b5a0;
+    --text-dim: rgba(200,185,160,0.55);
+    --accent-green: #1D9E75;
+    --accent-blue: #7aafcc;
+    --accent-orange: #d4a24a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem 2rem 4rem;
+    line-height: 1.7;
+    max-width: 820px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 0.95rem; margin-bottom: 2rem; }
+  h2 { font-size: 1.15rem; font-weight: 600; margin-top: 2.5rem; margin-bottom: 0.75rem; color: #f0e6d8; }
+  h3 { font-size: 1rem; font-weight: 500; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #e0d5c5; }
+  p { margin-bottom: 0.85rem; font-size: 0.95rem; }
+  code {
+    background: rgba(200,185,160,0.1);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  .file-tree {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.85rem;
+    line-height: 1.8;
+    margin: 1rem 0 1.5rem;
+    white-space: pre;
+    color: var(--text-dim);
+  }
+  .file-tree .dir { color: var(--accent-blue); }
+  .file-tree .file { color: var(--text); }
+  .file-tree .cmt { color: var(--text-dim); font-style: italic; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin: 1rem 0 1.5rem;
+  }
+  .card p:last-child { margin-bottom: 0; }
+  .principle {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+  }
+  .principle:last-child { margin-bottom: 0; }
+  .principle-marker {
+    color: var(--accent-green);
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .principle p { margin-bottom: 0; }
+  .before-after {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1rem 0;
+  }
+  @media (max-width: 700px) {
+    .before-after { grid-template-columns: 1fr; }
+  }
+  .before-after .card { margin: 0; }
+  .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .label.before { color: var(--accent-orange); }
+  .label.after { color: var(--accent-green); }
+  ul { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.35rem; font-size: 0.95rem; }
+  a { color: var(--accent-green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .nav-links {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.88rem;
+  }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  .see-also { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+  .see-also h2 { margin-top: 0; font-size: 1.1rem; }
+  .see-also ul { margin-top: 0.5rem; }
+  .see-also li { color: var(--text-dim); font-size: 0.92rem; }
+</style>
+</head>
+<body>
+
+<div class="nav-links">
+  <a href="./dependency-flowchart.html">Dependency Flowchart</a>
+  <a href="./console-recipes.html">Console Recipes</a>
+</div>
+
+<h1>Architecture &amp; Refactoring</h1>
+<p class="subtitle">How a single 600-line R script became a modular Shiny application</p>
+
+<h2>Before: Two monolithic scripts</h2>
+
+<p>The original codebase in <code>original_scripts/</code> consisted of two files:</p>
+
+<div class="before-after">
+  <div class="card">
+    <div class="label before">Main script (~624 lines)</div>
+    <p><code>Metropolis Sampling - 2022-01-01 v2a.R</code></p>
+    <ul>
+      <li>Parameters, functions, simulation loop, data reshaping, and 10 plot types &mdash; all in one file</li>
+      <li>Single function <code>annualizeFn()</code> that reads <code>int.period</code> from global scope</li>
+      <li>Control flow via <code>runCalcs</code> flag and <code>plotType</code> integer switch (1&ndash;10)</li>
+      <li>Global state everywhere &mdash; variables assigned at top, mutated throughout</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="label before">Meta script (~35 lines)</div>
+    <p><code>Metropolis Sampling - Meta Script - 2021-12-22 v1.R</code></p>
+    <ul>
+      <li>Loops over allocations by setting <code>perc.stocks</code> globally then calling <code>source()</code> on the main script</li>
+      <li>Accumulates results via <code>rbind()</code> on globals</li>
+      <li>Requires commenting out <code>set.seed(100)</code> in the main script to avoid identical trajectories</li>
+    </ul>
+  </div>
+</div>
+
+<h2>After: Five modules with clear separation</h2>
+
+<div class="file-tree"><span class="dir">R/</span>
+  <span class="file">helpers.R</span>           <span class="cmt">-- Pure utility functions (unit conversion, string parsing, formatting)</span>
+  <span class="file">simulation_engine.R</span> <span class="cmt">-- Core MCMC: covariance, interest, simulation loop, post-processing</span>
+  <span class="file">meta_sweep.R</span>        <span class="cmt">-- Frontier sweep loop (run_meta_sweep())</span>
+  <span class="file">plotting.R</span>          <span class="cmt">-- All 8 plot_*() visualization functions</span>
+  <span class="file">theme_config.R</span>      <span class="cmt">-- Centralized color/size theme</span>
+
+<span class="dir">server.R</span>              <span class="cmt">-- Shiny reactivity only — delegates to R/ modules</span>
+<span class="dir">ui.R</span>                  <span class="cmt">-- Shiny UI layout</span></div>
+
+<h3>Module responsibilities</h3>
+
+<div class="card">
+  <p><strong>helpers.R</strong> &mdash; Pure utility functions with no dependencies on other modules. Handles unit conversion (<code>clamp_pct_to_fraction()</code>), string parsing (<code>parse_allocation_string()</code>), and display formatting (<code>format_summary_table()</code>, <code>format_params_summary()</code>).</p>
+
+  <p><strong>simulation_engine.R</strong> &mdash; The computational core. Contains <code>build_covariance_matrix()</code>, <code>build_interest_vectors()</code>, <code>simulate_portfolios()</code> (Metropolis-Hastings loop), <code>build_result_dataframes()</code>, <code>compute_rolling_sd()</code>, and <code>compute_gain_summary()</code>. Also provides <code>run_simulation()</code>, a coordinator that calls all sub-functions in sequence and returns a combined result list.</p>
+
+  <p><strong>meta_sweep.R</strong> &mdash; Loops over a vector of stock allocations, calling <code>run_simulation()</code> for each. Collects point estimates for the frontier curve and per-simulation cloud data. Accepts a <code>progress_callback</code> for Shiny or console progress reporting.</p>
+
+  <p><strong>plotting.R</strong> &mdash; Eight <code>plot_*()</code> functions, each producing a self-contained ggplot object. Covers gain-vs-SD scatter, trajectory fans, cost profiles, final densities, rebalancing deltas, single-sim explorer, efficient frontier, and frontier explorer.</p>
+
+  <p><strong>theme_config.R</strong> &mdash; Single source of truth for the app's visual theme: colors, font sizes, and ggplot theme settings. All plotting functions reference this rather than hardcoding values.</p>
+</div>
+
+<h2>Organizing principles</h2>
+
+<div class="card">
+  <div class="principle">
+    <span class="principle-marker">1.</span>
+    <p><strong>Pure functions with explicit inputs/outputs.</strong> Every function takes all its inputs as arguments and returns results &mdash; no reading from or writing to global scope. The original <code>annualizeFn()</code> that implicitly used <code>int.period</code> is now a local call with all parameters passed explicitly.</p>
+  </div>
+  <div class="principle">
+    <span class="principle-marker">2.</span>
+    <p><strong>Coordinator pattern.</strong> <code>run_simulation()</code> orchestrates the sub-functions (covariance &rarr; interest &rarr; simulation &rarr; dataframes &rarr; rolling SD &rarr; gain summary) and returns a single result list. This keeps each sub-function focused while providing a convenient one-call entry point.</p>
+  </div>
+  <div class="principle">
+    <span class="principle-marker">3.</span>
+    <p><strong>Separation: engine &rarr; reshaping &rarr; visualization.</strong> The simulation engine produces raw arrays. Post-processing reshapes them into tidy data frames. Plotting functions consume those data frames. Each layer can be inspected independently.</p>
+  </div>
+  <div class="principle">
+    <span class="principle-marker">4.</span>
+    <p><strong>Shiny reactivity stays in server.R.</strong> The R/ modules have zero Shiny dependencies. <code>server.R</code> handles reactive inputs, calls the modules, and renders outputs. This means all functions are usable from a plain R console or RStudio session.</p>
+  </div>
+  <div class="principle">
+    <span class="principle-marker">5.</span>
+    <p><strong>Console-friendly by design.</strong> Functions work identically whether called from the Shiny app, an R console, or a batch script. The <code>scripts/</code> directory demonstrates this with precomputation scripts that call the same functions the app uses.</p>
+  </div>
+</div>
+
+<h2>Benefits</h2>
+
+<ul>
+  <li><strong>Inspect intermediates</strong> &mdash; Run each pipeline step in RStudio and examine the output: covariance matrices, interest vectors, raw simulation arrays, tidy data frames</li>
+  <li><strong>Step through the pipeline</strong> &mdash; Debug by calling sub-functions one at a time rather than running a 600-line script end-to-end</li>
+  <li><strong>Swap parameters</strong> &mdash; Change any input without editing source code; just pass different arguments</li>
+  <li><strong>Run offline batch jobs</strong> &mdash; <code>scripts/precompute_scenarios.R</code> calls the same functions to precompute frontier data at high simulation counts</li>
+  <li><strong>Test in isolation</strong> &mdash; Each function can be tested with known inputs without standing up the full Shiny app</li>
+</ul>
+
+<div class="see-also">
+  <h2>See also</h2>
+  <ul>
+    <li><a href="./dependency-flowchart.html">Dependency Flowchart</a> &mdash; Visual map of data flow through all functions</li>
+    <li><a href="./console-recipes.html">Console Recipes</a> &mdash; Copy-paste code to run the pipeline step-by-step in R</li>
+  </ul>
+</div>
+
+</body>
+</html>
