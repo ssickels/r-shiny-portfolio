@@ -33,6 +33,15 @@ function(input, output, session) {
     }
   })
 
+  # Update cloud opacity in-place (no re-render, preserves zoom)
+  observeEvent(input$cloud_alpha, {
+    alpha <- input$cloud_alpha
+    plotlyProxy("plot_gain_sd", session) %>%
+      plotlyProxyInvoke("restyle", list(`marker.opacity` = alpha), list(0L, 1L))
+    plotlyProxy("plot_frontier_explorer", session) %>%
+      plotlyProxyInvoke("restyle", list(`marker.opacity` = alpha), list(0L, 1L))
+  }, ignoreInit = TRUE)
+
   # Data source tracking: "precomputed" or "custom"
   single_source <- reactiveVal("precomputed")
   sweep_source <- reactiveVal("precomputed")
@@ -301,7 +310,7 @@ function(input, output, session) {
     plotly_clean(ggplotly(plot_gain_vs_sd(sim_result(),
       highlight_sim = screenshot_highlight_sim,
       show_cloud = !screenshot_hide_cloud,
-      cloud_alpha_override = input$cloud_alpha)))
+      cloud_alpha_override = isolate(input$cloud_alpha))))
   })
 
   output$plot_trajectories <- renderPlotly({
@@ -396,7 +405,7 @@ function(input, output, session) {
     p <- plotly_clean(ggplotly(
       plot_frontier_explorer(sweep_result(), frontier_alloc_index(),
                              show_cloud = TRUE,
-                             cloud_alpha_override = input$cloud_alpha),
+                             cloud_alpha_override = isolate(input$cloud_alpha)),
       source = "frontier_src"
     ) %>% event_register("plotly_relayout"))
 
