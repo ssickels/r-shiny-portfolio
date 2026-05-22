@@ -29,6 +29,8 @@ body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-s
 .motivation-item:last-child{margin-bottom:0}
 .motivation-num{font-size:1.4rem;font-weight:300;color:#1D9E75;line-height:1.3;min-width:1.6rem}
 .motivation-item p{margin:0;line-height:1.65;font-size:0.97rem;color:#c4b5a0}
+.motivation-item .arrow-link{display:inline-block;margin-top:4px;font-size:0.85rem;color:#1D9E75;text-decoration:none;transition:color 0.15s}
+.motivation-item .arrow-link:hover{color:#f0e6d8}
 
 section{margin-bottom:40px}
 section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
@@ -38,6 +40,8 @@ em{color:#f0e6d8;font-style:italic}
 strong{color:#f0e6d8;font-weight:500}
 
 .callout{border-left:3px solid #1D9E75;padding:14px 20px;margin:20px 0;color:rgba(200,185,160,0.65);font-size:0.95rem;line-height:1.7}
+.tab-link{color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3);transition:color 0.15s,border-color 0.15s}
+.tab-link:hover{color:#f0e6d8;border-color:#f0e6d8}
 
 /* Screenshots side-by-side */
 .screenshot-pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:24px 0}
@@ -78,6 +82,8 @@ canvas{display:block;width:100%;background:#241c14;border-radius:4px}
 .formula-ref a:hover{color:#f0e6d8}
 
 .fig-wrap{margin:24px 0;border:1px solid rgba(200,185,160,0.15);border-radius:8px;overflow:hidden;background:#241c14}
+.fig-wrap img{cursor:pointer;transition:opacity 0.15s}
+.fig-wrap img:hover{opacity:0.85}
 .fig-wrap figcaption{font-size:0.8rem;color:rgba(200,185,160,0.4);padding:10px 16px;border-top:1px solid rgba(200,185,160,0.1);line-height:1.5}
 
 .tech-section{padding-top:40px;border-top:1px solid rgba(200,185,160,0.15)}
@@ -112,29 +118,49 @@ a[style]{color:#1D9E75 !important}
   </div>
 
   <div class="motivation-box">
-    <h2>Two motivating questions</h2>
+    <h2>The page in four points</h2>
+    <p style="margin:0 0 18px;font-size:0.9rem;color:rgba(200,185,160,0.5);line-height:1.55">For readers who want the thesis without the full text. Each point links to the section that develops it.</p>
     <div class="motivation-item">
       <div class="motivation-num">1</div>
       <p><strong>Distributions, not point estimates.</strong>
-         Most financial projections give you a single number &mdash; an expected outcome.
-         But any single run of a portfolio through time is just one draw from a
-         wide distribution of possibilities. This simulator makes that distribution
-         visible: hundreds of independent runs, each following the same parameters
-         but arriving at very different places. The spread is the story.</p>
+         Most financial projections give you a single number. Any one such number
+         is a draw from a wide distribution &mdash; and the spread is often more
+         important than the center.
+         <br><a href="#why-i-built-this" class="arrow-link">&rarr; Why I built this</a></p>
     </div>
     <div class="motivation-item">
       <div class="motivation-num">2</div>
-      <p><strong>What does rebalancing do to the efficient frontier?</strong>
-         Standard treatments of the frontier (discussed below) assume rebalancing &mdash;
-         it's baked into the math, so only one curve is ever shown. This simulator
-         plots both the rebalanced and non-rebalanced frontiers side by side. As far
-         as I can tell this comparison isn't common in the literature, though
-         it's a large field and I don't claim to have read it all.</p>
+      <p><strong>The frontier is a centerline, not a ceiling.</strong>
+         The efficient frontier is standardly described as &ldquo;the best achievable
+         return at each level of risk.&rdquo; But it's a curve through expected
+         values &mdash; individual outcomes scatter widely above and below it.
+         <br><a href="#the-efficient-frontier" class="arrow-link">&rarr; The efficient frontier</a></p>
+    </div>
+    <div class="motivation-item">
+      <div class="motivation-num">3</div>
+      <p><strong>The textbook frontier and the simulator's frontier are different objects.</strong>
+         The classical frontier is a constant-weight, single-period construction
+         with no time axis. The simulator's frontiers are multi-period and
+         path-dependent. They share vocabulary by historical accident, not by
+         mathematical equivalence.
+         <br><a href="#the-efficient-frontier" class="arrow-link">&rarr; The efficient frontier</a></p>
+    </div>
+    <div class="motivation-item">
+      <div class="motivation-num">4</div>
+      <p><strong>Rebalancing can beat staying all-in on the highest-return asset.</strong>
+         In a multi-period world, periodic rebalancing forfeits drift gains,
+         locks in variance drag at the current allocation, and harvests mean
+         reversion between assets. The balance of these effects can produce a
+         rebalanced portfolio whose average terminal return exceeds that of
+         100% stocks &mdash; even when stocks have the higher expected return.
+         This is invisible in the single-period framework, where averages and
+         compound growth coincide.
+         <br><a href="#when-rebalancing-beats-100-stocks" class="arrow-link">&rarr; When rebalancing beats 100% stocks</a></p>
     </div>
   </div>
 
   <section>
-    <h2>Why I built this</h2>
+    <h2 id="why-i-built-this">Why I built this</h2>
     <p>I've long been skeptical of financial projections that give you a single
        number &mdash; "at 7% annual return, your $10,000 grows to $76,000 in 30 years."
        That figure isn't wrong exactly, but it papers over an enormous amount of
@@ -215,31 +241,50 @@ a[style]{color:#1D9E75 !important}
   </section>
 
   <section>
-    <h2 id="frontier">The efficient frontier</h2>
+    <h2 id="the-efficient-frontier">The efficient frontier</h2>
     <p>Imagine plotting every possible stock/bond mix on a chart &mdash; risk on the
        horizontal axis, expected return on the vertical. Most of those points are
-       <em>dominated</em> &mdash; meaning there's some other mix that offers either
-       higher return for the same risk, or lower risk for the same return.
+       <em>dominated</em>: there's some other mix that offers either higher expected
+       return for the same risk, or lower expected risk for the same return.
        The <strong>efficient frontier</strong> is the curve formed by the mixes
-       that <em>aren't</em> dominated: the best achievable return at every level
-       of risk.</p>
+       that aren't dominated.</p>
 
-    <p>Standard treatments of this concept assume rebalancing throughout &mdash; it's
-       an implicit part of the framework, so there's typically only ever one
-       frontier shown. This simulator plots two: one for rebalanced portfolios
-       and one for portfolios left to drift. The gap between them makes visible
-       something that's easy to overlook &mdash; rebalancing doesn't just keep you on
-       the frontier, it changes where the frontier is.</p>
+    <p>It's tempting &mdash; and standard descriptions encourage this &mdash; to read
+       the frontier as a hard ceiling: the best you can do at each level of risk.
+       But the frontier is a curve through <em>expected values</em>. Any individual
+       run of any mix can land far above it or far below it. The clouds on the
+       <a href="monte-carlo.html?tab=frontier_explorer" class="tab-link">Frontier Explorer</a> tab make this visible: each cloud is the distribution
+       of realized outcomes at one allocation, and the frontier dot is just the
+       centerline. The width of the cloud often matters more than the position
+       of the dot.</p>
 
-    <p>In the simulator, the <strong>Efficient Frontier</strong> tab shows the
+    <p>This is the same point as the page's opening summary, applied to the
+       frontier itself: distributions, not point estimates. The frontier is a
+       useful summary, but it summarizes by averaging &mdash; and averaging hides
+       exactly the variability that makes investing risky in the first place.</p>
+
+    <p>A second subtlety: the textbook frontier is a constant-weight construction.
+       There's no time axis, so weights don't drift and no rebalancing action is
+       needed &mdash; constant weights are just stipulated. The simulator, by contrast,
+       runs over time, and there constant weights have to be maintained by an
+       action: periodic rebalancing. That action has consequences the textbook
+       version doesn't account for (it locks in variance drag, forfeits drift,
+       and harvests mean reversion), which is why the simulator's rebalanced curve
+       doesn't simply reproduce the textbook frontier. The next section walks
+       through what changes.</p>
+
+    <p>In the simulator, the <a href="monte-carlo.html?tab=efficient_frontier" class="tab-link"><strong>Efficient Frontier</strong></a> tab shows the
        frontier as point estimates &mdash; each dot is the mean gain and mean SD
-       across all simulations for one stock/bond split. The <strong>Frontier
-       Explorer</strong> tab shows the full distributions from which those point
+       across all simulations for one stock/bond split. The <a href="monte-carlo.html?tab=frontier_explorer" class="tab-link"><strong>Frontier
+       Explorer</strong></a> tab shows the full distributions from which those point
        estimates are derived: clouds of individual simulation outcomes at each
        allocation, with the frontier overlaid.</p>
 
-    <p>Use the interactive widget below to explore how the frontier's shape responds
-       to changes in correlation, returns, and volatility:</p>
+    <p>Use the interactive widget below to explore how the textbook frontier &mdash;
+       the single-period constant-weight version &mdash; responds to changes in
+       correlation, returns, and volatility. The simulator builds something
+       different (multi-period, terminal-wealth), and the next section walks
+       through where the two pictures part company.</p>
 
     <!-- Interactive frontier widget (merged from monte-carlo-frontier.html) -->
     <div class="widget-wrap">
@@ -248,8 +293,8 @@ a[style]{color:#1D9E75 !important}
       </div>
       <div class="controls">
         <div class="ctrl">
-          <label>Correlation (&rho;) <span class="val" id="v-corr">0.70</span></label>
-          <input type="range" id="s-corr" min="-1" max="1" step="0.05" value="0.70">
+          <label>Correlation (&rho;) <span class="val" id="v-corr">-0.30</span></label>
+          <input type="range" id="s-corr" min="-1" max="1" step="0.05" value="-0.30">
         </div>
         <div class="ctrl">
           <label>Stock return <span class="val" id="v-sr">6.0%</span></label>
@@ -271,17 +316,106 @@ a[style]{color:#1D9E75 !important}
         </div>
       </div>
       <div class="legend">
-        <div class="legend-item"><div class="legend-swatch" style="background:#1D9E75"></div> Rebalanced</div>
-        <div class="legend-item"><div class="legend-swatch" style="background:#c86080;border-style:dashed"></div> Non-rebalanced (approx.)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#1D9E75"></div> Constant-weight frontier</div>
       </div>
     </div>
 
-    <p class="formula-ref">The rebalanced frontier uses the
+    <p class="formula-ref">The frontier shown uses the
        <a href="https://en.wikipedia.org/wiki/Modern_portfolio_theory#Two_mutual_fund_theorem" target="_blank">standard two-asset portfolio variance formula</a>:
        &sigma;<sub>p</sub> = &radic;(w&sup2;&sigma;<sub>s</sub>&sup2; + (1&minus;w)&sup2;&sigma;<sub>b</sub>&sup2; + 2w(1&minus;w)&rho;&sigma;<sub>s</sub>&sigma;<sub>b</sub>).
-       The non-rebalanced curve is an approximation &mdash; without rebalancing,
-       the portfolio drifts toward the higher-returning asset, increasing effective
-       volatility and reducing the diversification benefit.</p>
+       It's a single-period, analytic construction: no compounding, no drift across
+       periods, no path-dependence. Think of it as the textbook picture against which
+       the simulator's multi-period results are a contrast.</p>
+  </section>
+
+  <section>
+    <h2 id="when-rebalancing-beats-100-stocks">When rebalancing beats 100% stocks</h2>
+
+    <p>At certain parameter settings &mdash; particularly with negative correlation and
+       asymmetric assets &mdash; a rebalanced portfolio with some bond exposure produces
+       a higher <em>average</em> terminal gain than 100% stocks, even though stocks
+       have the higher expected return. The screenshot below shows this with
+       correlation&nbsp;=&nbsp;&minus;0.7, where stocks are more volatile (SD&nbsp;6)
+       and higher-returning than bonds (SD&nbsp;3).</p>
+
+    <div class="fig-wrap">
+      <img src="img/frontier_curveback.png"
+           alt="Efficient frontier with correlation −0.7 showing the rebalanced curve peaking around 60–70% stocks then curving back"
+           style="width:100%;display:block">
+      <figcaption>Frontier sweep at corr&nbsp;=&nbsp;&minus;0.7, asymmetric assets
+        (stock SD&nbsp;6, bond SD&nbsp;3, stock interest&nbsp;6%, bond interest&nbsp;2%).
+        The rebalanced curve (green) peaks and turns over; the non-rebalanced curve (red)
+        does not. Each dot is the <em>mean</em> gain and <em>mean</em> SD across 5,000 simulations.</figcaption>
+    </div>
+
+    <p><strong>Variance drag.</strong>
+       The mechanism is straightforward. If an investment gains 20% and then loses 20%,
+       you don't end up back where you started &mdash; you're at 96&cent; on the dollar.
+       Gain 50%, lose 50%, and you're at 75&cent;. The more volatile the path, the
+       wider the gap between the arithmetic average return and the actual compound
+       growth. This penalty is called <strong>variance drag</strong> (or volatility
+       drag), and its magnitude is roughly &frac12;&sigma;&sup2; &mdash; half the
+       variance of returns per period.</p>
+
+    <p><strong>Why a mixed portfolio can beat 100% stocks.</strong>
+       Variance drag affects both rebalanced and non-rebalanced portfolios &mdash;
+       it's a property of compounding volatile returns, not of rebalancing per se.
+       So drag alone can't explain why a rebalanced mix outperforms 100% stocks.
+       The difference comes from how each strategy's effective allocation evolves
+       over time.</p>
+
+    <p>Rebalancing earns a &ldquo;sell high / buy low&rdquo; premium by
+       systematically harvesting mean reversion between the two assets &mdash; but
+       this premium requires meaningful positions in both assets to work. As the
+       stock allocation climbs toward 100%, there's progressively less bond
+       exposure to rebalance into, and the harvesting opportunity shrinks toward
+       zero. At the same time, rebalancing forfeits the drift premium that a
+       non-rebalanced portfolio enjoys: by letting winners run, a non-rebalanced
+       90/10 drifts toward something like 99/1 over the run, capturing more of
+       the stock premium along the way. The rebalanced version stays pinned at
+       90/10, locked into the same high-volatility allocation every period.</p>
+
+    <p>So at high stock allocations, the rebalanced strategy is paying a real
+       cost &mdash; forfeited drift &mdash; for a harvesting benefit that's collapsing
+       toward zero. At 100% stocks the two strategies are mechanically identical
+       (nothing to rebalance) and the curves meet. At moderate allocations the
+       balance tips the other way: there's enough of both assets for harvesting
+       to matter, the harvesting premium is at its strongest, and the rebalanced
+       curve sits well above 100% stocks &mdash; even when stocks are the
+       higher-return asset on their own.</p>
+
+    <div class="callout">
+      These are <em>average</em> outcomes across thousands of simulations &mdash;
+      individual runs scatter widely (that's the cloud you see on the Frontier
+      Explorer tab). The curveback is a property of the mean, not of any
+      single simulated history.
+    </div>
+
+    <p><strong>The textbook vs. the sim.</strong>
+       The classic Markowitz frontier has no time dimension &mdash; no compounding,
+       no drift, no path. The result above can't appear in that framework,
+       because the framework can't represent it.</p>
+
+    <p><strong>Sanity check.</strong>
+       When rebalancing is disabled entirely (rebalance interval longer than the
+       time horizon), both the &ldquo;rebalanced&rdquo; and &ldquo;non-rebalanced&rdquo;
+       curves collapse to identical &mdash; verified across every allocation,
+       every simulation, zero difference. This confirms the divergence comes
+       entirely from the rebalancing mechanism, not from a code artifact.</p>
+
+    <p><strong>The tradeoff.</strong>
+       Rebalancing is a trade: it captures the rebalancing premium (systematic
+       sell-high/buy-low) but pays variance drag every period and forfeits the
+       drift premium (letting winners run). Where that balance tips depends on
+       correlation, volatility, and horizon &mdash; all subject to the
+       simplifications discussed in
+       &ldquo;What this is&nbsp;&mdash; and isn't&rdquo; above. In particular,
+       the plot above assumes a constant stock/bond correlation of &minus;0.7.
+       Actual correlations vary constantly &mdash; and rarely are that
+       decorrelated. The simulator's <a href="monte-carlo.html?tab=frontier_explorer" class="tab-link">Frontier Explorer</a> tab lets you compare
+       precomputed frontiers across a range of (constant) correlations and
+       rebalancing intervals, so you can see how the shape changes as
+       assumptions shift.</p>
   </section>
 
   <section>
@@ -388,20 +522,6 @@ a[style]{color:#1D9E75 !important}
     return { ret, vol };
   }
 
-  function nonrebalancedFrontier(w, p) {
-    const ret = w * p.sr + (1 - w) * p.br;
-    const returnDiff = Math.abs(p.sr - p.br);
-    const driftStrength = returnDiff * 2.5;
-    const shift = w * (1 - w) * driftStrength;
-    const wEff = p.sr > p.br ? Math.min(1, w + shift) : Math.max(0, w - shift);
-    const vol = Math.sqrt(
-      wEff * wEff * p.sv * p.sv +
-      (1 - wEff) * (1 - wEff) * p.bv * p.bv +
-      2 * wEff * (1 - wEff) * p.rho * p.sv * p.bv
-    );
-    return { ret, vol };
-  }
-
   function draw(p) {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
@@ -419,16 +539,13 @@ a[style]{color:#1D9E75 !important}
 
     const nPts = 51;
     const rebalPts = [];
-    const nonrebalPts = [];
     for (let i = 0; i <= nPts; i++) {
       const w = i / nPts;
       rebalPts.push(rebalancedFrontier(w, p));
-      nonrebalPts.push(nonrebalancedFrontier(w, p));
     }
 
-    const allPts = rebalPts.concat(nonrebalPts);
     let minVol = Infinity, maxVol = -Infinity, minRet = Infinity, maxRet = -Infinity;
-    for (const pt of allPts) {
+    for (const pt of rebalPts) {
       if (pt.vol < minVol) minVol = pt.vol;
       if (pt.vol > maxVol) maxVol = pt.vol;
       if (pt.ret < minRet) minRet = pt.ret;
@@ -500,7 +617,6 @@ a[style]{color:#1D9E75 !important}
       ctx.setLineDash([]);
     }
 
-    drawCurve(nonrebalPts, 'rgba(200,96,128,0.85)', 2, [6, 4]);
     drawCurve(rebalPts, '#1D9E75', 2.5);
 
     // Endpoints
@@ -521,28 +637,6 @@ a[style]{color:#1D9E75 !important}
     ctx.fillText('100% bonds', toX(bond100_r.vol) + 8, toY(bond100_r.ret) + 4);
     ctx.textAlign = 'right';
     ctx.fillText('100% stocks', toX(stock100_r.vol) - 8, toY(stock100_r.ret) + 4);
-
-    // Rebalancing bonus annotation
-    const mid_r = rebalancedFrontier(0.5, p);
-    const mid_nr = nonrebalancedFrontier(0.5, p);
-    const gap = Math.abs(mid_r.vol - mid_nr.vol);
-    if (gap > 0.05) {
-      const midX = (toX(mid_r.vol) + toX(mid_nr.vol)) / 2;
-      const midY = (toY(mid_r.ret) + toY(mid_nr.ret)) / 2;
-      ctx.strokeStyle = 'rgba(212,184,150,0.3)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(toX(mid_r.vol), toY(mid_r.ret));
-      ctx.lineTo(toX(mid_nr.vol), toY(mid_nr.ret));
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(212,184,150,0.5)';
-      ctx.font = '10px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('rebalancing', midX, midY - 8);
-      ctx.fillText('bonus', midX, midY + 4);
-    }
 
     // Allocation markers
     ctx.fillStyle = 'rgba(29,158,117,0.6)';
@@ -615,7 +709,7 @@ a[style]{color:#1D9E75 !important}
   const lb = document.getElementById('lightbox');
   const lbImg = document.getElementById('lightbox-img');
 
-  document.querySelectorAll('.screenshot-item img').forEach(function (img) {
+  document.querySelectorAll('.screenshot-item img, .fig-wrap img').forEach(function (img) {
     img.addEventListener('click', function () {
       lbImg.src = img.src;
       lbImg.alt = img.alt;

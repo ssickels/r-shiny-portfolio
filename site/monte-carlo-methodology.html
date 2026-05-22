@@ -299,6 +299,33 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
     </table>
   </section>
 
+  <section>
+    <h2>Why the axes differ from the textbook frontier</h2>
+    <p>If you've explored the
+       <a href="/monte-carlo-about.html#the-efficient-frontier">interactive frontier widget</a>
+       on the About page, you may have noticed that its x-axis ("Risk") ranges roughly
+       from 3 to 6, while the simulator's frontier plots show annualized
+       volatility in the 25&ndash;75% range. They look like different universes,
+       but both are correct &mdash; they're measuring different things.</p>
+    <p>The <strong>widget</strong> uses the classical Markowitz formula:
+       the portfolio standard deviation is a weighted combination of the input
+       asset SDs and their correlation, computed analytically in a single-period
+       framework. There's no time axis and no compounding &mdash; the x-axis is
+       simply the input volatility parameters recombined by the variance formula.</p>
+    <p>The <strong>simulator</strong> measures something different: the standard
+       deviation of realized per-step log returns across each simulated price path,
+       scaled to annual terms by &radic;300 (the number of steps per year). This is
+       <em>empirical</em> volatility &mdash; it emerges from the actual MCMC output
+       and reflects compounding, drift, and path-dependent effects that don't exist
+       in the single-period model.</p>
+    <div class="callout">
+      The gap between these two numbers is exactly what multi-period simulation
+      introduces. The textbook frontier is a useful mental model, but the
+      simulator's frontier lives in a world with time, compounding, and
+      the mechanical consequences of rebalancing along the way.
+    </div>
+  </section>
+
   <a href="/monte-carlo.html" class="sim-link">&larr; Open the simulator</a>
 
 </div>

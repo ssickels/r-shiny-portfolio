@@ -16,8 +16,9 @@ plot_gain_vs_sd <- function(result, highlight_sim = NULL, show_cloud = TRUE,
     geom_point(data = result$gainsVsSD.point.estDf,
                aes(x = sd, y = gain, color = type),
                size = app_theme$point_size, alpha = app_theme$point_alpha) +
+    scale_x_continuous(labels = scales::percent) +
     scale_y_continuous(labels = scales::percent) +
-    labs(x = "standard deviation", y = "gain (annualized %)", color = NULL) +
+    labs(x = "volatility (annualized %)", y = "gain (annualized %)", color = NULL) +
     ggtitle(paste0("Stocks / Bonds = ", round(p$perc.stocks * 100, 1), "% / ",
                    round((1 - p$perc.stocks) * 100, 1), "%")) +
     app_theme$base_theme()
@@ -160,12 +161,16 @@ plot_single_sim_explorer <- function(result, simSel) {
 
 #' Frontier explorer: cloud of sim results per allocation with frontier overlay
 plot_frontier_explorer <- function(sweep_data, alloc_index, show_cloud = TRUE,
-                                   cloud_alpha_override = NULL) {
+                                   cloud_alpha_override = NULL,
+                                   show_labels = TRUE,
+                                   highlight_sim = NULL) {
   allocs <- sort(unique(sweep_data$point_estimates$allocation))
   current_alloc <- allocs[alloc_index]
 
   all_pe <- sweep_data$point_estimates
   current_cloud <- sweep_data$cloud[sweep_data$cloud$allocation == current_alloc, ]
+  # Interleave rebal/nonrebal rows so neither color systematically covers the other
+  current_cloud <- current_cloud[order(current_cloud$sim), ]
   current_pe <- all_pe[all_pe$allocation == current_alloc, ]
   other_pe <- all_pe[all_pe$allocation != current_alloc, ]
 
@@ -191,16 +196,16 @@ plot_frontier_explorer <- function(sweep_data, alloc_index, show_cloud = TRUE,
                  else app_theme$cloud_alpha
 
   # Use a single color aesthetic throughout so ggplotly merges legends cleanly
-  ggplot() +
+  plt <- ggplot() +
     # Cloud of individual sim results for current allocation
     geom_point(data = current_cloud, aes(x = sd, y = gain, color = type),
                alpha = cloud_alpha) +
     # Frontier lines connecting point estimates by type
-    geom_line(data = all_pe[all_pe$type == "rebal", ],
+    geom_path(data = all_pe[all_pe$type == "rebal", ],
               aes(x = sd, y = gain),
               color = app_theme$frontier_line_color,
               alpha = app_theme$frontier_line_alpha) +
-    geom_line(data = all_pe[all_pe$type == "nonrebal", ],
+    geom_path(data = all_pe[all_pe$type == "nonrebal", ],
               aes(x = sd, y = gain),
               color = app_theme$frontier_line_color,
               alpha = app_theme$frontier_line_alpha) +
@@ -211,23 +216,55 @@ plot_frontier_explorer <- function(sweep_data, alloc_index, show_cloud = TRUE,
     geom_point(data = current_pe, aes(x = sd, y = gain, color = type),
                size = app_theme$current_point_size,
                alpha = app_theme$current_point_alpha) +
-    # Allocation % labels along the rebal frontier
-    geom_text(data = rebal_pe,
-              aes(x = sd, y = gain,
-                  label = paste0(round(allocation * 100), "%")),
-              size = app_theme$frontier_label_size, vjust = -1,
-              color = app_theme$frontier_label_color) +
     coord_cartesian(xlim = x_lim, ylim = y_lim) +
+    scale_x_continuous(labels = scales::percent) +
     scale_y_continuous(labels = scales::percent) +
-    labs(x = "standard deviation", y = "gain (annualized %)", color = NULL) +
+    labs(x = "volatility (annualized %)", y = "gain (annualized %)", color = NULL) +
     ggtitle(paste0("Frontier Explorer: ",
                    round(current_alloc * 100, 1), "% Stocks / ",
                    round((1 - current_alloc) * 100, 1), "% Bonds")) +
     app_theme$base_theme()
+
+  # Highlight a specific simulation pair (rebal + nonrebal connected by a line)
+  if (!is.null(highlight_sim)) {
+    hl <- current_cloud[current_cloud$sim == highlight_sim, ]
+    if (nrow(hl) >= 2) {
+      hl_rebal <- hl[hl$type == "rebal", ][1, ]
+      hl_nonrebal <- hl[hl$type == "nonrebal", ][1, ]
+      seg_df <- data.frame(x = hl_nonrebal$sd, xend = hl_rebal$sd,
+                           y = hl_nonrebal$gain, yend = hl_rebal$gain)
+      plt <- plt +
+        geom_segment(data = seg_df,
+                     aes(x = x, y = y, xend = xend, yend = yend),
+                     color = "gray40", linewidth = 0.5, alpha = 0.7,
+                     show.legend = FALSE) +
+        geom_point(data = hl_rebal, aes(x = sd, y = gain),
+                   shape = 23, fill = "#00BFC4", color = "black",
+                   size = 4, stroke = 0.8, show.legend = FALSE) +
+        geom_point(data = hl_nonrebal, aes(x = sd, y = gain),
+                   shape = 23, fill = "#F8766D", color = "black",
+                   size = 4, stroke = 0.8, show.legend = FALSE) +
+        geom_text(data = hl_rebal, aes(x = sd, y = gain),
+                  label = paste0("sim #", highlight_sim),
+                  size = 3, vjust = -1.5, color = "gray30",
+                  show.legend = FALSE)
+    }
+  }
+
+  if (show_labels) {
+    plt <- plt +
+      geom_text(data = rebal_pe,
+                aes(x = sd, y = gain,
+                    label = paste0(round(allocation * 100), "%")),
+                size = app_theme$frontier_label_size, vjust = -1,
+                color = app_theme$frontier_label_color)
+  }
+
+  plt
 }
 
 #' Efficient frontier plot from sweep results
-plot_efficient_frontier <- function(sweep_result) {
+plot_efficient_frontier <- function(sweep_result, show_labels = TRUE) {
   # Reshape to long format for plotting
   rebal_df <- data.frame(
     allocation = sweep_result$allocation,
@@ -243,11 +280,31 @@ plot_efficient_frontier <- function(sweep_result) {
   )
   plot_df <- rbind(rebal_df, nonrebal_df)
 
-  ggplot(data = plot_df, aes(x = sd, y = gain, color = type)) +
+  plt <- ggplot(data = plot_df, aes(x = sd, y = gain, color = type)) +
     geom_point(size = 2) +
-    geom_line(alpha = app_theme$mean_line_alpha) +
+    geom_path(alpha = app_theme$mean_line_alpha) +
+    scale_x_continuous(labels = scales::percent) +
     scale_y_continuous(labels = scales::percent) +
-    labs(x = "standard deviation", y = "gain (annualized %)", color = NULL) +
+    labs(x = "volatility (annualized %)", y = "gain (annualized %)", color = NULL) +
     ggtitle("Efficient Frontier: Gain vs Risk by Allocation") +
     app_theme$base_theme()
+
+  if (show_labels) {
+    plt <- plt +
+      geom_text_repel(data = rebal_df,
+                aes(x = sd, y = gain,
+                    label = paste0(round(allocation * 100), "%")),
+                size = app_theme$frontier_label_size,
+                color = app_theme$frontier_label_color,
+                nudge_y = diff(range(plot_df$gain)) * 0.04,
+                segment.color = "gray70", segment.size = 0.3,
+                min.segment.length = 0,
+                box.padding = 0.3, point.padding = 0.2,
+                max.overlaps = 20, seed = 42) +
+      labs(caption = "Labels show stock allocation") +
+      theme(plot.caption = element_text(face = "italic", size = 9,
+                                        color = "#9a8e82", hjust = 0))
+  }
+
+  plt
 }

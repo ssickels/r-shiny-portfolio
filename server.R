@@ -7,7 +7,6 @@ function(input, output, session) {
   b.mean <- 10
   init.inv <- 1000
   propStepDivisor <- 20
-  widthVal <- 600
   int.period <- 300
 
   # Screenshot mode: set to a sim number to highlight it on the Gain vs SD plot.
@@ -19,58 +18,63 @@ function(input, output, session) {
   # Reactive values to store results
   sim_result <- reactiveVal(NULL)
   sweep_result <- reactiveVal(NULL)
-  frontier_alloc_index <- reactiveVal(1)
-  active_scenario <- reactiveVal("corr070_rebal100")  # tracks which precomputed scenario is loaded
-  scenario_grid_open <- reactiveVal(FALSE)
-  scenario_pinned <- reactiveVal(FALSE)
+  frontier_alloc_index <- reactiveVal(6)  # default to 50/50 (index 6 of 0%,10%,...,100%)
+  frontier_highlight_sim <- reactiveVal(NULL)
+  active_scenario <- reactiveVal("corrn030_rebal100")  # tracks which precomputed scenario is loaded
 
-  # Helper: collapse the scenario grid
-  collapse_grid <- function() {
-    shinyjs::hide("scenario_grid_panel", anim = TRUE, animType = "slide", time = 0.2)
-    shinyjs::hide("scenario_pin", anim = TRUE, animType = "fade", time = 0.15)
-    shinyjs::removeClass("scenario_toggle", "open")
-    scenario_grid_open(FALSE)
-  }
-
-  # Toggle scenario grid visibility
-  observeEvent(input$scenario_toggle, {
-    if (scenario_grid_open()) {
-      collapse_grid()
-      scenario_pinned(FALSE)
-      shinyjs::removeClass("scenario_pin", "pinned")
+  # --- Manage params_details open/closed state based on active tab ---
+  # In Single allocation mode: force open, hide summary (looks like regular content)
+  # In Frontier mode: show summary, collapse by default
+  observe({
+    req(input$main_tabs)
+    if (input$main_tabs == "Single allocation") {
+      shinyjs::runjs("
+        var el = document.getElementById('params_details');
+        if (el) el.setAttribute('open', '');
+        var s = document.getElementById('params_summary');
+        if (s) { s.style.display = ''; s.classList.add('params-static'); }
+      ")
     } else {
-      shinyjs::show("scenario_grid_panel", anim = TRUE, animType = "slide", time = 0.2)
-      shinyjs::show("scenario_pin", anim = TRUE, animType = "fade", time = 0.15)
-      shinyjs::addClass("scenario_toggle", "open")
-      scenario_grid_open(TRUE)
+      shinyjs::runjs("
+        var el = document.getElementById('params_details');
+        if (el) el.removeAttribute('open');
+        var s = document.getElementById('params_summary');
+        if (s) { s.style.display = ''; s.classList.remove('params-static'); }
+      ")
     }
   })
 
-  # Pin/unpin scenario grid
-  observeEvent(input$scenario_pin, {
-    pinned <- !scenario_pinned()
-    scenario_pinned(pinned)
-    shinyjs::toggleClass("scenario_pin", "pinned")
-    if (!pinned) collapse_grid()
-  })
-  # Cloud alpha is driven by the UI slider (input$cloud_alpha)
-  # Highlight the label when cloud is fully hidden
+  # --- Cloud alpha: single allocation slider ---
   observe({
-    alpha <- input$cloud_alpha
+    alpha <- input$cloud_alpha_single
     req(!is.null(alpha))
     if (alpha == 0) {
-      shinyjs::runjs("$('#cloud_alpha').closest('.form-group').addClass('cloud-hidden-warning')")
+      shinyjs::runjs("$('#cloud_alpha_single').closest('.form-group').addClass('cloud-hidden-warning')")
     } else {
-      shinyjs::runjs("$('#cloud_alpha').closest('.form-group').removeClass('cloud-hidden-warning')")
+      shinyjs::runjs("$('#cloud_alpha_single').closest('.form-group').removeClass('cloud-hidden-warning')")
+    }
+  })
+
+  observe({
+    alpha <- input$cloud_alpha_frontier
+    req(!is.null(alpha))
+    if (alpha == 0) {
+      shinyjs::runjs("$('#cloud_alpha_frontier').closest('.form-group').addClass('cloud-hidden-warning')")
+    } else {
+      shinyjs::runjs("$('#cloud_alpha_frontier').closest('.form-group').removeClass('cloud-hidden-warning')")
     }
   })
 
   # Update cloud opacity in-place (no re-render, preserves zoom)
-  observeEvent(input$cloud_alpha, {
-    alpha <- input$cloud_alpha
+  observeEvent(input$cloud_alpha_single, {
+    alpha <- input$cloud_alpha_single
     plotlyProxy("plot_gain_sd", session) %>%
       plotlyProxyInvoke("restyle", list(`marker.opacity` = alpha), list(0L, 1L))
-    plotlyProxy("plot_frontier_explorer", session) %>%
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$cloud_alpha_frontier, {
+    alpha <- input$cloud_alpha_frontier
+    plotlyProxy("plot_frontier_merged", session) %>%
       plotlyProxyInvoke("restyle", list(`marker.opacity` = alpha), list(0L, 1L))
   }, ignoreInit = TRUE)
 
@@ -78,10 +82,56 @@ function(input, output, session) {
   single_source <- reactiveVal("precomputed")
   sweep_source <- reactiveVal("precomputed")
 
+  # --- Conditional visibility of restore/reset buttons ---
+  observe({
+    req(input$main_tabs)
+    is_custom <- (input$main_tabs == "Single allocation" && single_source() == "custom") ||
+                 (input$main_tabs == "Frontier" && sweep_source() == "custom")
+    shinyjs::toggle("restore_precomputed", condition = is_custom)
+  })
+
+  observe({
+    # Show "Reset to defaults" only when at least one param differs
+    defaults_match <- isTRUE(input$nSims == 500) &&
+                      isTRUE(input$n_timesteps == 1000) &&
+                      isTRUE(input$perc_stocks == 60) &&
+                      isTRUE(input$rebal_interval == 100) &&
+                      isTRUE(input$s_sd == 6) && isTRUE(input$b_sd == 3) &&
+                      isTRUE(input$s_b_corr == 0.7) &&
+                      isTRUE(input$s_int == 0.06) && isTRUE(input$b_int == 0.02)
+    shinyjs::toggle("reset_defaults", condition = !defaults_match)
+  })
+
+  # --- Deep-link: switch to a specific tab if ?tab= is in the URL ---
+  observe({
+    query <- parseQueryString(session$clientData$url_search)
+    tab <- query$tab
+    if (!is.null(tab)) {
+      if (tab %in% c("frontier_explorer", "efficient_frontier")) {
+        updateTabsetPanel(session, "main_tabs", selected = "Frontier")
+        if (tab == "frontier_explorer") {
+          updateCheckboxInput(session, "show_distributions", value = TRUE)
+        }
+      } else if (tab %in% c("gain_vs_sd", "final_densities", "trajectories",
+                             "cost_profiles", "single_sim_explorer", "summary")) {
+        updateTabsetPanel(session, "main_tabs", selected = "Single allocation")
+        sub <- switch(tab,
+          gain_vs_sd = "Gain vs SD",
+          final_densities = "Final Densities",
+          trajectories = "Trajectories",
+          cost_profiles = "Cost Profiles",
+          single_sim_explorer = "Single Sim Explorer",
+          summary = "Summary"
+        )
+        updateTabsetPanel(session, "single_tabs", selected = sub)
+      }
+    }
+  }) |> bindEvent(TRUE, once = TRUE)
+
   # --- Auto-load precomputed data on startup ---
   observe({
     single_path <- "data/precomputed/single_n200.rds"
-    frontier_path <- "data/precomputed/frontier_corr070_rebal100_n5000.rds"
+    frontier_path <- "data/precomputed/frontier_corrn030_rebal100_n5000.rds"
 
     if (file.exists(single_path)) {
       sim_result(readRDS(single_path))
@@ -101,15 +151,16 @@ function(input, output, session) {
       sweep_result(data)
       sweep_source("precomputed")
       active_scenario(paste0("corr", corr_str, "_rebal", rebal))
+      frontier_highlight_sim(NULL)
+      shinyjs::hide("clear_highlight")
       n_allocs <- length(unique(data$point_estimates$allocation))
       if (frontier_alloc_index() > n_allocs) frontier_alloc_index(1)
-      if (!scenario_pinned()) collapse_grid()
     }
   }
 
   # Scenario grid button observers
   scenarios <- expand.grid(
-    corr = c("070", "030", "000", "n030"),
+    corr = c("070", "030", "000", "n030", "n070"),
     rebal = c(25, 100, 300), stringsAsFactors = FALSE
   )
   for (i in seq_len(nrow(scenarios))) {
@@ -120,32 +171,6 @@ function(input, output, session) {
       })
     })
   }
-
-  # nSim alt buttons (500 / 2,000 at default scenario)
-  observeEvent(input$nsim_500, {
-    fname <- "data/precomputed/frontier_n500.rds"
-    if (file.exists(fname)) {
-      data <- readRDS(fname)
-      sweep_result(data)
-      sweep_source("precomputed")
-      active_scenario("corr070_rebal100_n500")
-      n_allocs <- length(unique(data$point_estimates$allocation))
-      if (frontier_alloc_index() > n_allocs) frontier_alloc_index(1)
-      if (!scenario_pinned()) collapse_grid()
-    }
-  })
-  observeEvent(input$nsim_2000, {
-    fname <- "data/precomputed/frontier_n2000.rds"
-    if (file.exists(fname)) {
-      data <- readRDS(fname)
-      sweep_result(data)
-      sweep_source("precomputed")
-      active_scenario("corr070_rebal100_n2000")
-      n_allocs <- length(unique(data$point_estimates$allocation))
-      if (frontier_alloc_index() > n_allocs) frontier_alloc_index(1)
-      if (!scenario_pinned()) collapse_grid()
-    }
-  })
 
   # Highlight active scenario button
   observe({
@@ -160,21 +185,12 @@ function(input, output, session) {
         shinyjs::removeClass(btn_id, "scenario-active")
       }
     }
-    # nSim alt buttons
-    for (n in c("500", "2000")) {
-      btn_id <- paste0("nsim_", n)
-      if (endsWith(current, paste0("_n", n))) {
-        shinyjs::addClass(btn_id, "nsim-alt-active")
-      } else {
-        shinyjs::removeClass(btn_id, "nsim-alt-active")
-      }
-    }
   })
 
   # --- Restore precomputed data ---
   observeEvent(input$restore_precomputed, {
     single_path <- "data/precomputed/single_n200.rds"
-    frontier_path <- "data/precomputed/frontier_corr070_rebal100_n5000.rds"
+    frontier_path <- "data/precomputed/frontier_corrn030_rebal100_n5000.rds"
 
     if (file.exists(single_path)) {
       sim_result(readRDS(single_path))
@@ -183,7 +199,7 @@ function(input, output, session) {
     if (file.exists(frontier_path)) {
       sweep_result(readRDS(frontier_path))
       sweep_source("precomputed")
-      active_scenario("corr070_rebal100")
+      active_scenario("corrn030_rebal100")
       frontier_alloc_index(1)
     }
   })
@@ -194,19 +210,22 @@ function(input, output, session) {
     updateSliderInput(session, "n_timesteps", value = 1000)
     updateSliderInput(session, "perc_stocks", value = 60)
     updateSliderInput(session, "rebal_interval", value = 100)
-    updateSliderInput(session, "cloud_alpha", value = 0.08)
+    updateSliderInput(session, "cloud_alpha_single", value = 0.08)
+    updateSliderInput(session, "cloud_alpha_frontier", value = 0.08)
     updateSliderInput(session, "s_sd", value = 6)
     updateSliderInput(session, "b_sd", value = 3)
     updateSliderInput(session, "s_b_corr", value = 0.7)
     updateSliderInput(session, "s_int", value = 0.06)
     updateSliderInput(session, "b_int", value = 0.02)
+    updateCheckboxInput(session, "show_distributions", value = FALSE)
+    updateCheckboxInput(session, "zoom_to_frontier", value = TRUE)
   })
 
-  # --- Status banner ---
+  # --- Status banner (single allocation only; frontier info goes in plot title) ---
   output$data_status_banner <- renderUI({
     tab <- input$main_tabs
 
-    if (tab == "Single Allocation") {
+    if (tab == "Single allocation") {
       src <- single_source()
       res <- sim_result()
       if (is.null(res)) return(NULL)
@@ -214,85 +233,54 @@ function(input, output, session) {
       if (src == "precomputed") {
         msg <- paste0("Showing precomputed results (", nsims,
                        " sims, 60/40 allocation). ",
-                       "Adjust parameters and run your own, or switch to Frontier Sweep ",
+                       "Adjust parameters and run your own, or switch to Frontier ",
                        "to explore precomputed scenarios.")
       } else {
         msg <- paste0("Showing custom simulation results (", nsims, " sims).")
       }
-    } else if (tab == "Frontier Sweep") {
-      src <- sweep_source()
-      sw <- sweep_result()
-      if (is.null(sw)) return(NULL)
-      nsims <- nrow(sw$cloud) / length(unique(sw$cloud$allocation)) / 2
-      if (src == "precomputed") {
-        sc <- active_scenario()
-        if (grepl("^corr", sc)) {
-          base <- sub("_n\\d+$", "", sc)
-          parts <- regmatches(base, regexec("corr(n?\\d+)_rebal(\\d+)", base))[[1]]
-          corr_val <- if (substr(parts[2], 1, 1) == "n") {
-            paste0("\u2212", as.numeric(sub("n", "", parts[2])) / 100)
-          } else {
-            as.character(as.numeric(parts[2]) / 100)
-          }
-          nsim_str <- if (grepl("_n\\d+$", sc)) {
-            format(as.numeric(sub(".*_n", "", sc)), big.mark = ",")
-          } else {
-            "5,000"
-          }
-          msg <- paste0("Showing precomputed frontier (", nsim_str,
-                         " sims, correlation ", corr_val,
-                         ", rebalance every ", parts[3], " days).")
-        } else {
-          msg <- paste0("Showing precomputed frontier (",
-                         format(round(nsims), big.mark = ","),
-                         " sims per allocation).")
-        }
+      div(class = "data-status-banner", msg)
+    } else {
+      NULL
+    }
+  })
+
+  # --- Frontier scenario label (reactive for plot titles) ---
+  frontier_scenario_label <- reactive({
+    sc <- active_scenario()
+    sw <- sweep_result()
+    req(sw)
+
+    if (grepl("^corr", sc)) {
+      base <- sub("_n\\d+$", "", sc)
+      parts <- regmatches(base, regexec("corr(n?\\d+)_rebal(\\d+)", base))[[1]]
+      corr_val <- if (substr(parts[2], 1, 1) == "n") {
+        paste0("\u2212", as.numeric(sub("n", "", parts[2])) / 100)
       } else {
-        msg <- paste0("Showing custom frontier sweep results (",
-                       format(round(nsims), big.mark = ","), " sims per allocation).")
+        as.character(as.numeric(parts[2]) / 100)
       }
+      rebal <- parts[3]
+      nsim_str <- if (grepl("_n\\d+$", sc)) {
+        format(as.numeric(sub(".*_n", "", sc)), big.mark = ",")
+      } else {
+        "5,000"
+      }
+      paste0("corr ", corr_val, ", rebal ", rebal, "d, ", nsim_str, " sims")
+    } else if (sweep_source() == "custom") {
+      nsims <- nrow(sw$cloud) / length(unique(sw$cloud$allocation)) / 2
+      paste0("custom run, ", format(round(nsims), big.mark = ","), " sims")
     } else {
-      return(NULL)
-    }
-
-    div(class = "data-status-banner", msg)
-  })
-
-  # --- Disable perc_stocks and update button label when tab changes ---
-  observe({
-    if (input$main_tabs == "Frontier Sweep") {
-      shinyjs::disable("perc_stocks")
-      updateActionButton(session, "run_single", label = "Run Frontier Sweep")
-    } else {
-      shinyjs::enable("perc_stocks")
-      updateActionButton(session, "run_single", label = "Run Single Allocation")
+      ""
     }
   })
 
-  # --- Run button: show confirmation modal ---
+  # --- Run single allocation button: show confirmation modal ---
   observeEvent(input$run_single, {
-    is_frontier <- input$main_tabs == "Frontier Sweep"
     nsims <- input$nSims
+    est_seconds <- round(nsims * 0.1)
 
-    if (is_frontier) {
-      n_allocs <- 11
-      total_sims <- n_allocs * nsims
-      # Rough time estimate: ~0.1s per sim on typical hardware
-      est_minutes <- round(total_sims * 0.1 / 60, 1)
-      title <- "Run Frontier Sweep?"
-      body <- tagList(
-        p(paste0("This will run ", format(total_sims, big.mark = ","),
-                 " simulations (", n_allocs, " allocations \u00d7 ",
-                 format(nsims, big.mark = ","), " sims each).")),
-        p(tags$strong(paste0("Estimated time: ~", est_minutes, " minutes")),
-          " (varies by hardware; frontier sweeps at 1,000+ sims can take much longer)."),
-        p("This will replace the current frontier data. ",
-          "You can restore precomputed results anytime.")
-      )
-    } else {
-      est_seconds <- round(nsims * 0.1)
-      title <- "Run Single Allocation?"
-      body <- tagList(
+    showModal(modalDialog(
+      title = "Run Single Allocation?",
+      tagList(
         p(paste0("This will run ", format(nsims, big.mark = ","),
                  " simulations at ", input$perc_stocks, "% stocks / ",
                  100 - input$perc_stocks, "% bonds.")),
@@ -300,12 +288,7 @@ function(input, output, session) {
           " (varies by hardware)."),
         p("This will replace the current single-allocation data. ",
           "You can restore precomputed results anytime.")
-      )
-    }
-
-    showModal(modalDialog(
-      title = title,
-      body,
+      ),
       footer = tagList(
         modalButton("Cancel"),
         actionButton("confirm_run", "Run", class = "btn-primary")
@@ -314,7 +297,69 @@ function(input, output, session) {
     ))
   })
 
-  # --- Confirmed run ---
+  # --- Run frontier button: show confirmation modal ---
+  observeEvent(input$run_frontier, {
+    nsims <- input$nSims
+    n_allocs <- 11
+    total_sims <- n_allocs * nsims
+    est_minutes <- round(total_sims * 0.1 / 60, 1)
+
+    showModal(modalDialog(
+      title = "Run Frontier Sweep?",
+      tagList(
+        p(paste0("This will run ", format(total_sims, big.mark = ","),
+                 " simulations (", n_allocs, " allocations \u00d7 ",
+                 format(nsims, big.mark = ","), " sims each).")),
+        p(tags$strong(paste0("Estimated time: ~", est_minutes, " minutes")),
+          " (varies by hardware; frontier sweeps at 1,000+ sims can take much longer)."),
+        p("This will replace the current frontier data. ",
+          "You can restore precomputed results anytime.")
+      ),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_frontier_run", "Run", class = "btn-primary")
+      ),
+      easyClose = TRUE
+    ))
+  })
+
+  # Helper: execute a frontier sweep with current parameters
+  do_frontier_sweep <- function() {
+    alloc_fracs <- clamp_pct_to_fraction(seq(0, 100, by = 10))
+    total_work <- length(alloc_fracs) * input$nSims
+
+    withProgress(message = "Running frontier sweep...", value = 0, {
+      set.seed(100)
+      result <- run_meta_sweep(
+        perc.stocks.vec = alloc_fracs,
+        n = input$n_timesteps,
+        s.mean = s.mean,
+        s.sd = input$s_sd,
+        b.mean = b.mean,
+        b.sd = input$b_sd,
+        s.b.corr = input$s_b_corr,
+        init.inv = init.inv,
+        rebal.interval = input$rebal_interval,
+        s.int = input$s_int,
+        b.int = input$b_int,
+        int.period = int.period,
+        propStepDivisor = propStepDivisor,
+        nSims = input$nSims,
+        nSimsToRecord = min(5, input$nSims),
+        progress_callback = function(alloc_i, total_allocs, sim_i, total_sims, msg) {
+          done <- (alloc_i - 1) * total_sims + sim_i
+          setProgress(value = done / total_work, message = msg)
+        }
+      )
+      sweep_result(result)
+      sweep_source("custom")
+    })
+
+    frontier_alloc_index(1)
+    active_scenario("")
+  }
+
+  # --- Confirmed single allocation run ---
   observeEvent(input$confirm_run, {
     removeModal()
     shinyjs::disable("run_single")
@@ -322,79 +367,46 @@ function(input, output, session) {
     perc <- clamp_pct_to_fraction(input$perc_stocks)
     nSimsToRecord <- min(10, input$nSims)
 
-    is_frontier <- input$main_tabs == "Frontier Sweep"
-
-    if (is_frontier) {
-      alloc_fracs <- clamp_pct_to_fraction(seq(0, 100, by = 10))
-      total_work <- length(alloc_fracs) * input$nSims
-
-      withProgress(message = "Running frontier sweep...", value = 0, {
-        set.seed(100)
-        result <- run_meta_sweep(
-          perc.stocks.vec = alloc_fracs,
-          n = input$n_timesteps,
-          s.mean = s.mean,
-          s.sd = input$s_sd,
-          b.mean = b.mean,
-          b.sd = input$b_sd,
-          s.b.corr = input$s_b_corr,
-          init.inv = init.inv,
-          rebal.interval = input$rebal_interval,
-          s.int = input$s_int,
-          b.int = input$b_int,
-          int.period = int.period,
-          propStepDivisor = propStepDivisor,
-          nSims = input$nSims,
-          nSimsToRecord = min(5, input$nSims),
-          widthVal = widthVal,
-          progress_callback = function(alloc_i, total_allocs, sim_i, total_sims, msg) {
-            done <- (alloc_i - 1) * total_sims + sim_i
-            setProgress(value = done / total_work, message = msg)
-          }
-        )
-        sweep_result(result)
-        sweep_source("custom")
-      })
-
-      frontier_alloc_index(1)
-      active_scenario("")
-    } else {
-      withProgress(message = "Running simulation...", value = 0, {
-        set.seed(100)
-        result <- run_simulation(
-          n = input$n_timesteps,
-          s.mean = s.mean,
-          s.sd = input$s_sd,
-          b.mean = b.mean,
-          b.sd = input$b_sd,
-          s.b.corr = input$s_b_corr,
-          init.inv = init.inv,
-          perc.stocks = perc,
-          rebal.interval = input$rebal_interval,
-          s.int = input$s_int,
-          b.int = input$b_int,
-          int.period = int.period,
-          propStepDivisor = propStepDivisor,
-          nSims = input$nSims,
-          nSimsToRecord = nSimsToRecord,
-          widthVal = widthVal,
-          progress_callback = function(i, total, msg) {
-            setProgress(value = i / total, message = msg)
-          }
-        )
-        sim_result(result)
-        single_source("custom")
-      })
-    }
+    withProgress(message = "Running simulation...", value = 0, {
+      set.seed(100)
+      result <- run_simulation(
+        n = input$n_timesteps,
+        s.mean = s.mean,
+        s.sd = input$s_sd,
+        b.mean = b.mean,
+        b.sd = input$b_sd,
+        s.b.corr = input$s_b_corr,
+        init.inv = init.inv,
+        perc.stocks = perc,
+        rebal.interval = input$rebal_interval,
+        s.int = input$s_int,
+        b.int = input$b_int,
+        int.period = int.period,
+        propStepDivisor = propStepDivisor,
+        nSims = input$nSims,
+        nSimsToRecord = nSimsToRecord,
+        progress_callback = function(i, total, msg) {
+          setProgress(value = i / total, message = msg)
+        }
+      )
+      sim_result(result)
+      single_source("custom")
+    })
 
     shinyjs::enable("run_single")
+  })
+
+  # --- Confirmed frontier run ---
+  observeEvent(input$confirm_frontier_run, {
+    removeModal()
+    do_frontier_sweep()
   })
 
   # --- Plotly config: download + reset axes ---
   plotly_clean <- function(p) {
     config(p, displayModeBar = TRUE,
            modeBarButtonsToRemove = c("zoom2d", "pan2d", "select2d", "lasso2d",
-                                       "zoomIn2d", "zoomOut2d", "autoScale2d",
+                                       "zoomIn2d", "zoomOut2d",
                                        "hoverClosestCartesian",
                                        "hoverCompareCartesian", "toggleSpikelines"),
            displaylogo = FALSE)
@@ -407,7 +419,7 @@ function(input, output, session) {
     plotly_clean(ggplotly(plot_gain_vs_sd(sim_result(),
       highlight_sim = screenshot_highlight_sim,
       show_cloud = !screenshot_hide_cloud,
-      cloud_alpha_override = isolate(input$cloud_alpha))))
+      cloud_alpha_override = isolate(input$cloud_alpha_single))))
   })
 
   output$plot_trajectories <- renderPlotly({
@@ -456,34 +468,136 @@ function(input, output, session) {
     plotly_clean(plot_single_sim_explorer(sim_result(), sim_explorer_index()))
   })
 
-  # --- Frontier plots (plotly) ---
-
-  output$plot_frontier <- renderPlotly({
-    req(sweep_result())
-    plotly_clean(ggplotly(plot_efficient_frontier(sweep_result()$summary)))
-  })
-
-  # --- Frontier Explorer ---
+  # --- Merged frontier plot ---
 
   # Store zoom state so it persists across allocation steps
   frontier_zoom <- reactiveValues(x = NULL, y = NULL)
 
-  # Capture zoom/pan events from plotly
+  # Precomputed axis ranges: tight (PE only) and wide (includes cloud spread)
+  frontier_axis_ranges <- reactive({
+    sw <- sweep_result()
+    req(sw)
+    pe <- sw$point_estimates
+    cl <- sw$cloud
+
+    pe_x <- range(pe$sd)
+    pe_y <- range(pe$gain)
+    pe_x_pad <- diff(pe_x) * 0.08
+    pe_y_pad <- diff(pe_y) * 0.08
+
+    cl_x <- quantile(cl$sd, c(0.02, 0.98), na.rm = TRUE)
+    cl_y <- quantile(cl$gain, c(0.02, 0.98), na.rm = TRUE)
+    wide_x <- c(min(pe_x[1], cl_x[1]), max(pe_x[2], cl_x[2]))
+    wide_y <- c(min(pe_y[1], cl_y[1]), max(pe_y[2], cl_y[2]))
+    wide_x_pad <- diff(wide_x) * 0.05
+    wide_y_pad <- diff(wide_y) * 0.05
+
+    list(
+      tight = list(x = pe_x + c(-pe_x_pad, pe_x_pad),
+                   y = pe_y + c(-pe_y_pad, pe_y_pad)),
+      wide  = list(x = wide_x + c(-wide_x_pad, wide_x_pad),
+                   y = wide_y + c(-wide_y_pad, wide_y_pad))
+    )
+  })
+
+  # Track current zoom preset so the toggle button knows which way to go
+  frontier_zoom_mode <- reactiveVal("in")  # "in" = tight around PEs, "out" = wide for clouds
+
+  # Checkbox: zoom to frontier (tight) vs full cloud range (wide)
+  observeEvent(input$zoom_to_frontier, {
+    ranges <- frontier_axis_ranges()
+    if (isTRUE(input$zoom_to_frontier)) {
+      frontier_zoom_mode("in")
+      frontier_zoom$x <- ranges$tight$x
+      frontier_zoom$y <- ranges$tight$y
+    } else {
+      frontier_zoom_mode("out")
+      frontier_zoom$x <- ranges$wide$x
+      frontier_zoom$y <- ranges$wide$y
+    }
+    shinyjs::hide("reset_view")
+  }, ignoreInit = TRUE)
+
+  # Capture zoom/pan events from plotly (user drag-zoom)
   observe({
     req(sweep_result())
     ev <- event_data("plotly_relayout", source = "frontier_src")
     req(ev)
-    # Zoom sets xaxis.range[0]/[1] and yaxis.range[0]/[1]
     if (!is.null(ev[["xaxis.range[0]"]])) {
       frontier_zoom$x <- c(ev[["xaxis.range[0]"]], ev[["xaxis.range[1]"]])
       frontier_zoom$y <- c(ev[["yaxis.range[0]"]], ev[["yaxis.range[1]"]])
+      shinyjs::show("reset_view")
     }
-    # Double-click or reset axes fires autosize or xaxis.autorange
     if (isTRUE(ev[["xaxis.autorange"]]) || !is.null(ev[["autosize"]])) {
       frontier_zoom$x <- NULL
       frontier_zoom$y <- NULL
+      shinyjs::hide("reset_view")
     }
   })
+
+  # Reset view button: restores preset zoom based on checkbox state
+  observeEvent(input$reset_view, {
+    ranges <- frontier_axis_ranges()
+    if (isTRUE(input$zoom_to_frontier)) {
+      frontier_zoom$x <- ranges$tight$x
+      frontier_zoom$y <- ranges$tight$y
+    } else {
+      frontier_zoom$x <- ranges$wide$x
+      frontier_zoom$y <- ranges$wide$y
+    }
+    shinyjs::hide("reset_view")
+  })
+
+  # --- Highlight a random simulation pair ---
+  observeEvent(input$highlight_random_sim, {
+    sw <- sweep_result()
+    req(sw)
+    allocs <- sort(unique(sw$point_estimates$allocation))
+    current_alloc <- allocs[frontier_alloc_index()]
+    current_cloud <- sw$cloud[sw$cloud$allocation == current_alloc, ]
+    sims <- unique(current_cloud$sim)
+    current_hl <- frontier_highlight_sim()
+    candidates <- setdiff(sims, current_hl)
+    if (length(candidates) == 0) candidates <- sims
+    new_sim <- sample(candidates, 1)
+    frontier_highlight_sim(new_sim)
+    shinyjs::show("clear_highlight")
+
+    # Check if highlighted dots are within current viewport; zoom out if not
+    hl <- current_cloud[current_cloud$sim == new_sim, ]
+    if (nrow(hl) >= 2 && !is.null(frontier_zoom$x)) {
+      xr <- frontier_zoom$x
+      yr <- frontier_zoom$y
+      dots_visible <- all(hl$sd >= xr[1] & hl$sd <= xr[2]) &&
+                      all(hl$gain >= yr[1] & hl$gain <= yr[2])
+      if (!dots_visible) {
+        ranges <- frontier_axis_ranges()
+        frontier_zoom_mode("out")
+        frontier_zoom$x <- ranges$wide$x
+        frontier_zoom$y <- ranges$wide$y
+        updateCheckboxInput(session, "zoom_to_frontier", value = FALSE)
+        shinyjs::hide("reset_view")
+      }
+    }
+  })
+
+  observeEvent(input$clear_highlight, {
+    frontier_highlight_sim(NULL)
+    shinyjs::hide("clear_highlight")
+  })
+
+  # When allocation changes, pick a new random sim if highlight is active
+  observeEvent(frontier_alloc_index(), {
+    if (!is.null(frontier_highlight_sim())) {
+      sw <- sweep_result()
+      req(sw)
+      allocs <- sort(unique(sw$point_estimates$allocation))
+      current_alloc <- allocs[frontier_alloc_index()]
+      current_cloud <- sw$cloud[sw$cloud$allocation == current_alloc, ]
+      sims <- unique(current_cloud$sim)
+      frontier_highlight_sim(sample(sims, 1))
+    }
+  }, ignoreInit = TRUE)
 
   observeEvent(input$frontier_prev, {
     idx <- frontier_alloc_index()
@@ -498,23 +612,66 @@ function(input, output, session) {
     if (idx < n_allocs) frontier_alloc_index(idx + 1)
   })
 
-  output$plot_frontier_explorer <- renderPlotly({
-    req(sweep_result())
-    p <- plotly_clean(ggplotly(
-      plot_frontier_explorer(sweep_result(), frontier_alloc_index(),
-                             show_cloud = TRUE,
-                             cloud_alpha_override = isolate(input$cloud_alpha)),
-      source = "frontier_src"
-    ) %>% event_register("plotly_relayout"))
+  # Grey out frontier nav arrows at boundaries
+  observe({
+    sweep <- sweep_result()
+    req(sweep)
+    idx <- frontier_alloc_index()
+    n_allocs <- length(unique(sweep$point_estimates$allocation))
+    shinyjs::toggleState("frontier_prev", condition = idx > 1)
+    shinyjs::toggleState("frontier_next", condition = idx < n_allocs)
+  })
 
-    # Reapply saved zoom if present
-    if (!is.null(frontier_zoom$x)) {
-      p <- p %>% layout(
-        xaxis = list(range = frontier_zoom$x),
-        yaxis = list(range = frontier_zoom$y)
-      )
+  output$plot_frontier_merged <- renderPlotly({
+    req(sweep_result())
+    scenario_lbl <- frontier_scenario_label()
+
+    if (isTRUE(input$show_distributions)) {
+      # Distribution view: clouds + frontier lines, no labels
+      allocs <- sort(unique(sweep_result()$point_estimates$allocation))
+      current_alloc <- allocs[frontier_alloc_index()]
+      alloc_str <- paste0(round(current_alloc * 100, 1), "% Stocks / ",
+                          round((1 - current_alloc) * 100, 1), "% Bonds")
+      title <- paste0("Frontier Explorer: ", alloc_str)
+      if (nchar(scenario_lbl) > 0) title <- paste0(title, " \u2014 ", scenario_lbl)
+
+      plt <- plot_frontier_explorer(sweep_result(), frontier_alloc_index(),
+                                     show_cloud = TRUE,
+                                     cloud_alpha_override = isolate(input$cloud_alpha_frontier),
+                                     show_labels = FALSE,
+                                     highlight_sim = frontier_highlight_sim()) +
+        ggtitle(title)
+
+      p <- plotly_clean(ggplotly(plt, source = "frontier_src") %>%
+                          event_register("plotly_relayout"))
+
+      if (!is.null(frontier_zoom$x)) {
+        p <- p %>% layout(
+          xaxis = list(range = frontier_zoom$x),
+          yaxis = list(range = frontier_zoom$y)
+        )
+      }
+      p
+    } else {
+      # Point estimate view: efficient frontier with labels
+      title <- "Efficient Frontier"
+      if (nchar(scenario_lbl) > 0) title <- paste0(title, " \u2014 ", scenario_lbl)
+
+      plt <- plot_efficient_frontier(sweep_result()$summary, show_labels = TRUE) +
+        ggtitle(title)
+      # Register frontier_src so the zoom observer doesn't warn
+      p <- plotly_clean(ggplotly(plt, source = "frontier_src") %>%
+                          event_register("plotly_relayout"))
+
+      # Apply saved zoom (e.g. user clicked "Zoom out" to see cloud range)
+      if (!is.null(frontier_zoom$x)) {
+        p <- p %>% layout(
+          xaxis = list(range = frontier_zoom$x),
+          yaxis = list(range = frontier_zoom$y)
+        )
+      }
+      p
     }
-    p
   })
 
   output$frontier_alloc_label <- renderText({
@@ -543,6 +700,14 @@ function(input, output, session) {
 
   callout <- function(text) {
     div(class = "plot-callout", HTML(text))
+  }
+
+  callout_bullets <- function(items) {
+    div(class = "plot-callout",
+      tags$ul(class = "callout-bullets",
+        lapply(items, function(item) tags$li(HTML(item)))
+      )
+    )
   }
 
   output$callout_gain_sd <- renderUI({
@@ -607,34 +772,24 @@ function(input, output, session) {
     )
   })
 
-  output$callout_frontier_explorer <- renderUI({
+  output$callout_frontier_merged <- renderUI({
     req(sweep_result())
     if (sweep_source() != "precomputed") return(NULL)
-    callout(
-      "The frontier sweep runs the full MCMC simulation at each stock/bond allocation
-       (0% to 100% in 10% steps). The <strong>highlighted cloud</strong> shows the full
-       distribution of outcomes for the selected allocation &mdash; every dot is one
-       simulation. The <strong>connected points</strong> along the frontier lines are
-       point estimates (means), which trace the efficient frontier. The gap between the
-       rebalanced and non-rebalanced frontiers is the rebalancing benefit.
-       See the <strong>Efficient Frontier</strong> tab for just the point estimates
-       (from a 5,000-sim run). You can zoom in by dragging a box on the plot;
-       the zoom is preserved as you step through allocations. Use the
-       <strong>Cloud Opacity</strong> slider to fade or hide the cloud."
-    )
-  })
 
-  output$callout_frontier <- renderUI({
-    req(sweep_result())
-    if (sweep_source() != "precomputed") return(NULL)
-    callout(
-      "The efficient frontier: each point is a <strong>point estimate</strong>
-       (mean gain and mean SD across all simulations) for one stock/bond allocation.
-       These are from a precomputed run of 5,000 simulations per allocation.
-       These are summary statistics &mdash; the Frontier Explorer tab shows the full
-       distributions from which they&rsquo;re derived. Two curves are shown: one for the
-       rebalanced strategy and one for non-rebalanced. Where rebalancing shifts the
-       curve upward or leftward, it&rsquo;s improving the risk-return tradeoff."
-    )
+    if (isTRUE(input$show_distributions)) {
+      callout_bullets(c(
+        "Each simulation produces two dots from the same price paths &mdash; one <strong>rebalanced</strong> (teal), one <strong>non-rebalanced</strong> (pink). The only difference is the portfolio strategy. <a href='#' onclick='$(\"#highlight_random_sim\").click(); return false;' class='callout-action-link'>Highlight a random simulation</a> (or click the button below) to see a single pair connected by a line.",
+        "The frontier dots (larger, connected) are the <strong>means</strong> across all simulations for the selected allocation. Individual pairs vary widely &mdash; that spread is the real story.",
+        "The gap between the rebalanced and non-rebalanced frontier lines is the rebalancing benefit <em>on average</em>.",
+        "Use the <strong>Zoom to frontier</strong> checkbox in the sidebar to toggle between a tight view around the frontier means and the full cloud range. You can also drag a box on the plot to zoom to a custom region."
+      ))
+    } else {
+      callout_bullets(c(
+        "Each point is a <strong>point estimate</strong> (mean gain and mean SD) from 5,000 simulations at one stock/bond allocation.",
+        "Toggle <strong>Show distributions</strong> in the sidebar to see the full simulation clouds these points are derived from.",
+        "Two curves: one rebalanced, one non-rebalanced. Where rebalancing shifts the curve upward or leftward, it&rsquo;s improving the risk-return tradeoff.",
+        "Use the <strong>Zoom to frontier</strong> checkbox in the sidebar to toggle between a tight view around the means and the full range. You can also drag a box on the plot to zoom to a custom region."
+      ))
+    }
   })
 }

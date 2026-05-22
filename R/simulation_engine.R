@@ -257,44 +257,27 @@ build_result_dataframes <- function(n, nSims, nSimsToRecord, arrays) {
   )
 }
 
-#' Compute rolling standard deviation for rebalanced and non-rebalanced portfolios
+#' Compute annualized log-return volatility for rebalanced and non-rebalanced portfolios
 #' @param value.rebal.tot Matrix of rebalanced total values (n x nSims)
 #' @param value.nonrebal.tot Matrix of non-rebalanced total values (n x nSims)
-#' @param n Number of timesteps
 #' @param nSims Total number of simulations
-#' @param widthVal Rolling window width
-#' @return List with errorSD.rebal and errorSD.nonrebal vectors
-compute_rolling_sd <- function(value.rebal.tot, value.nonrebal.tot, n, nSims, widthVal) {
-  mean.rebal.mat <- matrix(nrow = n - widthVal + 1, ncol = nSims)
-  error.rebal.mat <- matrix(nrow = n - widthVal + 1, ncol = nSims)
-  errorSD.rebal <- vector(length = nSims)
+#' @param int.period Interest compounding period (timesteps per year, for annualization)
+#' @return List with vol.rebal and vol.nonrebal vectors
+compute_annualized_vol <- function(value.rebal.tot, value.nonrebal.tot, nSims, int.period) {
+  vol.rebal <- vector(length = nSims)
+  vol.nonrebal <- vector(length = nSims)
   for (j in 1:nSims) {
-    mean.rebal.mat[, j] <- rollapply(value.rebal.tot[, j], width = widthVal,
-                                     align = "center", FUN = mean)
-    error.rebal.mat[, j] <- value.rebal.tot[(widthVal / 2):(n - widthVal / 2), j] -
-      mean.rebal.mat[, j]
-    errorSD.rebal[j] <- sd(error.rebal.mat[, j])
+    vol.rebal[j] <- sd(diff(log(value.rebal.tot[, j]))) * sqrt(int.period)
+    vol.nonrebal[j] <- sd(diff(log(value.nonrebal.tot[, j]))) * sqrt(int.period)
   }
-
-  mean.nonrebal.mat <- matrix(nrow = n - widthVal + 1, ncol = nSims)
-  error.nonrebal.mat <- matrix(nrow = n - widthVal + 1, ncol = nSims)
-  errorSD.nonrebal <- vector(length = nSims)
-  for (j in 1:nSims) {
-    mean.nonrebal.mat[, j] <- rollapply(value.nonrebal.tot[, j], width = widthVal,
-                                        align = "center", FUN = mean)
-    error.nonrebal.mat[, j] <- value.nonrebal.tot[(widthVal / 2):(n - widthVal / 2), j] -
-      mean.nonrebal.mat[, j]
-    errorSD.nonrebal[j] <- sd(error.nonrebal.mat[, j])
-  }
-
-  list(errorSD.rebal = errorSD.rebal, errorSD.nonrebal = errorSD.nonrebal)
+  list(errorSD.rebal = vol.rebal, errorSD.nonrebal = vol.nonrebal)
 }
 
-#' Compute gain-vs-SD summary data frames
+#' Compute gain-vs-volatility summary data frames
 #' @param value.rebal.tot Matrix of rebalanced total values (n x nSims)
 #' @param value.nonrebal.tot Matrix of non-rebalanced total values (n x nSims)
-#' @param errorSD.rebal Rebalanced rolling SD vector
-#' @param errorSD.nonrebal Non-rebalanced rolling SD vector
+#' @param errorSD.rebal Rebalanced annualized volatility vector
+#' @param errorSD.nonrebal Non-rebalanced annualized volatility vector
 #' @param init.inv Initial investment
 #' @param n Number of timesteps
 #' @param nSims Total number of simulations
@@ -348,14 +331,13 @@ compute_gain_summary <- function(value.rebal.tot, value.nonrebal.tot,
 #' @param propStepDivisor  Proposal step divisor (larger = slower exploration)
 #' @param nSims         Total number of simulations
 #' @param nSimsToRecord Number of sims to record full trajectories for
-#' @param widthVal      Rolling window width for SD calculations
 #' @param progress_callback  Optional function(i, total, msg) for progress
 #' @return A named list with data frames and echoed params
 run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
                            init.inv, perc.stocks, rebal.interval,
                            s.int, b.int, int.period,
                            propStepDivisor, nSims, nSimsToRecord,
-                           widthVal, progress_callback = NULL) {
+                           progress_callback = NULL) {
 
   # Avoid rebalance on the last timestep
   n <- n - 1
@@ -379,10 +361,10 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
   # Step 4: Build tidy data frames
   dfs <- build_result_dataframes(n, nSims, nSimsToRecord, arrays)
 
-  # Step 5: Rolling SD
-  rolling <- compute_rolling_sd(
+  # Step 5: Annualized volatility
+  rolling <- compute_annualized_vol(
     arrays$value.rebal.tot, arrays$value.nonrebal.tot,
-    n, nSims, widthVal
+    nSims, int.period
   )
 
   # Step 6: Gain summary
@@ -407,7 +389,7 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
       s.b.corr = s.b.corr, init.inv = init.inv, perc.stocks = perc.stocks,
       rebal.interval = rebal.interval, s.int = s.int, b.int = b.int,
       int.period = int.period, propStepDivisor = propStepDivisor,
-      nSims = nSims, nSimsToRecord = nSimsToRecord, widthVal = widthVal
+      nSims = nSims, nSimsToRecord = nSimsToRecord
     )
   )
 }

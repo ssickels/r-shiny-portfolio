@@ -11,7 +11,7 @@ run_meta_sweep <- function(perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd,
                            s.b.corr, init.inv, rebal.interval,
                            s.int, b.int, int.period,
                            propStepDivisor, nSims, nSimsToRecord,
-                           widthVal, max_cloud_sims = Inf,
+                           max_cloud_sims = Inf,
                            progress_callback = NULL) {
 
   summary_results <- list()
@@ -38,7 +38,7 @@ run_meta_sweep <- function(perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd,
       rebal.interval = rebal.interval, s.int = s.int, b.int = b.int,
       int.period = int.period, propStepDivisor = propStepDivisor,
       nSims = nSims, nSimsToRecord = nSimsToRecord,
-      widthVal = widthVal, progress_callback = sim_cb
+      progress_callback = sim_cb
     )
 
     # Summary row (existing frontier data)

@@ -32,8 +32,8 @@ parse_allocation_string <- function(alloc_string) {
 #' @return Formatted data frame with renamed columns
 format_summary_table <- function(df) {
   df$gain <- paste0(round(df$gain * 100, 3), "%")
-  df$sd <- round(df$sd, 2)
-  names(df) <- c("Std Dev", "Annualized Gain", "Strategy")
+  df$sd <- paste0(round(df$sd * 100, 2), "%")
+  names(df) <- c("Annualized Vol", "Annualized Gain", "Strategy")
   df
 }
 
@@ -53,7 +53,6 @@ format_params_summary <- function(params) {
     "Stock Interest: ", p$s.int, " | Bond Interest: ", p$b.int, "\n",
     "Interest Period: ", p$int.period, " timesteps\n",
     "Simulations: ", p$nSims, " ( ", p$nSimsToRecord, " recorded)\n",
-    "Rolling Window: ", p$widthVal, "\n",
     "Proposal Step Divisor: ", p$propStepDivisor, "\n"
   )
 }

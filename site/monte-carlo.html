@@ -50,7 +50,8 @@ body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-s
   </div>
 
   <div class="sim-frame-wrap">
-    <iframe src="https://ssickels.shinyapps.io/r-shiny-portfolio/"
+    <iframe id="sim-iframe"
+            src="https://ssickels.shinyapps.io/r-shiny-portfolio/"
             title="Monte Carlo Portfolio Simulator"
             loading="lazy"
             allow="fullscreen"></iframe>
@@ -68,6 +69,13 @@ body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-s
   document.getElementById('mobile-close').addEventListener('click', function () {
     document.getElementById('mobile-banner').style.display = 'none';
   });
+  // Pass ?tab= param through to the Shiny iframe
+  var params = new URLSearchParams(window.location.search);
+  var tab = params.get('tab');
+  if (tab) {
+    var iframe = document.getElementById('sim-iframe');
+    iframe.src = iframe.src.replace(/\/?$/, '?tab=' + encodeURIComponent(tab));
+  }
 })();
 </script>
 <script src="portfolio-nav.js"></script>
