@@ -1,5 +1,8 @@
 # ui.R — Shiny UI definition
 
+# Dev flag: set FALSE to hide layer-toggles disclosure in sidebar for production
+dev_layer_toggles <- TRUE
+
 fluidPage(
   useShinyjs(),
   tags$head(tags$link(rel = "stylesheet", href = "custom.css")),
@@ -87,13 +90,41 @@ fluidPage(
       # ===== FRONTIER MODE: Display section =====
       conditionalPanel("input.main_tabs == 'Frontier'",
         h4("Display"),
-        checkboxInput("show_distributions", "Show distributions", value = FALSE),
         checkboxInput("zoom_to_frontier", "Zoom to frontier", value = TRUE),
         actionButton("reset_view", "Reset view", class = "btn-sm reset-view-btn", style = "display:none;"),
-        conditionalPanel("input.show_distributions == true",
+        conditionalPanel("input.frontier_tabs == 'clouds'",
           div(style = "margin-top: 12px;",
             sliderInput("cloud_alpha_frontier", "Cloud Opacity",
                         min = 0, max = 0.30, value = 0.08, step = 0.01)
+          ),
+          if (dev_layer_toggles) tags$details(class = "layer-toggles",
+            tags$summary(
+              style = "cursor:pointer; color:#6b5b4f; font-size:15px; font-weight:500;",
+              "Layer toggles"
+            ),
+            div(style = "padding-top:4px;",
+              checkboxInput("layer_cloud_rebal", "Cloud (rebal)", TRUE),
+              checkboxInput("layer_cloud_nonrebal", "Cloud (nonrebal)", TRUE),
+              sliderInput("cloud_sample_n", "Cloud points",
+                          min = 500, max = 5000, value = 5000, step = 500),
+              checkboxInput("layer_line_rebal", "Frontier line (rebal)", TRUE),
+              checkboxInput("layer_line_nonrebal", "Frontier line (nonrebal)", TRUE),
+              sliderInput("frontier_line_width", "Line width",
+                          min = 0.5, max = 5, value = 0.5, step = 0.5),
+              sliderInput("frontier_line_alpha", "Line opacity",
+                          min = 0, max = 1, value = 0.4, step = 0.1),
+              checkboxInput("layer_dots_rebal", "Dots (rebal)", TRUE),
+              checkboxInput("layer_dots_nonrebal", "Dots (nonrebal)", TRUE),
+              checkboxInput("layer_highlight_current", "Highlight current", TRUE),
+              checkboxInput("layer_dots_others", "Other allocations", TRUE),
+              sliderInput("dot_size", "Dot size",
+                          min = 1, max = 6, value = 2, step = 0.5),
+              checkboxInput("layer_labels", "Allocation labels", FALSE),
+              checkboxInput("sim_show_rebal", "Sim plot (rebal)", TRUE),
+              checkboxInput("sim_show_nonrebal", "Sim plot (nonrebal)", TRUE),
+              actionButton("reset_layer_toggles", "Reset layers",
+                           class = "btn-sm btn-default")
+            )
           )
         )
       ),
@@ -108,6 +139,17 @@ fluidPage(
           tags$span(class = "params-heading", "Simulation")
         ),
         div(id = "params_content", style = "padding-top:4px;",
+          # Frontier mode: warning + run button at top of expander
+          conditionalPanel("input.main_tabs == 'Frontier'",
+            p(class = "rerun-warning",
+              "Running a frontier sweep is slow \u2014 it simulates every allocation ",
+              "from 0% to 100% stocks. At high sim counts this can take several minutes ",
+              "and may time out on free-tier hosting."),
+            actionButton("run_frontier", "Run frontier sweep",
+                          class = "btn-default btn-sm"),
+            hr()
+          ),
+
           sliderInput("nSims", "Number of Simulations",
                       min = 100, max = 1500, value = 500, step = 100),
           sliderInput("n_timesteps", "Time Horizon (days)",
@@ -144,24 +186,13 @@ fluidPage(
               sliderInput("b_int", "Bond Interest Rate",
                           min = 0, max = 0.2, value = 0.02, step = 0.005)
             )
-          ),
-
-          # Frontier mode: warning + run button at bottom of expander
-          conditionalPanel("input.main_tabs == 'Frontier'",
-            hr(),
-            p(class = "rerun-warning",
-              "Running a frontier sweep is slow \u2014 it simulates every allocation ",
-              "from 0% to 100% stocks. At high sim counts this can take several minutes ",
-              "and may time out on free-tier hosting."),
-            actionButton("run_frontier", "Run frontier sweep",
-                          class = "btn-default btn-sm")
           )
         )
       ),
 
-      # ===== SINGLE MODE: Display section (cloud alpha, Gain vs SD only) =====
+      # ===== SINGLE MODE: Display section (cloud alpha, Gain vs Volatility only) =====
       conditionalPanel(
-        "input.main_tabs == 'Single allocation' && input.single_tabs == 'Gain vs SD'",
+        "input.main_tabs == 'Single allocation' && input.single_tabs == 'Gain vs Volatility'",
         hr(),
         h4("Display"),
         sliderInput("cloud_alpha_single", "Cloud Opacity",
@@ -192,23 +223,15 @@ fluidPage(
         uiOutput("data_status_banner"),
         tabsetPanel(
           id = "single_tabs", type = "pills",
-          tabPanel("Gain vs SD",
+          tabPanel(title = span("Gain vs Volatility",
+                     img(src = "single_gain_vs_sd.png", class = "pill-thumb")),
+                   value = "Gain vs Volatility",
             plotlyOutput("plot_gain_sd", height = "600px"),
             uiOutput("callout_gain_sd")
           ),
-          tabPanel("Final Densities",
-            plotlyOutput("plot_densities", height = "600px"),
-            uiOutput("callout_densities")
-          ),
-          tabPanel("Trajectories",
-            plotlyOutput("plot_trajectories", height = "600px"),
-            uiOutput("callout_trajectories")
-          ),
-          tabPanel("Cost Profiles",
-            plotlyOutput("plot_costs", height = "600px"),
-            uiOutput("callout_costs")
-          ),
-          tabPanel("Single Sim Explorer",
+          tabPanel(title = span("Single Sim Explorer",
+                     img(src = "single_explorer.png", class = "pill-thumb")),
+                   value = "Single Sim Explorer",
             div(class = "sim-explorer-nav",
               actionButton("sim_prev", label = NULL,
                            icon = icon("arrow-left"), class = "btn-sm"),
@@ -232,10 +255,19 @@ fluidPage(
 
       # --- Frontier content ---
       conditionalPanel("input.main_tabs == 'Frontier'",
-        # Merged frontier plot
+        # Sub-tab selector (mode switch, not content container)
+        tabsetPanel(id = "frontier_tabs", type = "pills",
+          tabPanel(title = span("Just the means",
+                     img(src = "frontier_no_cloud.png", class = "pill-thumb")),
+                   value = "means"),
+          tabPanel(title = span("Means + clouds",
+                     img(src = "frontier_cloud.png", class = "pill-thumb")),
+                   value = "clouds")
+        ),
+        # Shared frontier plot
         plotlyOutput("plot_frontier_merged", height = "600px"),
-        # Allocation navigator + highlight (below plot, only when distributions visible)
-        conditionalPanel("input.show_distributions == true",
+        # Allocation navigator + highlight (clouds mode only)
+        conditionalPanel("input.frontier_tabs == 'clouds'",
           div(class = "frontier-alloc-nav",
             actionButton("frontier_prev", label = NULL,
                          icon = icon("arrow-left"), class = "btn-sm"),
@@ -245,11 +277,28 @@ fluidPage(
                          icon = icon("arrow-right"), class = "btn-sm")
           ),
           div(class = "frontier-highlight-row",
-            actionButton("highlight_random_sim", "Highlight a random simulation",
+            actionButton("highlight_random_sim", "Highlight a simulation",
                          class = "btn-sm btn-default"),
             actionButton("clear_highlight", "Clear highlight",
                          class = "btn-sm btn-link",
                          style = "display:none;")
+          )
+        ),
+        div(id = "frontier_sim_explorer_panel", style = "display:none;",
+          plotlyOutput("plot_frontier_sim_values", height = "300px"),
+          div(class = "plot-callout frontier-sim-caption",
+            "This is the actual simulated history behind the highlighted pair above. ",
+            "The two strategies share the same underlying price paths \u2014 they differ ",
+            "only in whether the portfolio is periodically rebalanced to the target allocation."
+          ),
+          tags$details(class = "frontier-sim-details",
+            tags$summary(
+              style = "cursor:pointer; color:#6b5b4f; font-size:15px; font-weight:500;",
+              "See shares and prices"
+            ),
+            div(style = "padding-top:8px;",
+              plotlyOutput("plot_frontier_sim_detail", height = "400px")
+            )
           )
         ),
         uiOutput("callout_frontier_merged")

@@ -5,6 +5,6 @@ account: ssickels
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 17107196
-bundleId: 12027577
+bundleId: 12032537
 url: https://ssickels.shinyapps.io/r-shiny-portfolio/
 version: 1

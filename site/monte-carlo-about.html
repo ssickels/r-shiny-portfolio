@@ -50,7 +50,7 @@ strong{color:#f0e6d8;font-weight:500}
 .screenshot-item .img-placeholder{background:rgba(255,255,255,0.04);border:1px dashed rgba(200,185,160,0.2);border-radius:6px;padding:40px 16px;margin-bottom:8px;color:rgba(200,185,160,0.3);font-size:0.85rem}
 .screenshot-item img{width:100%;border-radius:6px;border:1px solid rgba(200,185,160,0.15);cursor:pointer;transition:opacity 0.15s}
 .screenshot-item img:hover{opacity:0.85}
-.screenshot-item .caption{font-size:0.82rem;color:rgba(200,185,160,0.45);line-height:1.5;margin-top:6px}
+.screenshot-item .caption{font-size:0.82rem;color:rgba(200,185,160,0.65);line-height:1.5;margin-top:6px}
 
 /* Lightbox overlay */
 .lightbox{display:none;position:fixed;inset:0;z-index:99999;background:rgba(10,8,6,0.92);backdrop-filter:blur(4px);align-items:center;justify-content:center;cursor:pointer;padding:24px}
@@ -81,10 +81,12 @@ canvas{display:block;width:100%;background:#241c14;border-radius:4px}
 .formula-ref a{color:#d4b896}
 .formula-ref a:hover{color:#f0e6d8}
 
+.note-callout{border:1px solid rgba(200,185,160,0.15);border-left:3px solid #d4b896;border-radius:6px;padding:16px 20px;margin-top:20px;background:rgba(255,255,255,0.03);font-size:0.92rem;color:rgba(200,185,160,0.7);line-height:1.6}
+
 .fig-wrap{margin:24px 0;border:1px solid rgba(200,185,160,0.15);border-radius:8px;overflow:hidden;background:#241c14}
 .fig-wrap img{cursor:pointer;transition:opacity 0.15s}
 .fig-wrap img:hover{opacity:0.85}
-.fig-wrap figcaption{font-size:0.8rem;color:rgba(200,185,160,0.4);padding:10px 16px;border-top:1px solid rgba(200,185,160,0.1);line-height:1.5}
+.fig-wrap figcaption{font-size:0.8rem;color:rgba(200,185,160,0.65);padding:10px 16px;border-top:1px solid rgba(200,185,160,0.1);line-height:1.5}
 
 .tech-section{padding-top:40px;border-top:1px solid rgba(200,185,160,0.15)}
 .tech-section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:24px}
@@ -98,7 +100,7 @@ td{padding:8px 12px;border-bottom:1px solid rgba(200,185,160,0.08);vertical-alig
 tr:last-child td{border-bottom:none}
 td:first-child{color:rgba(200,185,160,0.55);white-space:nowrap;width:38%}
 
-.sim-link{display:inline-block;margin-top:24px;padding:9px 20px;border:1px solid rgba(200,185,160,0.2);border-radius:6px;color:rgba(200,185,160,0.55);text-decoration:none;font-size:0.9rem;transition:border-color 0.15s,color 0.15s}
+.sim-link{display:inline-block;margin-top:24px;margin-bottom:40px;padding:9px 20px;border:1px solid rgba(200,185,160,0.2);border-radius:6px;color:rgba(200,185,160,0.55);text-decoration:none;font-size:0.9rem;transition:border-color 0.15s,color 0.15s}
 .sim-link:hover{border-color:#1D9E75;color:#f0e6d8}
 
 .timestep-note{border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:16px 20px;margin:20px 0;background:rgba(255,255,255,0.02);font-size:0.9rem;color:rgba(200,185,160,0.55);line-height:1.65}
@@ -151,11 +153,10 @@ a[style]{color:#1D9E75 !important}
          In a multi-period world, periodic rebalancing forfeits drift gains,
          locks in variance drag at the current allocation, and harvests mean
          reversion between assets. The balance of these effects can produce a
-         rebalanced portfolio whose average terminal return exceeds that of
+         rebalanced portfolio whose <em>average</em> terminal return exceeds that of
          100% stocks &mdash; even when stocks have the higher expected return.
-         This is invisible in the single-period framework, where averages and
-         compound growth coincide.
-         <br><a href="#when-rebalancing-beats-100-stocks" class="arrow-link">&rarr; When rebalancing beats 100% stocks</a></p>
+         This is invisible in the single-period framework.
+         <br><a href="#when-a-mixed-portfolio-beats-pure-stocks" class="arrow-link">&rarr; When a mixed portfolio beats pure stocks</a></p>
     </div>
   </div>
 
@@ -170,24 +171,28 @@ a[style]{color:#1D9E75 !important}
        value. Building a simulation from scratch forced me to be precise about my
        assumptions and gave me something I could actually poke at.</p>
 
-    <div class="screenshot-pair">
-      <div class="screenshot-item">
-        <img src="img/point_estimate_no_cloud.png" alt="Gain vs SD plot showing only two point estimates for rebalanced and non-rebalanced strategies">
-        <div class="caption">Two point estimates &mdash; one for the rebalanced strategy,
-          one for non-rebalanced. This is what most projections give you.</div>
-      </div>
-      <div class="screenshot-item">
-        <img src="img/point_estimate_w_cloud.png" alt="Gain vs SD plot showing the full cloud of simulation outcomes with point estimates">
-        <div class="caption">The distribution of outcomes, with the point estimates
-          derived from them. The spread is what matters.</div>
-      </div>
+    <div class="fig-wrap">
+      <img src="img/two_means.png"
+           alt="Gain vs Volatility plot showing two point estimates — rebalanced (teal) and non-rebalanced (pink)"
+           style="width:100%;display:block">
+      <figcaption>Two point estimates &mdash; one for the rebalanced strategy (teal),
+        one for non-rebalanced (pink). This is what most projections give you.</figcaption>
+    </div>
+
+    <div class="fig-wrap">
+      <img src="img/two_means_with_cloud.png"
+           alt="Same Gain vs Volatility plot with the full cloud of 5,000 simulated outcomes visible around the two point estimates"
+           style="width:100%;display:block">
+      <figcaption>The same two point estimates, now shown with the cloud of 5,000 simulated
+        outcomes they summarize. The spread isn't a small wiggle around the means &mdash;
+        it's the range of futures you might actually experience.</figcaption>
     </div>
   </section>
 
   <section>
     <h2>What's behind a pair of dots</h2>
     <p>Each simulation generates a single set of correlated price paths, but
-       produces <em>two</em> dots on the Gain vs SD plot &mdash; one for the rebalanced
+       produces <em>two</em> dots on the Gain vs Volatility plot &mdash; one for the rebalanced
        strategy and one for the non-rebalanced strategy, each with its own
        annualized gain and standard deviation. It's tempting to treat these as
        abstract data points, but each pair represents a complete simulated history:
@@ -195,92 +200,110 @@ a[style]{color:#1D9E75 !important}
        and compounding returns. The Single Sim Explorer tab lets you open up any
        simulation and see the machinery inside.</p>
 
-    <div class="screenshot-pair">
-      <div class="screenshot-item">
-        <img src="img/sim_2_point.png" alt="Gain vs SD cloud with Sim #2 highlighted by a yellow dot and arrow">
-        <div class="caption">The Gain vs SD cloud. Each simulation produces two dots
-          (rebalanced and non-rebalanced). The highlighted pair is one simulation
-          we'll zoom into.</div>
-      </div>
-      <div class="screenshot-item">
-        <img src="img/sim_2_run.png" alt="Single Sim Explorer showing three panels: asset values, shares held, and share prices for Sim #2">
-        <div class="caption">The same simulation, unpacked: asset values, shares held,
-          and underlying prices. This is what produced that pair of dots.</div>
-      </div>
+    <div class="fig-wrap">
+      <img src="img/two_sim_points_cloud.png"
+           alt="Gain vs Volatility cloud with one simulation pair highlighted as diamonds, connected by a line"
+           style="width:100%;display:block">
+      <figcaption>One simulation, highlighted in the cloud. Both diamonds come from the
+        same price paths &mdash; they differ only in strategy. In this case the rebalanced
+        version produced a notably higher gain at notably higher volatility. Pairs are often
+        closer than this, but the spread varies &mdash; and that variability is the story.</figcaption>
     </div>
 
-    <p>The top panel shows how much each asset is worth over time in the rebalanced
-       portfolio, plus the total value for both strategies. The middle panel shows
-       shares held &mdash; watch them shift at each rebalancing event as the portfolio
-       sells winners and buys losers. The bottom panel shows the raw price paths
-       generated by the MCMC engine. Every pair of dots on the Gain vs SD plot has
-       a story like this behind it.</p>
+    <div class="fig-wrap">
+      <img src="img/two_sim_points_cost_traj.png"
+           alt="Portfolio value over time for both strategies sharing the same underlying price paths"
+           style="width:100%;display:block">
+      <figcaption>The same simulation, unfolded over time. Both strategies share the
+        underlying price paths but diverge in portfolio value as the rebalanced version
+        periodically resets the allocation. You can see the increased value over time and
+        the wider day-to-day swings in the rebalanced curve &mdash; which is exactly what
+        the higher gain and higher volatility on the cloud above measure.</figcaption>
+    </div>
+
+    <p>The Single Sim Explorer's three panels:</p>
+    <ul style="margin:8px 0 14px 20px;color:#c4b5a0;font-size:0.97rem;line-height:1.65">
+      <li style="margin-bottom:6px"><strong>Top:</strong> Asset values over time in the rebalanced portfolio, plus total values for both strategies.</li>
+      <li style="margin-bottom:6px"><strong>Middle:</strong> Shares held &mdash; watch them shift at each rebalancing event as the portfolio sells winners and buys losers.</li>
+      <li><strong>Bottom:</strong> The raw price paths generated by the MCMC engine.</li>
+    </ul>
+
+    <div class="fig-wrap">
+      <img src="img/two_sim_points_details.png"
+           alt="Shares held over time (top) and underlying price paths (bottom) for the highlighted simulation, showing rebalancing step changes and geometric mean reference lines"
+           style="width:100%;display:block">
+      <figcaption>Here are the shares held (top panel) and underlying price paths (bottom
+        panel) from which the portfolio values above are derived. The step changes in share
+        counts are rebalancing events &mdash; and you can see the &ldquo;sell high / buy
+        low&rdquo; mechanism at work: as stock prices fell sharply in the first ~400 days,
+        rebalancing bought more stock shares (since each share was cheaper); as stocks
+        recovered, the share count gradually trimmed back. Bond shares move less because
+        bond prices move less. The dashed lines on the prices panel are the geometric mean
+        reference lines for each asset.</figcaption>
+    </div>
+
+    <p>Every pair of dots on the Gain vs Volatility plot has a story like this behind it.</p>
   </section>
 
   <section>
     <h2>What this is &mdash; and isn't</h2>
-    <p>This simulator is a demonstration of general principles, not a predictive
-       model of real markets. The simplifications are significant and worth being
-       clear about.</p>
-    <div class="callout">
-      The goal is to build intuition about rebalancing, risk, and diversification &mdash;
-      not to prove anything about real markets or validate any particular
-      investment strategy.
-    </div>
-    <p>The most important simplification: the statistical properties of simulated
-       prices are fixed and don't change over time. In technical terms the process
-       is <em>stationary</em> &mdash; or approximately ergodic. Real market data is
-       famously neither. Volatility clusters. Correlations spike during crises.
-       Entire regimes shift. None of that is captured here.</p>
-    <p>On the other hand, the simulator does model correlation between stock and
-       bond returns &mdash; a genuinely important factor. Decorrelation is a key source
-       of diversification benefit, and you can explore it directly via the
-       stock&ndash;bond correlation parameter. The scenario grid on the Frontier
-       Explorer tab lets you quickly compare precomputed results across four
+    <p>The simulator is a teaching tool, not a predictive model of real markets.
+       The key simplifications:</p>
+    <ul style="margin:8px 0 14px 20px;color:#c4b5a0;font-size:0.97rem;line-height:1.65">
+      <li style="margin-bottom:6px">Statistical properties of prices are <strong>stationary</strong> &mdash; they don't change over time. Real markets aren't.</li>
+      <li style="margin-bottom:6px"><strong>Volatility clustering</strong> isn't captured. Real markets have calm periods and turbulent periods.</li>
+      <li style="margin-bottom:6px"><strong>Correlation regimes</strong> are fixed. Real correlations shift, especially during crises.</li>
+      <li><strong>Returns are Gaussian</strong> with constant parameters. Real returns have fat tails.</li>
+    </ul>
+    <p>Despite these simplifications, the qualitative patterns &mdash; wide distributions,
+       the costs and benefits of rebalancing, the shape of the frontier under multi-period
+       dynamics &mdash; hold up under more realistic assumptions, even though the specific
+       numbers wouldn't.</p>
+    <p>The simulator does model correlation between stocks and bonds, which is a genuinely
+       important factor. Decorrelation is a key source of diversification benefit, and the
+       scenario matrix on the Frontier tab lets you compare precomputed results across five
        correlation levels and three rebalancing intervals.</p>
   </section>
 
   <section>
     <h2 id="the-efficient-frontier">The efficient frontier</h2>
-    <p>Imagine plotting every possible stock/bond mix on a chart &mdash; risk on the
-       horizontal axis, expected return on the vertical. Most of those points are
-       <em>dominated</em>: there's some other mix that offers either higher expected
-       return for the same risk, or lower expected risk for the same return.
-       The <strong>efficient frontier</strong> is the curve formed by the mixes
+    <p>Each stock/bond mix produces a <em>distribution</em> of outcomes &mdash; many
+       possible gains and risks, depending on how prices actually move. Summarize
+       each distribution by two numbers: its mean gain and its mean SD. Plot those
+       summary points on a chart, with mean SD on the horizontal axis and mean gain
+       on the vertical. The result is one point per mix.</p>
+
+    <p>Most of those points are dominated: there's some other mix whose summary point
+       shows higher mean gain at the same mean SD, or lower mean SD at the same mean
+       gain. The <strong>efficient frontier</strong> is the curve formed by the points
        that aren't dominated.</p>
 
-    <p>It's tempting &mdash; and standard descriptions encourage this &mdash; to read
-       the frontier as a hard ceiling: the best you can do at each level of risk.
-       But the frontier is a curve through <em>expected values</em>. Any individual
-       run of any mix can land far above it or far below it. The clouds on the
-       <a href="monte-carlo.html?tab=frontier_explorer" class="tab-link">Frontier Explorer</a> tab make this visible: each cloud is the distribution
-       of realized outcomes at one allocation, and the frontier dot is just the
-       centerline. The width of the cloud often matters more than the position
-       of the dot.</p>
+    <p>A note on optimization: in the general N-asset version of the efficient frontier,
+       choosing the non-dominated portfolios is a real optimization problem &mdash; there
+       are many possible weight vectors at each risk level, and you have to find the best
+       one. In the two-asset case (stocks and bonds, as in this simulator), this collapses:
+       each stock/bond split is its own unique portfolio, so the frontier is just the curve
+       traced by sweeping the allocation from 0% to 100% stocks. No optimization is needed;
+       the curve is computed directly.</p>
 
-    <p>This is the same point as the page's opening summary, applied to the
-       frontier itself: distributions, not point estimates. The frontier is a
-       useful summary, but it summarizes by averaging &mdash; and averaging hides
-       exactly the variability that makes investing risky in the first place.</p>
-
-    <p>A second subtlety: the textbook frontier is a constant-weight construction.
+    <p>A second subtlety: the textbook frontier is a <em>constant-weight</em> construction.
        There's no time axis, so weights don't drift and no rebalancing action is
        needed &mdash; constant weights are just stipulated. The simulator, by contrast,
        runs over time, and there constant weights have to be maintained by an
-       action: periodic rebalancing. That action has consequences the textbook
+       <em>action</em>: periodic rebalancing. That action has consequences the textbook
        version doesn't account for (it locks in variance drag, forfeits drift,
        and harvests mean reversion), which is why the simulator's rebalanced curve
        doesn't simply reproduce the textbook frontier. The next section walks
        through what changes.</p>
 
-    <p>In the simulator, the <a href="monte-carlo.html?tab=efficient_frontier" class="tab-link"><strong>Efficient Frontier</strong></a> tab shows the
-       frontier as point estimates &mdash; each dot is the mean gain and mean SD
-       across all simulations for one stock/bond split. The <a href="monte-carlo.html?tab=frontier_explorer" class="tab-link"><strong>Frontier
-       Explorer</strong></a> tab shows the full distributions from which those point
-       estimates are derived: clouds of individual simulation outcomes at each
-       allocation, with the frontier overlaid.</p>
+    <p>In the simulator, the <strong>Frontier</strong> tab shows both views:
+       <a href="monte-carlo.html?tab=efficient_frontier" class="tab-link"><strong>Just the means</strong></a>
+       shows the frontier as point estimates (each dot is the mean gain and mean SD
+       across all simulations for one stock/bond split), and
+       <a href="monte-carlo.html?tab=frontier_explorer" class="tab-link"><strong>Means + clouds</strong></a>
+       shows the full distributions from which those point estimates are derived.</p>
 
-    <p>Use the interactive widget below to explore how the textbook frontier &mdash;
+    <p>Use the interactive widget below to explore how the <em>textbook</em> frontier &mdash;
        the single-period constant-weight version &mdash; responds to changes in
        correlation, returns, and volatility. The simulator builds something
        different (multi-period, terminal-wealth), and the next section walks
@@ -316,7 +339,7 @@ a[style]{color:#1D9E75 !important}
         </div>
       </div>
       <div class="legend">
-        <div class="legend-item"><div class="legend-swatch" style="background:#1D9E75"></div> Constant-weight frontier</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#1D9E75"></div> Analytic frontier</div>
       </div>
     </div>
 
@@ -326,10 +349,129 @@ a[style]{color:#1D9E75 !important}
        It's a single-period, analytic construction: no compounding, no drift across
        periods, no path-dependence. Think of it as the textbook picture against which
        the simulator's multi-period results are a contrast.</p>
+
+    <h3 style="font-size:0.95rem;font-weight:400;color:#f0e6d8;margin:24px 0 12px">A note on units: SD vs. volatility</h3>
+
+    <p>The widget above uses &ldquo;SD&rdquo; to label the standard deviation parameter
+       of single-period returns &mdash; a number you set as a model input. The simulator's
+       plots use &ldquo;volatility (annualized %)&rdquo; on the x-axis, which is the
+       standard deviation of realized returns computed from the simulated price paths,
+       annualized and expressed as a percentage. These are related but not identical:</p>
+
+    <ul style="margin:8px 0 14px 20px;color:#c4b5a0;font-size:0.97rem;line-height:1.65">
+      <li style="margin-bottom:6px">The widget's SD is a <em>parameter</em> of the return distribution. The simulator's volatility is a <em>statistic</em> estimated from simulation output.</li>
+      <li style="margin-bottom:6px">The widget's SD is single-period; the simulator's volatility is annualized.</li>
+      <li>For rebalanced portfolios over many periods, the two converge after appropriate scaling. For non-rebalanced portfolios, drift effects mean the realized volatility can deviate substantially from what the single-period parameter would predict.</li>
+    </ul>
+
+    <p>In other words, the widget shows the textbook idealization where SD is a parameter
+       you stipulate. The simulator shows the realized volatility that emerges from actually
+       running the system. Both are &ldquo;standard deviation of returns&rdquo; in a
+       meaningful sense, but they live in different parts of the pipeline.</p>
+
+    <div class="note-callout" style="margin-top:24px">
+      <p style="margin:0 0 10px;color:rgba(200,185,160,0.7);font-size:0.92rem;line-height:1.6"><strong>The math.</strong>
+         For independent, identically-distributed log-returns over discrete time periods,
+         the variance of the total log-return over <em>N</em> periods is
+         <em>N</em>&nbsp;&times;&nbsp;&sigma;&sup2;<sub>period</sub>.
+         Standard deviation scales with the square root:</p>
+      <p style="margin:0 0 12px;text-align:center;color:#d4b896;font-size:0.95rem">
+         &sigma;<sub>annual</sub> = &sigma;<sub>period</sub> &times; &radic;<span style="text-decoration:overline"><em>T</em><sub>year</sub></span></p>
+      <p style="margin:0 0 10px;color:rgba(200,185,160,0.7);font-size:0.92rem;line-height:1.6">
+         where <em>T</em><sub>year</sub> is the number of periods in a year &mdash;
+         whatever you take a period to mean. The two quantities converge on the same thing
+         (the annualized SD of returns) once you fix that interpretation.</p>
+      <p style="margin:0 0 10px;color:rgba(200,185,160,0.7);font-size:0.92rem;line-height:1.6">
+         <strong>A worked example:</strong> if you adopt the
+         &ldquo;<a href="#interpreting-days" style="color:#d4b896">Interpreting days</a>&rdquo;
+         heuristic that one timestep is roughly one trading day, then
+         <em>T</em><sub>year</sub>&nbsp;&asymp;&nbsp;252 and the annualization factor is
+         &radic;252&nbsp;&asymp;&nbsp;15.87. Under that interpretation, the widget's
+         &sigma;<sub>period</sub>&nbsp;=&nbsp;6 corresponds to
+         &sigma;<sub>annual</sub>&nbsp;&asymp;&nbsp;95 in the same units.</p>
+      <p style="margin:0;color:rgba(200,185,160,0.7);font-size:0.92rem;line-height:1.6">
+         This is the textbook scaling. In practice the simulator's realized volatility
+         won't match the prediction exactly. The
+         <a href="monte-carlo-methodology.html#metropolis-hastings" style="color:#d4b896">Metropolis-Hastings price model</a>
+         and the conversion from prices to returns introduce additional scaling that
+         the simple &radic;<em>T</em> relationship doesn't capture. The structural
+         relationship holds (variance accumulates linearly, SD scales as &radic;<em>T</em>),
+         but the specific numeric correspondence between widget parameter and simulator
+         output depends on both the
+         <a href="#interpreting-days" style="color:#d4b896">timestep interpretation</a>
+         and the engine's internals.</p>
+    </div>
   </section>
 
   <section>
-    <h2 id="when-rebalancing-beats-100-stocks">When rebalancing beats 100% stocks</h2>
+    <h2>Why go to all this trouble?</h2>
+
+    <p>The textbook efficient frontier is computed in one step from a closed-form formula:
+       plug in expected returns, volatilities, and correlation, and out comes a curve. The
+       simulator takes a different path. For every allocation, it generates hundreds or
+       thousands of simulated price trajectories, computes the outcomes for each, aggregates
+       them into a cloud of points, takes the mean of the cloud, and plots that mean. Repeat
+       for the next allocation. Repeat across scenarios. It's enormously more work for what
+       often looks like a similar answer.</p>
+
+    <div class="fig-wrap" id="flowchart-figure">
+      <img src="img/efficient_frontier_flowchart.png"
+           alt="Flowchart comparing the analytic pipeline (parameters → frontier in one step) with the simulator pipeline (parameters → price trajectories → outcome cloud → mean → frontier point)"
+           style="width:100%;display:block">
+    </div>
+
+    <p>Both pipelines start from the same input parameters. The analytic version reaches the
+       frontier in one step. The simulator passes through three intermediate objects on the way:
+       the price trajectories that simulate possible futures, the cloud of outcome points those
+       futures produce, and the mean of the cloud that becomes a single plotted point.</p>
+
+    <p>Both approaches produce a frontier curve. The difference is in what gets carried along the way:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>What's preserved</th>
+          <th>Analytic (textbook)</th>
+          <th>Simulator</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Distribution of outcomes</td><td>Collapsed to mean</td><td>Full distribution per allocation</td></tr>
+        <tr><td>Time dimension</td><td>None &mdash; single period</td><td>Multi-period compounding</td></tr>
+        <tr><td>Rebalancing</td><td>Stipulated (constant weights)</td><td>Action with consequences</td></tr>
+        <tr><td>Variance drag</td><td>Implicit only</td><td>Explicit in realized paths</td></tr>
+        <tr><td>Extensibility</td><td>Limited to closed-form cases</td><td>Add transaction costs, regime shifts, etc.</td></tr>
+        <tr><td>Speed</td><td>Instantaneous</td><td>Slow (minutes for full sweep)</td></tr>
+        <tr><td>Statistical noise</td><td>None &mdash; exact</td><td>Monte Carlo error</td></tr>
+        <tr><td>Transparency</td><td>High &mdash; see inputs &rarr; output</td><td>Lower &mdash; must inspect simulations</td></tr>
+      </tbody>
+    </table>
+
+    <p>None of this means the analytic approach is obsolete &mdash; quite the opposite.
+       Closed-form solutions are exact (within their assumptions), fast to compute, and
+       transparent in a way simulation outputs aren't: you can see how the answer depends
+       on each input, which often <em>is</em> the insight. They compose with other analytic
+       results in ways simulations don't, making them the natural building blocks for
+       optimizers and risk tools. And they provide the baseline a simulation needs to be
+       checked against &mdash; without a closed-form answer for the constant-weight
+       single-period case, you'd have no way to know whether your simulator was converging,
+       biased, or just noisy.</p>
+
+    <p>Analytic and simulation aren't substitutes; they're complementary, and a serious
+       analyst usually wants both. The simulator extends the analytic picture into territory
+       the formulas can't reach &mdash; multi-period effects, rebalancing as action, the
+       distribution of outcomes &mdash; but it does so on a foundation the analytic framework
+       provides. The interesting cases are where the two diverge: where rebalancing's
+       locked-in variance drag pulls a frontier into shapes the textbook version can't
+       represent, where the cloud of outcomes is so wide that the frontier dot becomes a
+       misleading summary, where the action of maintaining constant weights costs something
+       the stipulation of constant weights doesn't acknowledge. Those are the cases the
+       simulator is built to surface, and where the analytic framework &mdash; through no
+       fault of its own &mdash; runs out of resolution.</p>
+  </section>
+
+  <section>
+    <h2 id="when-a-mixed-portfolio-beats-pure-stocks">When a mixed portfolio beats pure stocks</h2>
 
     <p>At certain parameter settings &mdash; particularly with negative correlation and
        asymmetric assets &mdash; a rebalanced portfolio with some bond exposure produces
@@ -340,16 +482,17 @@ a[style]{color:#1D9E75 !important}
 
     <div class="fig-wrap">
       <img src="img/frontier_curveback.png"
-           alt="Efficient frontier with correlation −0.7 showing the rebalanced curve peaking around 60–70% stocks then curving back"
+           alt="Efficient frontier with correlation −0.7 showing the rebalanced curve peaking around 60–70% stocks then turning over"
            style="width:100%;display:block">
       <figcaption>Frontier sweep at corr&nbsp;=&nbsp;&minus;0.7, asymmetric assets
         (stock SD&nbsp;6, bond SD&nbsp;3, stock interest&nbsp;6%, bond interest&nbsp;2%).
-        The rebalanced curve (green) peaks and turns over; the non-rebalanced curve (red)
-        does not. Each dot is the <em>mean</em> gain and <em>mean</em> SD across 5,000 simulations.</figcaption>
+        The rebalanced curve (teal) peaks above the 100% stocks point; the non-rebalanced
+        curve (pink) does not. Each dot is the <em>mean</em> gain and <em>mean</em> SD
+        across 5,000 simulations.</figcaption>
     </div>
 
     <p><strong>Variance drag.</strong>
-       The mechanism is straightforward. If an investment gains 20% and then loses 20%,
+       If an investment gains 20% and then loses 20%,
        you don't end up back where you started &mdash; you're at 96&cent; on the dollar.
        Gain 50%, lose 50%, and you're at 75&cent;. The more volatile the path, the
        wider the gap between the arithmetic average return and the actual compound
@@ -358,38 +501,22 @@ a[style]{color:#1D9E75 !important}
        variance of returns per period.</p>
 
     <p><strong>Why a mixed portfolio can beat 100% stocks.</strong>
-       Variance drag affects both rebalanced and non-rebalanced portfolios &mdash;
-       it's a property of compounding volatile returns, not of rebalancing per se.
-       So drag alone can't explain why a rebalanced mix outperforms 100% stocks.
-       The difference comes from how each strategy's effective allocation evolves
-       over time.</p>
+       Three effects are happening simultaneously when you compare a rebalanced
+       mixed portfolio to 100% stocks:</p>
 
-    <p>Rebalancing earns a &ldquo;sell high / buy low&rdquo; premium by
-       systematically harvesting mean reversion between the two assets &mdash; but
-       this premium requires meaningful positions in both assets to work. As the
-       stock allocation climbs toward 100%, there's progressively less bond
-       exposure to rebalance into, and the harvesting opportunity shrinks toward
-       zero. At the same time, rebalancing forfeits the drift premium that a
-       non-rebalanced portfolio enjoys: by letting winners run, a non-rebalanced
-       90/10 drifts toward something like 99/1 over the run, capturing more of
-       the stock premium along the way. The rebalanced version stays pinned at
-       90/10, locked into the same high-volatility allocation every period.</p>
+    <ul style="margin:8px 0 14px 20px;color:#c4b5a0;font-size:0.97rem;line-height:1.65">
+      <li style="margin-bottom:6px"><strong>Lower expected return</strong> (favors pure stocks). Bonds return less than stocks, so any allocation to bonds drags the arithmetic average down. This is the obvious effect, and the one the textbook frontier captures.</li>
+      <li style="margin-bottom:6px"><strong>Lower variance drag</strong> (favors mixed). The mixed portfolio has lower portfolio variance, so less &sigma;&sup2;/2 penalty per period. Over many periods, this gap compounds. The textbook frontier doesn't show this because it has no time dimension.</li>
+      <li><strong>Harvesting premium</strong> (favors mixed). Rebalancing earns a &ldquo;sell high / buy low&rdquo; premium by systematically harvesting mean reversion between the two assets &mdash; but this premium requires meaningful positions in <em>both</em> assets to work. As the stock allocation climbs toward 100%, there's progressively less bond exposure to rebalance into, and the harvesting opportunity shrinks toward zero. At 100% stocks it's exactly zero.</li>
+    </ul>
 
-    <p>So at high stock allocations, the rebalanced strategy is paying a real
-       cost &mdash; forfeited drift &mdash; for a harvesting benefit that's collapsing
-       toward zero. At 100% stocks the two strategies are mechanically identical
-       (nothing to rebalance) and the curves meet. At moderate allocations the
-       balance tips the other way: there's enough of both assets for harvesting
-       to matter, the harvesting premium is at its strongest, and the rebalanced
-       curve sits well above 100% stocks &mdash; even when stocks are the
-       higher-return asset on their own.</p>
-
-    <div class="callout">
-      These are <em>average</em> outcomes across thousands of simulations &mdash;
-      individual runs scatter widely (that's the cloud you see on the Frontier
-      Explorer tab). The curveback is a property of the mean, not of any
-      single simulated history.
-    </div>
+    <p>When the second and third effects together exceed the first &mdash; when the drag
+       reduction plus harvesting premium more than compensates for the lower expected
+       return &mdash; the mixed portfolio beats pure stocks on average terminal wealth.
+       This is most likely when bonds are meaningfully decorrelated from stocks (so the
+       variance reduction is large) and when both volatility and the harvesting opportunity
+       are present (so the premium is meaningful). At 100% stocks all three effects vanish
+       simultaneously, which is why the rebalanced and non-rebalanced curves meet there.</p>
 
     <p><strong>The textbook vs. the sim.</strong>
        The classic Markowitz frontier has no time dimension &mdash; no compounding,
@@ -412,14 +539,15 @@ a[style]{color:#1D9E75 !important}
        &ldquo;What this is&nbsp;&mdash; and isn't&rdquo; above. In particular,
        the plot above assumes a constant stock/bond correlation of &minus;0.7.
        Actual correlations vary constantly &mdash; and rarely are that
-       decorrelated. The simulator's <a href="monte-carlo.html?tab=frontier_explorer" class="tab-link">Frontier Explorer</a> tab lets you compare
-       precomputed frontiers across a range of (constant) correlations and
-       rebalancing intervals, so you can see how the shape changes as
-       assumptions shift.</p>
+       decorrelated. The simulator's
+       <a href="monte-carlo.html?tab=efficient_frontier" class="tab-link">Frontier</a>
+       tab lets you compare precomputed frontiers across a range of (constant)
+       correlations and rebalancing intervals, so you can see how the shape
+       changes as assumptions shift.</p>
   </section>
 
   <section>
-    <h2>Interpreting days</h2>
+    <h2 id="interpreting-days">Interpreting days</h2>
     <div class="timestep-note">
       <strong>A rough heuristic:</strong> with the default parameters (interest period = 300,
       time horizon = 1000), each timestep corresponds to roughly one trading day. That makes

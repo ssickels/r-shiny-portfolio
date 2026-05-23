@@ -17,6 +17,7 @@ run_meta_sweep <- function(perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd,
   summary_results <- list()
   cloud_results <- list()
   point_est_results <- list()
+  sim_history_results <- list()
 
   for (k in seq_along(perc.stocks.vec)) {
     alloc <- perc.stocks.vec[k]
@@ -40,6 +41,22 @@ run_meta_sweep <- function(perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd,
       nSims = nSims, nSimsToRecord = nSimsToRecord,
       progress_callback = sim_cb
     )
+
+    # Capture subsampled price paths for first 10 sims
+    n_record <- min(10, nSims)
+    n_steps <- res$params$n
+    subsample_times <- c(1L, seq(5L, n_steps, by = 5L))
+    hist_rows <- list()
+    for (s in seq_len(n_record)) {
+      sim_costs <- res$costsDf[res$costsDf$sim == s & res$costsDf$time %in% subsample_times, ]
+      stocks <- sim_costs$cost[sim_costs$class == "stocks"]
+      bonds  <- sim_costs$cost[sim_costs$class == "bonds"]
+      hist_rows[[s]] <- data.frame(
+        allocation = alloc, sim = s, time = subsample_times,
+        stock_price = stocks, bond_price = bonds
+      )
+    }
+    sim_history_results[[k]] <- do.call(rbind, hist_rows)
 
     # Summary row (existing frontier data)
     pe <- res$gainsVsSD.point.estDf
@@ -70,6 +87,7 @@ run_meta_sweep <- function(perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd,
   list(
     summary = do.call(rbind, summary_results),
     cloud = do.call(rbind, cloud_results),
-    point_estimates = do.call(rbind, point_est_results)
+    point_estimates = do.call(rbind, point_est_results),
+    sim_histories = do.call(rbind, sim_history_results)
   )
 }

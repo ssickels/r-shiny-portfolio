@@ -428,6 +428,15 @@ pre {
   font-size: 16px;
 }
 
+/* Layer toggles — compact checkbox spacing */
+.layer-toggles .form-group {
+  margin-bottom: 0;
+}
+.layer-toggles .checkbox {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
 /* Cloud opacity slider — warning state when hidden */
 .cloud-hidden-warning .control-label {
   color: #c07020 !important;
@@ -452,7 +461,7 @@ pre {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
 }
 .frontier-highlight-row .btn-link {
   color: #9a8e82 !important;
@@ -473,6 +482,57 @@ pre {
 }
 .callout-action-link:hover {
   color: #178a65 !important;
+}
+
+/* Frontier sim explorer panel */
+.frontier-sim-caption {
+  margin-bottom: 8px;
+}
+.frontier-sim-details summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #6b5b4f;
+  font-size: 15px;
+  font-weight: 500;
+}
+.frontier-sim-details summary::-webkit-details-marker {
+  display: none;
+}
+.frontier-sim-details summary::before {
+  content: '\25B6';
+  font-size: 10px;
+  color: #6b5b4f;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.frontier-sim-details[open] summary::before {
+  transform: rotate(90deg);
+}
+.frontier-sim-details summary:hover {
+  color: #3b2f2f;
+}
+
+/* Thumbnail images in sub-tab pill labels */
+.pill-thumb {
+  height: 40px;
+  width: auto;
+  margin-left: 6px;
+  vertical-align: middle;
+  border-radius: 3px;
+  opacity: 0.85;
+}
+.nav-pills > li.active .pill-thumb {
+  opacity: 1;
+}
+
+/* Equal-height pill buttons (so tabs without thumbnails match height) */
+.nav-pills > li > a {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Callout bullet lists */

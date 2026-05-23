@@ -9,7 +9,7 @@ function(input, output, session) {
   propStepDivisor <- 20
   int.period <- 300
 
-  # Screenshot mode: set to a sim number to highlight it on the Gain vs SD plot.
+  # Screenshot mode: set to a sim number to highlight it on the Gain vs Volatility plot.
   # Set to NULL for normal operation. Set screenshot_hide_cloud to TRUE to show
   # only point estimates (for "point estimate only" screenshot).
   screenshot_highlight_sim <- NULL
@@ -20,6 +20,8 @@ function(input, output, session) {
   sweep_result <- reactiveVal(NULL)
   frontier_alloc_index <- reactiveVal(6)  # default to 50/50 (index 6 of 0%,10%,...,100%)
   frontier_highlight_sim <- reactiveVal(NULL)
+  frontier_cached_sim_idx <- reactiveVal(0L)   # 0 = none, 1-10 = which cached sim
+  frontier_sim_portfolio  <- reactiveVal(NULL)  # reconstructed portfolio data
   active_scenario <- reactiveVal("corrn030_rebal100")  # tracks which precomputed scenario is loaded
 
   # --- Manage params_details open/closed state based on active tab ---
@@ -74,8 +76,14 @@ function(input, output, session) {
 
   observeEvent(input$cloud_alpha_frontier, {
     alpha <- input$cloud_alpha_frontier
-    plotlyProxy("plot_frontier_merged", session) %>%
-      plotlyProxyInvoke("restyle", list(`marker.opacity` = alpha), list(0L, 1L))
+    # Cloud traces are always first; compute indices from toggle state
+    traces <- integer(0)
+    if (!isFALSE(input$layer_cloud_rebal))    traces <- c(traces, length(traces))
+    if (!isFALSE(input$layer_cloud_nonrebal)) traces <- c(traces, length(traces))
+    if (length(traces) > 0) {
+      plotlyProxy("plot_frontier_merged", session) %>%
+        plotlyProxyInvoke("restyle", list(`marker.opacity` = alpha), as.list(traces))
+    }
   }, ignoreInit = TRUE)
 
   # Data source tracking: "precomputed" or "custom"
@@ -91,14 +99,18 @@ function(input, output, session) {
   })
 
   observe({
-    # Show "Reset to defaults" only when at least one param differs
-    defaults_match <- isTRUE(input$nSims == 500) &&
-                      isTRUE(input$n_timesteps == 1000) &&
-                      isTRUE(input$perc_stocks == 60) &&
-                      isTRUE(input$rebal_interval == 100) &&
-                      isTRUE(input$s_sd == 6) && isTRUE(input$b_sd == 3) &&
-                      isTRUE(input$s_b_corr == 0.7) &&
-                      isTRUE(input$s_int == 0.06) && isTRUE(input$b_int == 0.02)
+    # Show "Reset to defaults" only when a slider relevant to the current tab differs
+    shared_match <- isTRUE(input$nSims == 500) &&
+                    isTRUE(input$n_timesteps == 1000) &&
+                    isTRUE(input$rebal_interval == 100) &&
+                    isTRUE(input$s_sd == 6) && isTRUE(input$b_sd == 3) &&
+                    isTRUE(input$s_b_corr == 0.7) &&
+                    isTRUE(input$s_int == 0.06) && isTRUE(input$b_int == 0.02)
+    if (isTRUE(input$main_tabs == "Single allocation")) {
+      defaults_match <- shared_match && isTRUE(input$perc_stocks == 60)
+    } else {
+      defaults_match <- shared_match
+    }
     shinyjs::toggle("reset_defaults", condition = !defaults_match)
   })
 
@@ -110,16 +122,14 @@ function(input, output, session) {
       if (tab %in% c("frontier_explorer", "efficient_frontier")) {
         updateTabsetPanel(session, "main_tabs", selected = "Frontier")
         if (tab == "frontier_explorer") {
-          updateCheckboxInput(session, "show_distributions", value = TRUE)
+          updateTabsetPanel(session, "frontier_tabs", selected = "clouds")
         }
-      } else if (tab %in% c("gain_vs_sd", "final_densities", "trajectories",
-                             "cost_profiles", "single_sim_explorer", "summary")) {
+      } else if (tab %in% c("gain_vs_sd", "gain_vs_volatility",
+                             "single_sim_explorer", "summary")) {
         updateTabsetPanel(session, "main_tabs", selected = "Single allocation")
         sub <- switch(tab,
-          gain_vs_sd = "Gain vs SD",
-          final_densities = "Final Densities",
-          trajectories = "Trajectories",
-          cost_profiles = "Cost Profiles",
+          gain_vs_sd = "Gain vs Volatility",
+          gain_vs_volatility = "Gain vs Volatility",
           single_sim_explorer = "Single Sim Explorer",
           summary = "Summary"
         )
@@ -152,7 +162,14 @@ function(input, output, session) {
       sweep_source("precomputed")
       active_scenario(paste0("corr", corr_str, "_rebal", rebal))
       frontier_highlight_sim(NULL)
+      frontier_cached_sim_idx(0L)
+      frontier_sim_portfolio(NULL)
       shinyjs::hide("clear_highlight")
+      shinyjs::hide("frontier_sim_explorer_panel")
+      # Reset zoom so it re-initializes from checkbox with new data's axis ranges
+      frontier_zoom$x <- NULL
+      frontier_zoom$y <- NULL
+      shinyjs::hide("reset_view")
       n_allocs <- length(unique(data$point_estimates$allocation))
       if (frontier_alloc_index() > n_allocs) frontier_alloc_index(1)
     }
@@ -201,6 +218,9 @@ function(input, output, session) {
       sweep_source("precomputed")
       active_scenario("corrn030_rebal100")
       frontier_alloc_index(1)
+      frontier_zoom$x <- NULL
+      frontier_zoom$y <- NULL
+      shinyjs::hide("reset_view")
     }
   })
 
@@ -217,8 +237,30 @@ function(input, output, session) {
     updateSliderInput(session, "s_b_corr", value = 0.7)
     updateSliderInput(session, "s_int", value = 0.06)
     updateSliderInput(session, "b_int", value = 0.02)
-    updateCheckboxInput(session, "show_distributions", value = FALSE)
+    updateTabsetPanel(session, "frontier_tabs", selected = "means")
     updateCheckboxInput(session, "zoom_to_frontier", value = TRUE)
+    frontier_cached_sim_idx(0L)
+    frontier_sim_portfolio(NULL)
+    shinyjs::hide("frontier_sim_explorer_panel")
+  })
+
+  # --- Reset layer toggles to defaults ---
+  observeEvent(input$reset_layer_toggles, {
+    updateCheckboxInput(session, "layer_cloud_rebal", value = TRUE)
+    updateCheckboxInput(session, "layer_cloud_nonrebal", value = TRUE)
+    updateSliderInput(session, "cloud_sample_n", value = 5000)
+    updateCheckboxInput(session, "layer_line_rebal", value = TRUE)
+    updateCheckboxInput(session, "layer_line_nonrebal", value = TRUE)
+    updateSliderInput(session, "frontier_line_width", value = 0.5)
+    updateSliderInput(session, "frontier_line_alpha", value = 0.4)
+    updateCheckboxInput(session, "layer_dots_rebal", value = TRUE)
+    updateCheckboxInput(session, "layer_dots_nonrebal", value = TRUE)
+    updateCheckboxInput(session, "layer_highlight_current", value = TRUE)
+    updateCheckboxInput(session, "layer_dots_others", value = TRUE)
+    updateSliderInput(session, "dot_size", value = 2)
+    updateCheckboxInput(session, "layer_labels", value = FALSE)
+    updateCheckboxInput(session, "sim_show_rebal", value = TRUE)
+    updateCheckboxInput(session, "sim_show_nonrebal", value = TRUE)
   })
 
   # --- Status banner (single allocation only; frontier info goes in plot title) ---
@@ -357,6 +399,9 @@ function(input, output, session) {
 
     frontier_alloc_index(1)
     active_scenario("")
+    frontier_zoom$x <- NULL
+    frontier_zoom$y <- NULL
+    shinyjs::hide("reset_view")
   }
 
   # --- Confirmed single allocation run ---
@@ -422,24 +467,6 @@ function(input, output, session) {
       cloud_alpha_override = isolate(input$cloud_alpha_single))))
   })
 
-  output$plot_trajectories <- renderPlotly({
-    req(sim_result())
-    plotly_clean(ggplotly(
-      plot_trajectories(sim_result(), max_sims = min(100, sim_result()$params$nSims))
-    ))
-  })
-
-  output$plot_costs <- renderPlotly({
-    req(sim_result())
-    plotly_clean(ggplotly(
-      plot_cost_profiles(sim_result(), max_sims = min(10, sim_result()$params$nSims))
-    ))
-  })
-
-  output$plot_densities <- renderPlotly({
-    req(sim_result())
-    plotly_clean(ggplotly(plot_final_densities(sim_result())))
-  })
 
   # --- Single Sim Explorer ---
   sim_explorer_index <- reactiveVal(1)
@@ -472,6 +499,10 @@ function(input, output, session) {
 
   # Store zoom state so it persists across allocation steps
   frontier_zoom <- reactiveValues(x = NULL, y = NULL)
+  # Timestamp of last programmatic zoom change; relayout events within a short
+
+  # window after this are from re-renders, not user drag-zooms
+  frontier_zoom_set_time <- reactiveVal(0)
 
   # Precomputed axis ranges: tight (PE only) and wide (includes cloud spread)
   frontier_axis_ranges <- reactive({
@@ -500,6 +531,22 @@ function(input, output, session) {
     )
   })
 
+  # Initialize zoom from checkbox when sweep data first becomes available
+  observe({
+    ranges <- frontier_axis_ranges()
+    # Only initialize if zoom has never been set
+    if (is.null(frontier_zoom$x)) {
+      if (isTRUE(input$zoom_to_frontier)) {
+        frontier_zoom$x <- ranges$tight$x
+        frontier_zoom$y <- ranges$tight$y
+      } else {
+        frontier_zoom$x <- ranges$wide$x
+        frontier_zoom$y <- ranges$wide$y
+      }
+      frontier_zoom_set_time(as.numeric(Sys.time()))
+    }
+  })
+
   # Track current zoom preset so the toggle button knows which way to go
   frontier_zoom_mode <- reactiveVal("in")  # "in" = tight around PEs, "out" = wide for clouds
 
@@ -515,14 +562,19 @@ function(input, output, session) {
       frontier_zoom$x <- ranges$wide$x
       frontier_zoom$y <- ranges$wide$y
     }
+    frontier_zoom_set_time(as.numeric(Sys.time()))
     shinyjs::hide("reset_view")
   }, ignoreInit = TRUE)
 
-  # Capture zoom/pan events from plotly (user drag-zoom)
+  # Capture zoom/pan events from plotly (user drag-zoom only)
   observe({
     req(sweep_result())
     ev <- event_data("plotly_relayout", source = "frontier_src")
     req(ev)
+    # Ignore relayout events that fire within 1 second of a programmatic zoom change;
+    # these are from re-renders, not user drag-zooms
+    elapsed <- as.numeric(Sys.time()) - frontier_zoom_set_time()
+    if (elapsed < 1) return()
     if (!is.null(ev[["xaxis.range[0]"]])) {
       frontier_zoom$x <- c(ev[["xaxis.range[0]"]], ev[["xaxis.range[1]"]])
       frontier_zoom$y <- c(ev[["yaxis.range[0]"]], ev[["yaxis.range[1]"]])
@@ -548,23 +600,59 @@ function(input, output, session) {
     shinyjs::hide("reset_view")
   })
 
-  # --- Highlight a random simulation pair ---
+  # Precomputed mean price vectors for frontier sim explorer detail plot
+  frontier_mean_prices <- reactive({
+    # Fixed params: s.mean=10, b.mean=10, s.int=0.06, b.int=0.02, int.period=300
+    # n = 999 (after the n-1 adjustment in run_simulation)
+    subsample_times <- c(1L, seq(5L, 999L, by = 5L))
+    s_mean_vec <- 10 * ((1 + 0.06)^((subsample_times - 1) / 300))
+    b_mean_vec <- 10 * ((1 + 0.02)^((subsample_times - 1) / 300))
+    list(stock = s_mean_vec, bond = b_mean_vec)
+  })
+
+  # --- Highlight a simulation pair (cycling through cached sims) ---
   observeEvent(input$highlight_random_sim, {
     sw <- sweep_result()
-    req(sw)
+    req(sw, sw$sim_histories)
+
     allocs <- sort(unique(sw$point_estimates$allocation))
     current_alloc <- allocs[frontier_alloc_index()]
-    current_cloud <- sw$cloud[sw$cloud$allocation == current_alloc, ]
-    sims <- unique(current_cloud$sim)
-    current_hl <- frontier_highlight_sim()
-    candidates <- setdiff(sims, current_hl)
-    if (length(candidates) == 0) candidates <- sims
-    new_sim <- sample(candidates, 1)
-    frontier_highlight_sim(new_sim)
+
+    # Cycle through cached sims 1->2->...->N->1
+    idx <- frontier_cached_sim_idx()
+    n_cached <- length(unique(
+      sw$sim_histories$sim[sw$sim_histories$allocation == current_alloc]
+    ))
+    new_idx <- if (idx >= n_cached) 1L else idx + 1L
+    frontier_cached_sim_idx(new_idx)
+    frontier_highlight_sim(new_idx)
+    updateActionButton(session, "highlight_random_sim", label = "Highlight another simulation")
     shinyjs::show("clear_highlight")
 
+    # Reconstruct portfolio from cached prices
+    hist <- sw$sim_histories[
+      sw$sim_histories$allocation == current_alloc &
+      sw$sim_histories$sim == new_idx, ]
+
+    # Get rebal interval from scenario params
+    sc <- active_scenario()
+    rebal_int <- as.integer(sub(".*_rebal(\\d+).*", "\\1", sc))
+    if (is.na(rebal_int)) rebal_int <- 100L  # fallback for custom runs
+
+    portfolio <- reconstruct_portfolio(
+      stock_prices = hist$stock_price,
+      bond_prices = hist$bond_price,
+      time_vec = hist$time,
+      perc_stocks = current_alloc,
+      rebal_interval = rebal_int,
+      init_inv = 1000
+    )
+    frontier_sim_portfolio(portfolio)
+    shinyjs::show("frontier_sim_explorer_panel")
+
     # Check if highlighted dots are within current viewport; zoom out if not
-    hl <- current_cloud[current_cloud$sim == new_sim, ]
+    current_cloud <- sw$cloud[sw$cloud$allocation == current_alloc, ]
+    hl <- current_cloud[current_cloud$sim == new_idx, ]
     if (nrow(hl) >= 2 && !is.null(frontier_zoom$x)) {
       xr <- frontier_zoom$x
       yr <- frontier_zoom$y
@@ -583,19 +671,21 @@ function(input, output, session) {
 
   observeEvent(input$clear_highlight, {
     frontier_highlight_sim(NULL)
+    frontier_cached_sim_idx(0L)
+    frontier_sim_portfolio(NULL)
+    updateActionButton(session, "highlight_random_sim", label = "Highlight a simulation")
     shinyjs::hide("clear_highlight")
+    shinyjs::hide("frontier_sim_explorer_panel")
   })
 
-  # When allocation changes, pick a new random sim if highlight is active
+  # When allocation changes, clear highlight and hide explorer
   observeEvent(frontier_alloc_index(), {
     if (!is.null(frontier_highlight_sim())) {
-      sw <- sweep_result()
-      req(sw)
-      allocs <- sort(unique(sw$point_estimates$allocation))
-      current_alloc <- allocs[frontier_alloc_index()]
-      current_cloud <- sw$cloud[sw$cloud$allocation == current_alloc, ]
-      sims <- unique(current_cloud$sim)
-      frontier_highlight_sim(sample(sims, 1))
+      frontier_highlight_sim(NULL)
+      frontier_cached_sim_idx(0L)
+      frontier_sim_portfolio(NULL)
+      shinyjs::hide("clear_highlight")
+      shinyjs::hide("frontier_sim_explorer_panel")
     }
   }, ignoreInit = TRUE)
 
@@ -624,9 +714,11 @@ function(input, output, session) {
 
   output$plot_frontier_merged <- renderPlotly({
     req(sweep_result())
+    # Mark render time so the relayout observer ignores the initial axis event
+    frontier_zoom_set_time(as.numeric(Sys.time()))
     scenario_lbl <- frontier_scenario_label()
 
-    if (isTRUE(input$show_distributions)) {
+    if (identical(input$frontier_tabs, "clouds")) {
       # Distribution view: clouds + frontier lines, no labels
       allocs <- sort(unique(sweep_result()$point_estimates$allocation))
       current_alloc <- allocs[frontier_alloc_index()]
@@ -636,10 +728,21 @@ function(input, output, session) {
       if (nchar(scenario_lbl) > 0) title <- paste0(title, " \u2014 ", scenario_lbl)
 
       plt <- plot_frontier_explorer(sweep_result(), frontier_alloc_index(),
-                                     show_cloud = TRUE,
                                      cloud_alpha_override = isolate(input$cloud_alpha_frontier),
-                                     show_labels = FALSE,
-                                     highlight_sim = frontier_highlight_sim()) +
+                                     show_labels = !isFALSE(input$layer_labels),
+                                     highlight_sim = frontier_highlight_sim(),
+                                     show_cloud_rebal = !isFALSE(input$layer_cloud_rebal),
+                                     show_cloud_nonrebal = !isFALSE(input$layer_cloud_nonrebal),
+                                     show_line_rebal = !isFALSE(input$layer_line_rebal),
+                                     show_line_nonrebal = !isFALSE(input$layer_line_nonrebal),
+                                     show_dots_rebal = !isFALSE(input$layer_dots_rebal),
+                                     show_dots_nonrebal = !isFALSE(input$layer_dots_nonrebal),
+                                     highlight_current = !isFALSE(input$layer_highlight_current),
+                                     show_dots_others = !isFALSE(input$layer_dots_others),
+                                     dot_size = if (is.null(input$dot_size)) 2 else input$dot_size,
+                                     line_width = if (is.null(input$frontier_line_width)) 0.5 else input$frontier_line_width,
+                                     line_alpha = if (is.null(input$frontier_line_alpha)) 0.4 else input$frontier_line_alpha,
+                                     cloud_sample_n = input$cloud_sample_n) +
         ggtitle(title)
 
       p <- plotly_clean(ggplotly(plt, source = "frontier_src") %>%
@@ -672,6 +775,33 @@ function(input, output, session) {
       }
       p
     }
+  })
+
+  # --- Frontier sim explorer outputs ---
+
+  output$plot_frontier_sim_values <- renderPlotly({
+    portfolio <- frontier_sim_portfolio()
+    req(portfolio)
+    idx <- frontier_cached_sim_idx()
+    sw <- sweep_result()
+    allocs <- sort(unique(sw$point_estimates$allocation))
+    current_alloc <- allocs[frontier_alloc_index()]
+    n_cached <- length(unique(
+      sw$sim_histories$sim[sw$sim_histories$allocation == current_alloc]
+    ))
+    label <- paste0("Sim ", idx, " of ", n_cached, ": portfolio value over time")
+    plotly_clean(ggplotly(plot_frontier_sim_portfolio(portfolio, label,
+      show_rebal = !isFALSE(input$sim_show_rebal),
+      show_nonrebal = !isFALSE(input$sim_show_nonrebal))))
+  })
+
+  output$plot_frontier_sim_detail <- renderPlotly({
+    portfolio <- frontier_sim_portfolio()
+    req(portfolio)
+    idx <- frontier_cached_sim_idx()
+    means <- frontier_mean_prices()
+    label <- paste0("Sim ", idx)
+    plotly_clean(plot_frontier_sim_detail(portfolio, means$stock, means$bond, label))
   })
 
   output$frontier_alloc_label <- renderText({
@@ -723,45 +853,12 @@ function(input, output, session) {
     )
   })
 
-  output$callout_densities <- renderUI({
-    req(sim_result())
-    if (single_source() != "precomputed") return(NULL)
-    callout(
-      "Density curves of final portfolio values after the full time horizon.
-       Rebalanced and non-rebalanced strategies start from the same MCMC price paths
-       but diverge as the rebalanced portfolio periodically reallocates to maintain
-       its target stock/bond split. Wider distributions mean more outcome uncertainty."
-    )
-  })
-
-  output$callout_trajectories <- renderUI({
-    req(sim_result())
-    if (single_source() != "precomputed") return(NULL)
-    callout(
-      "Each line is a single simulation's portfolio value over time &mdash; one for each
-       MCMC price path. Rebalanced and non-rebalanced portfolios diverge over the same
-       underlying paths. The fan of trajectories shows the range of possible outcomes,
-       not just the average."
-    )
-  })
-
-  output$callout_costs <- renderUI({
-    req(sim_result())
-    if (single_source() != "precomputed") return(NULL)
-    callout(
-      "Share prices generated by the Metropolis-Hastings chain for each simulation.
-       Stock and bond prices are correlated (controlled by the stock-bond correlation
-       parameter) and include a drift term from their respective interest rates.
-       These are the raw price paths that drive all portfolio outcomes."
-    )
-  })
-
   output$callout_explorer <- renderUI({
     req(sim_result())
     if (single_source() != "precomputed") return(NULL)
     callout(
       "This entire panel &mdash; all three views &mdash; is the story behind
-       <strong>a single pair of dots</strong> on the Gain vs SD plot. Each simulation
+       <strong>a single pair of dots</strong> on the Gain vs Volatility plot. Each simulation
        produces two dots (rebalanced and non-rebalanced) from the same price paths;
        here you're seeing the machinery that produced them.
        Top panel: the dollar value of each asset class in the rebalanced portfolio,
@@ -776,19 +873,19 @@ function(input, output, session) {
     req(sweep_result())
     if (sweep_source() != "precomputed") return(NULL)
 
-    if (isTRUE(input$show_distributions)) {
+    if (identical(input$frontier_tabs, "clouds")) {
       callout_bullets(c(
-        "Each simulation produces two dots from the same price paths &mdash; one <strong>rebalanced</strong> (teal), one <strong>non-rebalanced</strong> (pink). The only difference is the portfolio strategy. <a href='#' onclick='$(\"#highlight_random_sim\").click(); return false;' class='callout-action-link'>Highlight a random simulation</a> (or click the button below) to see a single pair connected by a line.",
+        "Each simulation produces two dots from the same price paths &mdash; one <strong>rebalanced</strong> (teal), one <strong>non-rebalanced</strong> (pink). The only difference is the portfolio strategy. Click <strong>Highlight a simulation</strong> to see a single pair connected by a line and the underlying simulated history below.",
         "The frontier dots (larger, connected) are the <strong>means</strong> across all simulations for the selected allocation. Individual pairs vary widely &mdash; that spread is the real story.",
         "The gap between the rebalanced and non-rebalanced frontier lines is the rebalancing benefit <em>on average</em>.",
-        "Use the <strong>Zoom to frontier</strong> checkbox in the sidebar to toggle between a tight view around the frontier means and the full cloud range. You can also drag a box on the plot to zoom to a custom region."
+        "Use <strong>Zoom to frontier</strong> in the sidebar to toggle between a tight view around the frontier means and the full cloud range. You can also drag a box on the plot to zoom to a custom region."
       ))
     } else {
       callout_bullets(c(
         "Each point is a <strong>point estimate</strong> (mean gain and mean SD) from 5,000 simulations at one stock/bond allocation.",
-        "Toggle <strong>Show distributions</strong> in the sidebar to see the full simulation clouds these points are derived from.",
-        "Two curves: one rebalanced, one non-rebalanced. Where rebalancing shifts the curve upward or leftward, it&rsquo;s improving the risk-return tradeoff.",
-        "Use the <strong>Zoom to frontier</strong> checkbox in the sidebar to toggle between a tight view around the means and the full range. You can also drag a box on the plot to zoom to a custom region."
+        "For the underlying distributions these points are derived from, click the <strong>Means + clouds</strong> sub-tab above.",
+        "Two curves: one rebalanced, one non-rebalanced. Where rebalancing shifts the curve upward or leftward, it&rsquo;s improving the risk-return tradeoff on average.",
+        "Use <strong>Zoom to frontier</strong> in the sidebar to toggle between a tight view around the frontier and the full axis range. You can also drag a box on the plot to zoom to a custom region."
       ))
     }
   })

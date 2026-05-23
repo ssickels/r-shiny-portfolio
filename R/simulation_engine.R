@@ -393,3 +393,78 @@ run_simulation <- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
     )
   )
 }
+
+#' Reconstruct portfolio values from subsampled price paths
+#'
+#' Takes subsampled stock/bond prices and returns rebalanced + non-rebalanced
+#' portfolio values, share counts, and per-asset values at each time point.
+#'
+#' @param stock_prices Vector of subsampled stock prices
+#' @param bond_prices Vector of subsampled bond prices
+#' @param time_vec Vector of time indices corresponding to the prices
+#' @param perc_stocks Fraction allocated to stocks (0-1)
+#' @param rebal_interval Rebalance every N timesteps
+#' @param init_inv Initial investment ($)
+#' @return Data frame with time, rebal/nonrebal totals, shares, values, prices
+reconstruct_portfolio <- function(stock_prices, bond_prices, time_vec,
+                                   perc_stocks, rebal_interval, init_inv) {
+  n <- length(stock_prices)
+  # Initialize shares from first prices
+  sh_s <- (init_inv * perc_stocks) / stock_prices[1]
+  sh_b <- (init_inv * (1 - perc_stocks)) / bond_prices[1]
+
+  # Allocate output vectors
+  rebal_total <- nonrebal_total <- numeric(n)
+  rebal_sh_s <- rebal_sh_b <- numeric(n)
+  rebal_val_s <- rebal_val_b <- numeric(n)
+
+  # Nonrebal shares are constant
+  nr_sh_s <- sh_s; nr_sh_b <- sh_b
+
+  rebal_sh_s[1] <- sh_s; rebal_sh_b[1] <- sh_b
+  rebal_val_s[1] <- sh_s * stock_prices[1]
+  rebal_val_b[1] <- sh_b * bond_prices[1]
+  rebal_total[1] <- rebal_val_s[1] + rebal_val_b[1]
+  nonrebal_total[1] <- rebal_total[1]
+
+  for (i in 2:n) {
+    # Carry shares, compute values
+    rebal_sh_s[i] <- rebal_sh_s[i-1]
+    rebal_sh_b[i] <- rebal_sh_b[i-1]
+    rebal_val_s[i] <- rebal_sh_s[i] * stock_prices[i]
+    rebal_val_b[i] <- rebal_sh_b[i] * bond_prices[i]
+    rebal_total[i] <- rebal_val_s[i] + rebal_val_b[i]
+
+    # Rebalance at multiples of rebal_interval
+    if (time_vec[i] %% rebal_interval == 0) {
+      target <- c(perc_stocks, 1 - perc_stocks)
+      vals <- c(rebal_val_s[i], rebal_val_b[i])
+      pcts <- vals / rebal_total[i]
+      del <- pcts - target
+      over <- del > 0
+      gain <- del[over] * rebal_total[i]
+      prices <- c(stock_prices[i], bond_prices[i])
+      sh <- c(rebal_sh_s[i], rebal_sh_b[i])
+      sh[over] <- target[over] * rebal_total[i] / prices[over]
+      sh[!over] <- sh[!over] + gain / prices[!over]
+      rebal_sh_s[i] <- sh[1]; rebal_sh_b[i] <- sh[2]
+      rebal_val_s[i] <- sh[1] * stock_prices[i]
+      rebal_val_b[i] <- sh[2] * bond_prices[i]
+      rebal_total[i] <- rebal_val_s[i] + rebal_val_b[i]
+    }
+
+    nonrebal_total[i] <- nr_sh_s * stock_prices[i] + nr_sh_b * bond_prices[i]
+  }
+
+  data.frame(
+    time = time_vec,
+    rebal_total = rebal_total,
+    nonrebal_total = nonrebal_total,
+    rebal_stock_shares = rebal_sh_s,
+    rebal_bond_shares = rebal_sh_b,
+    rebal_stock_value = rebal_val_s,
+    rebal_bond_value = rebal_val_b,
+    stock_price = stock_prices,
+    bond_price = bond_prices
+  )
+}

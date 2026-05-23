@@ -16,6 +16,8 @@ plot_gain_vs_sd <- function(result, highlight_sim = NULL, show_cloud = TRUE,
     geom_point(data = result$gainsVsSD.point.estDf,
                aes(x = sd, y = gain, color = type),
                size = app_theme$point_size, alpha = app_theme$point_alpha) +
+    scale_color_manual(values = app_theme$strategy_colors,
+                       labels = app_theme$strategy_labels) +
     scale_x_continuous(labels = scales::percent) +
     scale_y_continuous(labels = scales::percent) +
     labs(x = "volatility (annualized %)", y = "gain (annualized %)", color = NULL) +
@@ -111,6 +113,7 @@ plot_single_sim_explorer <- function(result, simSel) {
   plt.vals <- ggplot() +
     geom_line(data = value.sim.selDf, aes(x = time, y = val, color = class)) +
     geom_line(data = value.tot.sim.selDf, aes(x = time, y = val, color = type)) +
+    scale_color_manual(values = app_theme$explorer_colors) +
     labs(y = "value ($)", color = NULL) +
     ggtitle(paste("Rebalanced Asset Values (& Non-rebal Totals); Sim #", simSel)) +
     app_theme$base_theme() +
@@ -121,6 +124,7 @@ plot_single_sim_explorer <- function(result, simSel) {
   plt.shares <- ggplot(data = shares.sim.selDf,
                        aes(x = time, y = shares, color = class)) +
     geom_line() +
+    scale_color_manual(values = app_theme$asset_colors) +
     labs(color = NULL) +
     ggtitle(paste("Shares Held, Rebalanced; Sim #", simSel)) +
     app_theme$base_theme() +
@@ -133,6 +137,7 @@ plot_single_sim_explorer <- function(result, simSel) {
     geom_line() +
     geom_line(data = mean.vecDf, aes(x = time, y = val, color = class),
               alpha = app_theme$mean_line_alpha, linetype = "dashed") +
+    scale_color_manual(values = app_theme$asset_colors) +
     labs(color = NULL) +
     ggtitle(paste("Costs per Share; Sim #", simSel)) +
     app_theme$base_theme() +
@@ -160,10 +165,22 @@ plot_single_sim_explorer <- function(result, simSel) {
 }
 
 #' Frontier explorer: cloud of sim results per allocation with frontier overlay
-plot_frontier_explorer <- function(sweep_data, alloc_index, show_cloud = TRUE,
+plot_frontier_explorer <- function(sweep_data, alloc_index,
                                    cloud_alpha_override = NULL,
                                    show_labels = TRUE,
-                                   highlight_sim = NULL) {
+                                   highlight_sim = NULL,
+                                   show_cloud_rebal = TRUE,
+                                   show_cloud_nonrebal = TRUE,
+                                   show_line_rebal = TRUE,
+                                   show_line_nonrebal = TRUE,
+                                   show_dots_rebal = TRUE,
+                                   show_dots_nonrebal = TRUE,
+                                   highlight_current = TRUE,
+                                   show_dots_others = TRUE,
+                                   dot_size = 2,
+                                   line_width = 0.5,
+                                   line_alpha = app_theme$frontier_line_alpha,
+                                   cloud_sample_n = NULL) {
   allocs <- sort(unique(sweep_data$point_estimates$allocation))
   current_alloc <- allocs[alloc_index]
 
@@ -191,32 +208,87 @@ plot_frontier_explorer <- function(sweep_data, alloc_index, show_cloud = TRUE,
   # Allocation labels on rebal frontier points only (avoid clutter)
   rebal_pe <- all_pe[all_pe$type == "rebal", ]
 
-  cloud_alpha <- if (!show_cloud) 0
-                 else if (!is.null(cloud_alpha_override)) cloud_alpha_override
+  cloud_alpha <- if (!is.null(cloud_alpha_override)) cloud_alpha_override
                  else app_theme$cloud_alpha
 
-  # Use a single color aesthetic throughout so ggplotly merges legends cleanly
-  plt <- ggplot() +
-    # Cloud of individual sim results for current allocation
-    geom_point(data = current_cloud, aes(x = sd, y = gain, color = type),
-               alpha = cloud_alpha) +
-    # Frontier lines connecting point estimates by type
-    geom_path(data = all_pe[all_pe$type == "rebal", ],
-              aes(x = sd, y = gain),
-              color = app_theme$frontier_line_color,
-              alpha = app_theme$frontier_line_alpha) +
-    geom_path(data = all_pe[all_pe$type == "nonrebal", ],
-              aes(x = sd, y = gain),
-              color = app_theme$frontier_line_color,
-              alpha = app_theme$frontier_line_alpha) +
-    # Other allocation point estimates
-    geom_point(data = other_pe, aes(x = sd, y = gain, color = type),
-               size = 2, alpha = app_theme$other_point_alpha) +
-    # Current allocation point estimates (highlighted)
-    geom_point(data = current_pe, aes(x = sd, y = gain, color = type),
-               size = app_theme$current_point_size,
-               alpha = app_theme$current_point_alpha) +
+  # Subsample cloud for visual clarity at higher opacity
+  if (!is.null(cloud_sample_n)) {
+    all_sims <- unique(current_cloud$sim)
+    if (cloud_sample_n < length(all_sims)) {
+      set.seed(42)
+      keep_sims <- sample(all_sims, cloud_sample_n)
+      current_cloud <- current_cloud[current_cloud$sim %in% keep_sims, ]
+    }
+  }
+
+  # Split cloud by strategy for independent toggle control
+  cloud_rebal_df    <- current_cloud[current_cloud$type == "rebal", ]
+  cloud_nonrebal_df <- current_cloud[current_cloud$type == "nonrebal", ]
+
+  # Filter OTHER allocation PE dots by strategy toggles
+  other_pe_show <- other_pe[
+    (other_pe$type == "rebal" & show_dots_rebal) |
+    (other_pe$type == "nonrebal" & show_dots_nonrebal), ]
+
+  plt <- ggplot()
+
+  # 1. Cloud layers (fixed color, no legend — legend comes from PE dots)
+  if (show_cloud_rebal) {
+    plt <- plt +
+      geom_point(data = cloud_rebal_df, aes(x = sd, y = gain),
+                 color = app_theme$rebal_color, alpha = cloud_alpha,
+                 show.legend = FALSE)
+  }
+  if (show_cloud_nonrebal) {
+    plt <- plt +
+      geom_point(data = cloud_nonrebal_df, aes(x = sd, y = gain),
+                 color = app_theme$nonrebal_color, alpha = cloud_alpha,
+                 show.legend = FALSE)
+  }
+
+  # 2. Frontier lines
+  if (show_line_rebal) {
+    plt <- plt +
+      geom_path(data = all_pe[all_pe$type == "rebal", ],
+                aes(x = sd, y = gain),
+                color = app_theme$frontier_line_color,
+                alpha = line_alpha,
+                linewidth = line_width)
+  }
+  if (show_line_nonrebal) {
+    plt <- plt +
+      geom_path(data = all_pe[all_pe$type == "nonrebal", ],
+                aes(x = sd, y = gain),
+                color = app_theme$frontier_line_color,
+                alpha = line_alpha,
+                linewidth = line_width)
+  }
+
+  # 3. Other allocation PE dots (controlled by strategy toggles + others toggle)
+  if (show_dots_others && nrow(other_pe_show) > 0) {
+    plt <- plt +
+      geom_point(data = other_pe_show, aes(x = sd, y = gain, color = type),
+                 size = dot_size, alpha = app_theme$other_point_alpha)
+  }
+
+  # 4. Current allocation PE dot (strategy toggles filter type; highlight controls size)
+  current_pe_show <- current_pe[
+    (current_pe$type == "rebal" & show_dots_rebal) |
+    (current_pe$type == "nonrebal" & show_dots_nonrebal), ]
+  if (nrow(current_pe_show) > 0) {
+    cur_size  <- if (highlight_current) dot_size + 2 else dot_size
+    cur_alpha <- if (highlight_current) app_theme$current_point_alpha else app_theme$other_point_alpha
+    plt <- plt +
+      geom_point(data = current_pe_show, aes(x = sd, y = gain, color = type),
+                 size = cur_size, alpha = cur_alpha)
+  }
+
+  # Scales and theme
+  has_color_aes <- (show_dots_others && nrow(other_pe_show) > 0) || nrow(current_pe_show) > 0
+  plt <- plt +
     coord_cartesian(xlim = x_lim, ylim = y_lim) +
+    { if (has_color_aes) scale_color_manual(values = app_theme$strategy_colors,
+                                           labels = app_theme$strategy_labels) } +
     scale_x_continuous(labels = scales::percent) +
     scale_y_continuous(labels = scales::percent) +
     labs(x = "volatility (annualized %)", y = "gain (annualized %)", color = NULL) +
@@ -283,6 +355,8 @@ plot_efficient_frontier <- function(sweep_result, show_labels = TRUE) {
   plt <- ggplot(data = plot_df, aes(x = sd, y = gain, color = type)) +
     geom_point(size = 2) +
     geom_path(alpha = app_theme$mean_line_alpha) +
+    scale_color_manual(values = app_theme$strategy_colors,
+                       labels = app_theme$strategy_labels) +
     scale_x_continuous(labels = scales::percent) +
     scale_y_continuous(labels = scales::percent) +
     labs(x = "volatility (annualized %)", y = "gain (annualized %)", color = NULL) +
@@ -307,4 +381,77 @@ plot_efficient_frontier <- function(sweep_result, show_labels = TRUE) {
   }
 
   plt
+}
+
+#' Frontier sim explorer: portfolio value over time (rebal vs nonrebal)
+plot_frontier_sim_portfolio <- function(portfolio_df, sim_label,
+                                        show_rebal = TRUE,
+                                        show_nonrebal = TRUE) {
+  df <- data.frame(
+    time = rep(portfolio_df$time, 2),
+    value = c(portfolio_df$rebal_total, portfolio_df$nonrebal_total),
+    strategy = rep(c("rebal", "nonrebal"), each = nrow(portfolio_df))
+  )
+  keep <- (df$strategy == "rebal" & show_rebal) |
+          (df$strategy == "nonrebal" & show_nonrebal)
+  df <- df[keep, ]
+  ggplot(df, aes(x = time, y = value, color = strategy)) +
+    geom_line() +
+    scale_color_manual(values = app_theme$strategy_colors,
+                       labels = app_theme$strategy_labels) +
+    labs(x = "day", y = "portfolio value ($)", color = NULL) +
+    ggtitle(sim_label) +
+    app_theme$base_theme()
+}
+
+#' Frontier sim explorer: detail subplot (shares held + underlying prices)
+plot_frontier_sim_detail <- function(portfolio_df, mean_stock, mean_bond, sim_label) {
+  # Panel 1: Rebalanced shares held
+  shares_df <- data.frame(
+    time = rep(portfolio_df$time, 2),
+    shares = c(portfolio_df$rebal_stock_shares, portfolio_df$rebal_bond_shares),
+    class = rep(c("stocks", "bonds"), each = nrow(portfolio_df))
+  )
+  p1 <- ggplot(shares_df, aes(x = time, y = shares, color = class)) +
+    geom_line() +
+    scale_color_manual(values = app_theme$asset_colors) +
+    labs(y = "shares", color = NULL) +
+    ggtitle(paste("Shares Held (Rebalanced);", sim_label)) +
+    app_theme$base_theme() +
+    theme(plot.title = element_text(size = 10), axis.title.x = element_blank())
+
+  # Panel 2: Underlying prices
+  prices_df <- data.frame(
+    time = rep(portfolio_df$time, 2),
+    price = c(portfolio_df$stock_price, portfolio_df$bond_price),
+    class = rep(c("stocks", "bonds"), each = nrow(portfolio_df))
+  )
+  mean_df <- data.frame(
+    time = rep(portfolio_df$time, 2),
+    price = c(mean_stock, mean_bond),
+    class = rep(c("stocks", "bonds"), each = nrow(portfolio_df))
+  )
+  p2 <- ggplot() +
+    geom_line(data = prices_df, aes(x = time, y = price, color = class)) +
+    geom_line(data = mean_df, aes(x = time, y = price, color = class),
+              alpha = app_theme$mean_line_alpha, linetype = "dashed") +
+    scale_color_manual(values = app_theme$asset_colors) +
+    labs(x = "day", y = "cost per share ($)", color = NULL) +
+    ggtitle(paste("Underlying Prices;", sim_label)) +
+    app_theme$base_theme() +
+    theme(plot.title = element_text(size = 10))
+
+  # Combine as subplot
+  pp1 <- ggplotly(p1)
+  pp2 <- ggplotly(p2)
+  for (i in seq_along(pp2$x$data)) pp2$x$data[[i]]$showlegend <- FALSE
+
+  subplot(pp1, pp2, nrows = 2, shareX = TRUE, heights = c(0.5, 0.5), titleY = TRUE) %>%
+    layout(
+      showlegend = TRUE,
+      legend = list(orientation = "h", x = 0.5, xanchor = "center", y = 1.02,
+                    font = list(color = app_theme$text_color)),
+      paper_bgcolor = app_theme$panel_bg,
+      plot_bgcolor = app_theme$panel_bg
+    )
 }

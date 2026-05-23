@@ -95,7 +95,7 @@ for (i in seq_len(total)) {
     rebal.interval  = rebal,
     perc.stocks.vec = sweep_allocs,
     nSims           = nSims,
-    nSimsToRecord   = 5,
+    nSimsToRecord   = 10,
     progress_callback = function(alloc_i, total_allocs, sim_i, total_sims, msg) {
       if (sim_i %% 1000 == 0) {
         cat(sprintf("  alloc %d/%d, sim %d/%d\n",

@@ -23,28 +23,43 @@ body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-s
 .page-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
 .page-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
 
-.flow-box{border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:24px 28px;margin:24px 0;background:rgba(255,255,255,0.03)}
-.flow-step{display:flex;gap:16px;margin-bottom:20px;align-items:flex-start}
-.flow-step:last-child{margin-bottom:0}
-.flow-num{font-size:0.82rem;font-weight:600;color:#1D9E75;background:rgba(29,158,117,0.12);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
-.flow-step .step-content{flex:1}
-.flow-step h3{font-size:0.97rem;font-weight:500;color:#f0e6d8;margin-bottom:6px}
-.flow-step p{margin:0;font-size:0.95rem;color:#c4b5a0;line-height:1.65}
-.flow-step ul{margin:8px 0 0;padding-left:20px;list-style:none}
-.flow-step li{padding:4px 0;font-size:0.95rem;color:#c4b5a0;line-height:1.6;position:relative;padding-left:14px}
-.flow-step li::before{content:'';position:absolute;left:0;top:12px;width:5px;height:5px;border-radius:50%;background:rgba(29,158,117,0.5)}
-.flow-step a{color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3);transition:border-color 0.15s}
-.flow-step a:hover{border-color:#1D9E75}
+section{margin-bottom:40px}
+section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem}
+section p:last-child{margin-bottom:0}
 
 em{color:#f0e6d8;font-style:italic}
 strong{color:#f0e6d8;font-weight:500}
 
-.callout{border-left:3px solid #1D9E75;padding:14px 20px;margin:32px 0;color:rgba(200,185,160,0.65);font-size:0.95rem;line-height:1.7}
-.callout a{color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3);transition:border-color 0.15s}
-.callout a:hover{border-color:#1D9E75}
+.tab-link{color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3);transition:color 0.15s,border-color 0.15s}
+.tab-link:hover{color:#f0e6d8;border-color:#f0e6d8}
 
-.sim-link{display:inline-block;margin-top:24px;padding:9px 20px;border:1px solid rgba(200,185,160,0.2);border-radius:6px;color:rgba(200,185,160,0.55);text-decoration:none;font-size:0.9rem;transition:border-color 0.15s,color 0.15s}
+/* Map items: goal → view pairs */
+.map-item{margin-bottom:18px;padding-left:16px;border-left:2px solid rgba(29,158,117,0.25)}
+.map-item:last-child{margin-bottom:0}
+.map-item .map-goal{font-size:0.97rem;color:rgba(200,185,160,0.55);margin-bottom:4px}
+.map-item .map-dest{font-size:0.88rem;color:#1D9E75;margin-bottom:4px}
+.map-item p{margin:0;font-size:0.95rem;color:#c4b5a0;line-height:1.65}
+
+/* View reference list */
+.view-ref{margin-bottom:20px}
+.view-ref:last-child{margin-bottom:0}
+.view-ref .view-name{font-size:0.97rem;color:#f0e6d8;font-weight:500;margin-bottom:4px}
+.view-ref p{margin:0;font-size:0.95rem;color:#c4b5a0;line-height:1.65}
+
+/* Run instructions */
+.run-list{margin:10px 0 14px 20px;color:#c4b5a0;font-size:0.95rem;line-height:1.65;list-style:none;padding:0}
+.run-list li{padding:6px 0 6px 18px;position:relative}
+.run-list li::before{content:'';position:absolute;left:0;top:14px;width:5px;height:5px;border-radius:50%;background:rgba(29,158,117,0.5)}
+
+.guide-fig{margin:20px 0;text-align:center}
+.guide-fig img{width:100%;max-width:600px;border-radius:6px;border:1px solid rgba(200,185,160,0.15)}
+.guide-fig .caption{font-size:0.82rem;color:rgba(200,185,160,0.65);line-height:1.5;margin-top:8px;max-width:600px;margin-left:auto;margin-right:auto}
+
+.sim-link{display:inline-block;margin-top:24px;margin-bottom:40px;padding:9px 20px;border:1px solid rgba(200,185,160,0.2);border-radius:6px;color:rgba(200,185,160,0.55);text-decoration:none;font-size:0.9rem;transition:border-color 0.15s,color 0.15s}
 .sim-link:hover{border-color:#1D9E75;color:#f0e6d8}
+
+a[style]{color:#1D9E75 !important}
 </style>
 </head>
 <body>
@@ -56,92 +71,183 @@ strong{color:#f0e6d8;font-weight:500}
     <p>A quick orientation for the <a href="/monte-carlo.html" style="color:#1D9E75;border-bottom:1px solid rgba(29,158,117,0.3)">Monte Carlo Portfolio Simulator</a>.</p>
   </div>
 
-  <div class="flow-box">
+  <section>
+    <h2>What this simulator is for</h2>
+    <p>Most financial projections give you a single number: &ldquo;at 7% return,
+       your $10,000 becomes $76,000 in 30 years.&rdquo; That number is a reasonable
+       summary of expected outcomes, and it's useful input for thinking about the
+       long run. But your actual outcome &mdash; the one you'll live with as an
+       investor &mdash; can differ substantially from the projection. Your portfolio's
+       gain might be meaningfully better or meaningfully worse. Same for the risk you
+       experience along the way. The spread isn't a small wiggle around the expected
+       value; it can be enormous. This simulator is a way to see those distributions
+       where most tools show you only the points.</p>
 
-    <div class="flow-step">
-      <div class="flow-num">1</div>
-      <div class="step-content">
-        <h3>Two tabs, two questions</h3>
-        <p>The simulator has two main tabs:</p>
-        <ul>
-          <li><strong>Single Allocation</strong> &mdash; runs many simulations at
-              one stock/bond split. How wide is the range of outcomes for this mix?</li>
-          <li><strong>Frontier Sweep</strong> &mdash; runs simulations across
-              <em>every</em> split and maps out the
-              <a href="/monte-carlo-about.html#frontier">efficient frontier</a>,
-              the curve of best achievable return at every level of risk.
-              How does the tradeoff shift across all allocations?</li>
-        </ul>
-      </div>
+    <div class="guide-fig">
+      <img src="img/cloud_and_point.png" alt="Cloud of simulation outcomes with a single mean point highlighted">
+      <div class="caption">Your actual outcome could be any one of these dots. The mean
+        (large dot) is a useful summary &mdash; but the spread around it can be wide.</div>
     </div>
 
-    <div class="flow-step">
-      <div class="flow-num">2</div>
-      <div class="step-content">
-        <h3>Single Allocation: the spread at one mix</h3>
-        <p>This is what opens first. The Gain vs SD plot shows a cloud of outcomes &mdash;
-           each dot is one simulation, with separate dots for the rebalanced and
-           non-rebalanced strategies
-           (the <a href="/monte-carlo-about.html">About</a> page explains why both
-           matter). The sub-tabs show the same simulations from different angles:</p>
-        <ul>
-          <li><strong>Final Densities</strong> &mdash; distribution of ending portfolio values</li>
-          <li><strong>Trajectories</strong> &mdash; portfolio value paths over time</li>
-          <li><strong>Cost Profiles</strong> &mdash; rebalancing transaction costs</li>
-          <li><strong>Single Sim Explorer</strong> &mdash; unpack the machinery behind any individual run</li>
-        </ul>
-      </div>
+    <p>If you've encountered the efficient frontier &mdash; the bullet-shaped curve
+       from finance textbooks and Wikipedia &mdash; this simulator extends that picture
+       in directions the textbook version can't easily go. It shows the distribution of
+       outcomes underneath each frontier point, the consequences of rebalancing as an
+       action over time, and the cases where the textbook frontier becomes misleading.
+       If you haven't encountered the frontier and don't want to, that's fine &mdash;
+       the distribution-focused views stand on their own.</p>
+
+    <div class="guide-fig">
+      <img src="img/efficient_frontier_and_point.png" alt="Same cloud of outcomes with the efficient frontier curve overlaid">
+      <div class="caption">The same outcomes, with the mean (large dot) now shown as one
+        point on the efficient frontier. Each frontier point summarizes a cloud like this
+        one &mdash; for a different stock/bond mix.</div>
     </div>
 
-    <div class="flow-step">
-      <div class="flow-num">3</div>
-      <div class="step-content">
-        <h3>Frontier Sweep: the big picture</h3>
-        <p>Switch to the Frontier Sweep tab to see all allocations at once, preloaded
-           with a 5,000-sim sweep. Two frontier curves (rebalanced vs. non-rebalanced)
-           show how rebalancing shifts the tradeoff.</p>
-        <ul>
-          <li><strong>&larr; &rarr; arrows</strong> &mdash; step from 0% stocks to
-              100% and watch the highlighted cloud move along the curve</li>
-          <li><strong>Scenario grid</strong> &mdash; click &ldquo;Explore alternative
-              correlations and rebalancing intervals&rdquo; to compare across four
-              correlation levels and three rebalancing intervals. Try negative
-              correlation to see the frontier reshape.</li>
-        </ul>
+    <p>A common question about the efficient frontier is &ldquo;can I use this to pick
+       my investments?&rdquo; The honest answer is &ldquo;not directly.&rdquo; The frontier
+       is sometimes taken as a prescriptive tool, but it's better understood as a
+       conceptual one &mdash; a way to summarize the risk-return tradeoff across portfolio
+       mixes under specific assumptions. It can help you reason about whether you're being
+       well-paid for the risk you're taking, and how that tradeoff shifts under different
+       conditions. The simulator makes that reasoning more concrete by showing the
+       distributions and dynamics the textbook frontier abstracts away.</p>
+  </section>
+
+  <section>
+    <h2>How to find what interests you</h2>
+    <p>The simulator has two modes (top-level tabs) and several views within each.
+       Rather than walk through them in order, here's a map organized by what you
+       might want to explore.</p>
+
+    <div style="margin-top:20px">
+      <div class="map-item">
+        <div class="map-goal"><strong>To see how individual outcomes can differ from the average</strong></div>
+        <div class="map-dest">&rarr; Single allocation &gt; Gain vs Volatility</div>
+        <p>Pick a stock/bond mix and look at the cloud of dots. Each dot is one simulated
+           future for that mix. The two highlighted dots are the means of the rebalanced and
+           non-rebalanced outcomes. The spread of the cloud around them is the range of
+           futures you might actually experience.</p>
+      </div>
+
+      <div class="map-item">
+        <div class="map-goal"><strong>To see how the efficient frontier shape responds to assumptions</strong></div>
+        <div class="map-dest">&rarr; Frontier &gt; Just the means</div>
+        <p>The frontier is the curve of mean outcomes across all stock/bond allocations. The
+           scenario matrix on the left lets you step through different correlations and
+           rebalancing intervals. Under some conditions &mdash; particularly negative
+           correlation between stocks and bonds &mdash; a rebalanced mixed portfolio can
+           produce a higher average return than 100% stocks. Worth noticing when it does.</p>
+      </div>
+
+      <div class="map-item">
+        <div class="map-goal"><strong>To see the distributions underneath the frontier</strong></div>
+        <div class="map-dest">&rarr; Frontier &gt; Means + clouds</div>
+        <p>Same frontier curves, with the simulation cloud visible underneath. The frontier
+           dots are the means; the clouds are the distributions those means summarize. The
+           gap between the rebalanced and non-rebalanced curves is the rebalancing benefit
+           on average &mdash; but individual simulations vary widely.</p>
+      </div>
+
+      <div class="map-item">
+        <div class="map-goal"><strong>To see the actual price path behind a specific simulation</strong></div>
+        <div class="map-dest">&rarr; Frontier &gt; Means + clouds &gt; Highlight a simulation</div>
+        <p>One pair of dots gets highlighted and the underlying simulated history appears
+           below &mdash; portfolio value over time for both strategies, sharing the same
+           price paths but differing in rebalancing. Or visit
+           <strong>Single allocation &gt; Single Sim Explorer</strong> to step through
+           ten cached simulations in detail.</p>
+      </div>
+
+      <div class="map-item">
+        <div class="map-goal"><strong>For numbers behind the current view</strong></div>
+        <div class="map-dest">&rarr; Single allocation &gt; Summary</div>
+        <p>Shows the point estimates and the simulation parameters for the current run.</p>
+      </div>
+
+      <div class="map-item">
+        <div class="map-goal"><strong>For the conceptual background</strong></div>
+        <div class="map-dest">&rarr; <a href="monte-carlo-about.html" class="tab-link">About page</a></div>
+        <p>Covers why the rebalanced frontier sometimes produces higher returns than pure
+           stocks, the difference between the textbook (analytic) frontier and the simulator's
+           version, and a discussion of the optimization question that the two-asset frontier
+           raises.</p>
       </div>
     </div>
+  </section>
 
-    <div class="flow-step">
-      <div class="flow-num">4</div>
-      <div class="step-content">
-        <h3>Zoom and adjust the view</h3>
-        <ul>
-          <li><strong>Zoom</strong> &mdash; drag a rectangle on any plot. On the
-              Frontier Explorer, the zoom persists as you step through allocations.</li>
-          <li><strong>Cloud Opacity</strong> &mdash; fade the simulation cloud to
-              isolate point estimates, or increase it to study the full distribution.</li>
-        </ul>
+  <section>
+    <h2>The views in brief</h2>
+
+    <div style="margin-top:8px">
+      <div class="view-ref">
+        <div class="view-name">Single allocation &gt; Gain vs Volatility</div>
+        <p>One stock/bond mix, simulated many times. The cloud is the distribution of
+           outcomes; the two highlighted dots are the means. The headline insight: the
+           spread is wide, often much wider than retail finance content suggests.</p>
+      </div>
+
+      <div class="view-ref">
+        <div class="view-name">Single allocation &gt; Single Sim Explorer</div>
+        <p>A close-up of one simulated history. Top panel: portfolio value over time for
+           both rebalanced and non-rebalanced strategies. Middle panel: shares held &mdash;
+           watch them shift at each rebalancing event. Bottom panel: the underlying simulated
+           prices. Every dot in the Gain vs Volatility cloud has a story like this behind it.</p>
+      </div>
+
+      <div class="view-ref">
+        <div class="view-name">Single allocation &gt; Summary</div>
+        <p>Point estimates (means and standard deviations) for the current run, plus the
+           simulation parameters.</p>
+      </div>
+
+      <div class="view-ref">
+        <div class="view-name">Frontier &gt; Just the means</div>
+        <p>The efficient frontier as it's usually shown &mdash; a curve of point estimates
+           across allocations. Two curves are plotted: rebalanced and non-rebalanced. The
+           scenario matrix lets you step through different correlation and rebalancing
+           assumptions.</p>
+      </div>
+
+      <div class="view-ref">
+        <div class="view-name">Frontier &gt; Means + clouds</div>
+        <p>The same frontier with the simulation distributions visible underneath. Useful
+           for seeing how much the individual outcomes scatter around the frontier means,
+           and for noticing that the gap between the rebalanced and non-rebalanced curves
+           can be small relative to the spread.</p>
       </div>
     </div>
+  </section>
 
-    <div class="flow-step">
-      <div class="flow-num">5</div>
-      <div class="step-content">
-        <h3>Run your own</h3>
-        <p>Adjust parameters in the sidebar and hit Run. Single Allocation runs one
-           stock/bond split; Frontier Sweep sweeps all allocations. High sim counts
-           take longer &mdash; the app will show a progress bar.</p>
-      </div>
-    </div>
+  <section>
+    <h2>Running your own simulations</h2>
+    <p>The default views show precomputed results, which load instantly. If you want to
+       run your own simulations with different parameters:</p>
+    <ul class="run-list">
+      <li>On <strong>Single allocation</strong>, adjust the sliders in the sidebar and
+          click <strong>Run Single Allocation</strong>. Live runs are fast.</li>
+      <li>On <strong>Frontier</strong>, expand &ldquo;Simulation&rdquo; in the sidebar
+          to access the run controls. Running a full frontier sweep is slow (it simulates
+          every allocation from 0% to 100%) and may time out for very high simulation
+          counts on free-tier hosting.</li>
+    </ul>
+    <p>The Market assumptions expander lets you change the underlying price dynamics &mdash;
+       stock and bond volatility, correlation, expected returns.</p>
+  </section>
 
-  </div>
-
-  <div class="callout">
-    The spread is the story &mdash; point estimates summarize, but the cloud of
-    outcomes shows you what's actually possible. For more on the methodology,
-    see <a href="/monte-carlo-methodology.html">How It Works</a>. For motivation
-    and context, see <a href="/monte-carlo-about.html">About</a>.
-  </div>
+  <section>
+    <h2>What this simulator isn't</h2>
+    <p>It's a demonstration of general principles, not a predictive model of real markets.
+       The simulated price dynamics are stationary (statistical properties don't change over
+       time), which is famously not how real markets behave. Correlations spike during crises.
+       Volatility clusters. Regimes shift. None of that is captured here.</p>
+    <p>What the simulator does capture is the basic structure of how distributions, time, and
+       rebalancing interact under simplified conditions. The qualitative conclusions &mdash;
+       that distributions are wide, that rebalancing has both costs and benefits, that the
+       frontier looks different when you account for multi-period dynamics &mdash; hold up
+       under more realistic assumptions, even though the specific numbers wouldn't. The goal
+       is to build intuition, not to predict.</p>
+  </section>
 
   <a href="/monte-carlo.html" class="sim-link">&larr; Open the simulator</a>
 

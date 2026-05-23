@@ -40,6 +40,22 @@ app_theme <- list(
   # Mean line overlay
   mean_line_alpha = 0.5,
 
+  # Strategy colors (rebal vs nonrebal)
+  rebal_color   = "#00BFC4",  # teal
+  nonrebal_color = "#F8766D", # pink
+
+  # Asset class colors (stocks vs bonds)
+  stock_color = "#2ca02c",    # green
+  bond_color  = "#ff7f0e",    # orange
+
+  # Named vectors for scale_color_manual()
+  strategy_colors = c("total rebal" = "#00BFC4", "total non-rebal" = "#F8766D",
+                       "rebal" = "#00BFC4", "nonrebal" = "#F8766D"),
+  strategy_labels = c("rebal" = "rebalanced", "nonrebal" = "non-rebalanced"),
+  asset_colors    = c("stocks" = "#2ca02c", "bonds" = "#ff7f0e"),
+  explorer_colors = c("stocks" = "#2ca02c", "bonds" = "#ff7f0e",
+                       "total rebal" = "#00BFC4", "total non-rebal" = "#F8766D"),
+
   # Base ggplot theme (function)
   base_theme     = function() {
     theme_light() %+replace%
