@@ -455,3 +455,121 @@ plot_frontier_sim_detail <- function(portfolio_df, mean_stock, mean_bond, sim_la
       plot_bgcolor = app_theme$panel_bg
     )
 }
+
+#' Plot frontier bands: two-panel plotly subplot (gain + volatility by allocation)
+#' @param bands_df Data frame from compute_frontier_bands()
+#' @param title Plot title
+#' @param show_rebal Show rebalanced strategy lines and band
+#' @param show_nonrebal Show non-rebalanced strategy lines and band
+#' @return A plotly object
+plot_frontier_bands <- function(bands_df, title = "Range of Outcomes by Allocation",
+                                show_rebal = TRUE, show_nonrebal = TRUE,
+                                ylim = NULL) {
+  rebal_df    <- bands_df[bands_df$type == "rebal", ]
+  nonrebal_df <- bands_df[bands_df$type == "nonrebal", ]
+
+  ribbon_alpha <- app_theme$density_alpha
+
+  # Empty-state: both strategies hidden
+  if (!show_rebal && !show_nonrebal) {
+    p_empty <- ggplot() +
+      annotate("text", x = 50, y = 0, size = 4.5, color = app_theme$text_secondary,
+               label = "No strategies selected \u2014 check one or both above.") +
+      scale_x_continuous(limits = c(0, 100)) +
+      app_theme$base_theme()
+    p_gain <- p_empty + labs(y = "gain (annualized %)") + ggtitle(title) +
+      theme(axis.title.x = element_blank())
+    p_vol  <- p_empty + labs(x = "stock allocation (%)", y = "volatility (annualized %)")
+
+    pp1 <- ggplotly(p_gain)
+    pp2 <- ggplotly(p_vol)
+    for (i in seq_along(pp2$x$data)) pp2$x$data[[i]]$showlegend <- FALSE
+
+    return(
+      subplot(pp1, pp2, nrows = 2, shareX = TRUE, heights = c(0.5, 0.5),
+              titleY = TRUE) %>%
+        layout(
+          showlegend = FALSE,
+          margin = list(t = 40),
+          paper_bgcolor = app_theme$panel_bg,
+          plot_bgcolor = app_theme$panel_bg
+        )
+    )
+  }
+
+  # Helper: add a strategy's band + mean line + median line to a ggplot
+  add_strategy_layers <- function(p, df, color, color_key,
+                                  ymin_col, ymax_col, mean_col, median_col) {
+    p +
+      geom_ribbon(data = df,
+                  aes(x = alloc_pct, ymin = .data[[ymin_col]], ymax = .data[[ymax_col]]),
+                  fill = color, alpha = ribbon_alpha) +
+      geom_line(data = df,
+                aes(x = alloc_pct, y = .data[[mean_col]], color = color_key),
+                linewidth = 0.8) +
+      geom_point(data = df,
+                 aes(x = alloc_pct, y = .data[[mean_col]], color = color_key),
+                 size = 2) +
+      geom_line(data = df,
+                aes(x = alloc_pct, y = .data[[median_col]], color = color_key),
+                linewidth = 0.8, linetype = "dashed") +
+      geom_point(data = df,
+                 aes(x = alloc_pct, y = .data[[median_col]], color = color_key),
+                 size = 2, shape = 1)
+  }
+
+  # Top panel: gain by allocation
+  p_gain <- ggplot()
+  if (show_rebal) {
+    p_gain <- add_strategy_layers(p_gain, rebal_df, app_theme$rebal_color, "rebal",
+                                   "lower_gain", "upper_gain", "mean_gain", "median_gain")
+  }
+  if (show_nonrebal) {
+    p_gain <- add_strategy_layers(p_gain, nonrebal_df, app_theme$nonrebal_color, "nonrebal",
+                                   "lower_gain", "upper_gain", "mean_gain", "median_gain")
+  }
+  p_gain <- p_gain +
+    scale_color_manual(values = app_theme$strategy_colors,
+                       labels = app_theme$strategy_labels) +
+    scale_y_continuous(labels = scales::percent) +
+    { if (!is.null(ylim)) coord_cartesian(ylim = ylim$gain) } +
+    labs(y = "gain (annualized %)", color = NULL) +
+    ggtitle(title) +
+    app_theme$base_theme() +
+    theme(axis.title.x = element_blank())
+
+  # Bottom panel: volatility by allocation
+  p_vol <- ggplot()
+  if (show_rebal) {
+    p_vol <- add_strategy_layers(p_vol, rebal_df, app_theme$rebal_color, "rebal",
+                                  "lower_sd", "upper_sd", "mean_sd", "median_sd")
+  }
+  if (show_nonrebal) {
+    p_vol <- add_strategy_layers(p_vol, nonrebal_df, app_theme$nonrebal_color, "nonrebal",
+                                  "lower_sd", "upper_sd", "mean_sd", "median_sd")
+  }
+  p_vol <- p_vol +
+    scale_color_manual(values = app_theme$strategy_colors,
+                       labels = app_theme$strategy_labels) +
+    scale_y_continuous(labels = scales::percent) +
+    { if (!is.null(ylim)) coord_cartesian(ylim = ylim$sd) } +
+    labs(x = "stock allocation (%)", y = "volatility (annualized %)", color = NULL) +
+    app_theme$base_theme()
+
+  # Convert to plotly and stack
+  pp1 <- ggplotly(p_gain)
+  pp2 <- ggplotly(p_vol)
+
+  for (i in seq_along(pp2$x$data)) pp2$x$data[[i]]$showlegend <- FALSE
+
+  subplot(pp1, pp2, nrows = 2, shareX = TRUE, heights = c(0.5, 0.5),
+          titleY = TRUE) %>%
+    layout(
+      showlegend = TRUE,
+      legend = list(orientation = "h", x = 0.5, xanchor = "center", y = 1.02,
+                    font = list(color = app_theme$text_color)),
+      margin = list(t = 40),
+      paper_bgcolor = app_theme$panel_bg,
+      plot_bgcolor = app_theme$panel_bg
+    )
+}

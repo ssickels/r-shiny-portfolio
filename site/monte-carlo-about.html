@@ -278,6 +278,16 @@ a[style]{color:#1D9E75 !important}
        gain. The <strong>efficient frontier</strong> is the curve formed by the points
        that aren't dominated.</p>
 
+    <p>The efficient frontier was introduced by
+       <a href="https://en.wikipedia.org/wiki/Modern_portfolio_theory" class="tab-link">Harry Markowitz in 1952</a>,
+       and the body of work that grew from it &mdash; modern portfolio theory &mdash;
+       earned him a share of the 1990 Nobel Memorial Prize in Economic Sciences. The
+       framework is foundational: nearly every quantitative approach to portfolio
+       construction since rests on it in some form. This simulator engages with the
+       framework's most basic form (two assets, mean-variance, single period for the
+       analytic version) and asks what happens when you extend it into territory the
+       original formulation doesn't address.</p>
+
     <p>A note on optimization: in the general N-asset version of the efficient frontier,
        choosing the non-dominated portfolios is a real optimization problem &mdash; there
        are many possible weight vectors at each risk level, and you have to find the best
@@ -568,7 +578,9 @@ a[style]{color:#1D9E75 !important}
          sampling. At each time step, a new price is proposed from a multivariate normal
          centered on the current price. The proposal is accepted or rejected based on
          the ratio of target densities, producing correlated price paths that respect
-         the specified distribution parameters.</p>
+         the specified distribution parameters. See
+         <a href="monte-carlo-methodology.html" style="color:#1D9E75;">How It Works</a>
+         for a detailed walkthrough with an interactive visualization of the sampler.</p>
     </div>
 
     <div class="tech-subsection">

@@ -90,8 +90,22 @@ fluidPage(
       # ===== FRONTIER MODE: Display section =====
       conditionalPanel("input.main_tabs == 'Frontier'",
         h4("Display"),
-        checkboxInput("zoom_to_frontier", "Zoom to frontier", value = TRUE),
-        actionButton("reset_view", "Reset view", class = "btn-sm reset-view-btn", style = "display:none;"),
+        conditionalPanel("input.frontier_tabs != 'bands'",
+          checkboxInput("zoom_to_frontier", "Zoom to frontier", value = TRUE),
+          actionButton("reset_view", "Reset view", class = "btn-sm reset-view-btn", style = "display:none;")
+        ),
+        conditionalPanel("input.frontier_tabs == 'bands'",
+          radioButtons("band_type", "Band type:",
+                       choices = c("Percentile (10\u201390%)" = "percentile",
+                                   "HDI (80%)" = "hdi"),
+                       selected = "percentile"),
+          div(style = "margin-top: 8px;",
+            tags$label(style = "color: #6b5b4f; font-size: 14px; font-weight: 600;",
+                       "Show:"),
+            checkboxInput("bands_show_rebal", "Rebalanced", value = TRUE),
+            checkboxInput("bands_show_nonrebal", "Non-rebalanced", value = TRUE)
+          )
+        ),
         conditionalPanel("input.frontier_tabs == 'clouds'",
           div(style = "margin-top: 12px;",
             sliderInput("cloud_alpha_frontier", "Cloud Opacity",
@@ -262,7 +276,10 @@ fluidPage(
                    value = "means"),
           tabPanel(title = span("Means + clouds",
                      img(src = "frontier_cloud.png", class = "pill-thumb")),
-                   value = "clouds")
+                   value = "clouds"),
+          tabPanel(title = span("Range of outcomes",
+                     img(src = "range_of_outcomes.png", class = "pill-thumb")),
+                   value = "bands")
         ),
         # Shared frontier plot
         plotlyOutput("plot_frontier_merged", height = "600px"),

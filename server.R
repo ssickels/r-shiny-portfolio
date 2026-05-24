@@ -124,6 +124,9 @@ function(input, output, session) {
         if (tab == "frontier_explorer") {
           updateTabsetPanel(session, "frontier_tabs", selected = "clouds")
         }
+      } else if (tab %in% c("bands", "range_of_outcomes")) {
+        updateTabsetPanel(session, "main_tabs", selected = "Frontier")
+        updateTabsetPanel(session, "frontier_tabs", selected = "bands")
       } else if (tab %in% c("gain_vs_sd", "gain_vs_volatility",
                              "single_sim_explorer", "summary")) {
         updateTabsetPanel(session, "main_tabs", selected = "Single allocation")
@@ -495,6 +498,13 @@ function(input, output, session) {
     plotly_clean(plot_single_sim_explorer(sim_result(), sim_explorer_index()))
   })
 
+  # --- Bands y-axis ranges (cached per scenario, stable across band type/strategy toggles) ---
+  bands_ylim <- reactive({
+    sw <- sweep_result()
+    req(sw)
+    compute_bands_ylim(sw$cloud)
+  })
+
   # --- Merged frontier plot ---
 
   # Store zoom state so it persists across allocation steps
@@ -755,6 +765,17 @@ function(input, output, session) {
         )
       }
       p
+    } else if (identical(input$frontier_tabs, "bands")) {
+      # Range of outcomes: percentile bands by allocation
+      title <- "Range of Outcomes by Allocation"
+      if (nchar(scenario_lbl) > 0) title <- paste0(title, " \u2014 ", scenario_lbl)
+
+      bt <- if (is.null(input$band_type)) "percentile" else input$band_type
+      bands_df <- compute_frontier_bands(sweep_result()$cloud, band_type = bt)
+      plotly_clean(plot_frontier_bands(bands_df, title = title,
+        show_rebal = !isFALSE(input$bands_show_rebal),
+        show_nonrebal = !isFALSE(input$bands_show_nonrebal),
+        ylim = bands_ylim()))
     } else {
       # Point estimate view: efficient frontier with labels
       title <- "Efficient Frontier"
@@ -879,6 +900,19 @@ function(input, output, session) {
         "The frontier dots (larger, connected) are the <strong>means</strong> across all simulations for the selected allocation. Individual pairs vary widely &mdash; that spread is the real story.",
         "The gap between the rebalanced and non-rebalanced frontier lines is the rebalancing benefit <em>on average</em>.",
         "Use <strong>Zoom to frontier</strong> in the sidebar to toggle between a tight view around the frontier means and the full cloud range. You can also drag a box on the plot to zoom to a custom region."
+      ))
+    } else if (identical(input$frontier_tabs, "bands")) {
+      callout_bullets(c(
+        "Each strategy is summarized by two lines: a <strong>solid line</strong> for the mean (same as the means plotted in the other sub-tabs) and a <strong>dashed line</strong> for the median (the 50th percentile). When mean and median diverge, the distribution is skewed &mdash; typically the mean is pulled above the median by a long upper tail.",
+        paste0(
+          "The shaded band shows where <strong>80% of outcomes</strong> fall at each allocation. ",
+          "Two band types are available in the sidebar:<br>",
+          "&bull; <strong>Percentile (10&ndash;90%)</strong> &mdash; the symmetric cut between the 10th and 90th percentiles.<br>",
+          "&bull; <strong>HDI (80%)</strong> &mdash; the narrowest interval containing 80% of outcomes. ",
+          "For skewed distributions, HDI shifts toward where the data is densest, which often means a tighter band centered closer to the mode."
+        ),
+        "For symmetric distributions, percentile and HDI bands coincide. For skewed distributions, HDI is the more honest summary of &ldquo;where most outcomes actually concentrate&rdquo; &mdash; the percentile version can include sparse upper-tail regions to maintain symmetry.",
+        "<strong>Tip:</strong> Where the rebalanced and non-rebalanced bands overlap, the colors combine into a third shade. Toggle one strategy off in the sidebar to see the other&rsquo;s band more clearly."
       ))
     } else {
       callout_bullets(c(
