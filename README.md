@@ -77,7 +77,11 @@ r-shiny-portfolio/
 ├── scripts/                   # Batch scripts (e.g., precompute_scenarios.R)
 ├── original_scripts/          # Legacy monolithic R scripts (2021–22)
 ├── docs/                      # Architecture, flowchart, console recipes
-├── site/                      # Companion HTML pages for stevessite.com
+├── site/                      # Companion HTML pages + "Behind the Assumptions" essays
+│   ├── img/                   # Screenshots and figures for site pages
+│   ├── portfolio-nav.js       # Shared navigation bar (tabs + hamburger menu)
+│   ├── behind-the-assumptions.html  # Landing page with animated cartoon
+│   └── behind-{1..4}-*.html   # Chapter pages with interactive widgets
 └── www/                       # Shiny static assets (CSS)
 ```
 
@@ -85,7 +89,17 @@ r-shiny-portfolio/
 
 Companion pages on [stevessite.com](https://stevessite.com):
 
-- [Getting Started](https://stevessite.com/monte-carlo-guide.html)
 - [Simulator](https://stevessite.com/monte-carlo.html) — Shiny app embed
+- [Getting Started](https://stevessite.com/monte-carlo-guide.html)
 - [About](https://stevessite.com/monte-carlo-about.html)
 - [How It Works](https://stevessite.com/monte-carlo-methodology.html)
+
+### Behind the Assumptions
+
+A four-chapter essay section examining the uncertainty *behind* the simulator's inputs — the question of what parameter values to use in the first place. Includes interactive widgets and an animated cartoon.
+
+- [Landing page](https://stevessite.com/behind-the-assumptions.html) — overview, embedded two-pipelines animation, chapter previews
+- [Ch 1: The "Optimal" Portfolio](https://stevessite.com/behind-1-optimal.html) — Sharpe ratio, tangency portfolios, and why the textbook answer is fragile
+- [Ch 2: Parameter Uncertainty](https://stevessite.com/behind-2-parameter-uncertainty.html) — interactive two-asset widget showing how input uncertainty propagates to the "optimal" allocation
+- [Ch 3: The Inputs Aren't Stable](https://stevessite.com/behind-3-drift.html) — historical evidence that means, volatilities, and correlations drift over time
+- [Ch 4: Three Assets and Beyond](https://stevessite.com/behind-4-three-assets.html) — interactive three-asset ternary widget, section coda
