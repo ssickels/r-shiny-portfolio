@@ -40,11 +40,11 @@ strong{color:#f0e6d8;font-weight:500}
 /* Pipelines cartoon inset */
 .pipelines-inset{background:#f8f7f4;border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:28px 20px 24px;margin-bottom:40px}
 .pipelines-inset h2{font-size:1.2rem;font-weight:normal;color:#333;margin-bottom:4px;font-family:Georgia,'Times New Roman',serif}
-.pipelines-inset .pipelines-subtitle{color:#888;font-size:0.88rem;margin-bottom:20px;font-style:italic}
+.pipelines-inset .pipelines-subtitle{color:#777;font-size:0.88rem;margin-bottom:20px;font-style:italic}
 .pipelines-inset .pipelines-canvas-wrap{background:#fff;border:1px solid #ddd;border-radius:6px;overflow:hidden;margin-bottom:14px}
 .pipelines-inset canvas{display:block;width:100%;height:auto}
 .pipelines-inset .pipelines-controls{display:flex;align-items:center;gap:10px;margin-bottom:28px;flex-wrap:wrap}
-.pipelines-inset .pipelines-controls button{padding:5px 14px;background:#fff;border:1px solid #ccc;border-radius:4px;color:#555;font-size:0.82rem;cursor:pointer;font-family:system-ui,sans-serif;transition:all 0.12s}
+.pipelines-inset .pipelines-controls button{padding:5px 14px;background:#fff;border:1px solid #ccc;border-radius:4px;color:#444;font-size:0.82rem;cursor:pointer;font-family:system-ui,sans-serif;transition:all 0.12s}
 .pipelines-inset .pipelines-controls button:hover{background:#f0f0f0;border-color:#999;color:#333}
 .pipelines-inset .pipelines-controls button.active{background:#444;color:#fff;border-color:#444}
 .pipelines-inset .pipelines-speed-group{display:flex;gap:0}
@@ -52,18 +52,39 @@ strong{color:#f0e6d8;font-weight:500}
 .pipelines-inset .pipelines-speed-group button:first-child{border-radius:4px 0 0 4px}
 .pipelines-inset .pipelines-speed-group button:last-child{border-radius:0 4px 4px 0}
 .pipelines-inset .pipelines-speed-group button+button{border-left:none}
-.pipelines-inset .pipelines-credit{font-size:0.82rem;color:#888;font-style:italic;margin-bottom:18px}
-.pipelines-inset .pipelines-caption{font-size:0.91rem;color:#555;line-height:1.75;font-family:Georgia,'Times New Roman',serif}
-.pipelines-inset .pipelines-caption p{margin-bottom:14px;color:#555}
+.pipelines-inset .pipelines-credit{font-size:0.82rem;color:#777;font-style:italic;margin-bottom:18px}
+.pipelines-inset .pipelines-caption{font-size:0.91rem;color:#444;line-height:1.75;font-family:Georgia,'Times New Roman',serif}
+.pipelines-inset .pipelines-caption p{margin-bottom:14px;color:#444}
 .pipelines-inset .pipelines-caption strong{color:#333;font-weight:600}
 .pipelines-inset .pipelines-caption em{color:#333;font-style:italic}
-.pipelines-inset .pipelines-quote{border-left:3px solid #ccc;padding-left:14px;margin:16px 0;color:#666;font-style:italic}
+.pipelines-inset .pipelines-quote{border-left:3px solid #bbb;padding-left:14px;margin:16px 0;color:#555;font-style:italic}
 .pipelines-inset .pipelines-panel-pair{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}
 .pipelines-inset .pipelines-panel-box{border:1px solid #ddd;border-radius:5px;padding:14px 16px;background:#faf9f7}
-.pipelines-inset .pipelines-panel-box p{margin-bottom:0;color:#555}
-.pipelines-inset .pipelines-panel-heading{font-size:0.93rem;font-weight:600;color:#555;margin-bottom:6px}
+.pipelines-inset .pipelines-panel-box p{margin-bottom:0;color:#444}
+.pipelines-inset .pipelines-panel-heading{font-size:0.93rem;font-weight:600;color:#444;margin-bottom:6px}
 .pipelines-inset .pipelines-panel-box.right .pipelines-panel-heading{color:#3a7ca5}
 @media(max-width:560px){.pipelines-inset .pipelines-panel-pair{grid-template-columns:1fr}}
+
+/* Cartoon enlarge / lightbox */
+.cartoon-backdrop{display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.88);backdrop-filter:blur(4px)}
+.cartoon-backdrop.is-open{display:block}
+.pipelines-inset{position:relative}
+.pipelines-inset.is-enlarged{position:fixed;top:12px;left:12px;right:12px;bottom:12px;z-index:99999;max-width:none;margin:0;overflow-y:auto;border-radius:8px;padding:24px 28px 24px}
+.cartoon-close-btn{display:none;position:absolute;top:10px;right:14px;background:rgba(0,0,0,0.06);border:1px solid #ccc;border-radius:4px;color:#666;font-size:22px;line-height:1;cursor:pointer;padding:2px 8px;transition:all 0.12s;z-index:1}
+.cartoon-close-btn:hover{background:rgba(0,0,0,0.1);color:#333;border-color:#999}
+.pipelines-inset.is-enlarged .cartoon-close-btn{display:block}
+.cartoon-enlarge-hint{font-size:0.78rem;color:#999;cursor:pointer;margin-left:auto;transition:color 0.12s;user-select:none}
+.cartoon-enlarge-hint:hover{color:#444}
+
+/* Chart figure */
+.chart-figure{margin:28px 0 36px}
+.chart-figure img{width:100%;max-width:640px;display:block;border-radius:6px;border:1px solid rgba(200,185,160,0.15);cursor:pointer;transition:opacity 0.15s}
+.chart-figure img:hover{opacity:0.85}
+.chart-caption{font-size:0.82rem;color:rgba(200,185,160,0.5);font-style:italic;line-height:1.55;margin-top:10px;max-width:640px}
+/* Image lightbox */
+.img-lightbox{display:none;position:fixed;inset:0;z-index:99999;background:rgba(10,8,6,0.92);backdrop-filter:blur(4px);align-items:center;justify-content:center;cursor:pointer;padding:24px}
+.img-lightbox.is-open{display:flex}
+.img-lightbox img{max-width:92vw;max-height:90vh;border-radius:6px}
 
 /* Chapter cards */
 .chapter-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px}
@@ -109,15 +130,23 @@ strong{color:#f0e6d8;font-weight:500}
 <section>
   <h2 id="two-ways">Two ways to think about uncertainty</h2>
   <p>Before the chapters begin, it&rsquo;s worth being clear about what kind of uncertainty this section is examining, because there&rsquo;s another kind &mdash; addressed by the main simulator on the home page &mdash; that&rsquo;s easy to conflate with it.</p>
-  <p>The Monte Carlo simulator shows that even with a single set of input parameters, <em>outcomes</em> are uncertain. A 60/40 portfolio over a specific period doesn&rsquo;t produce one expected return; it produces a distribution of possible returns. The textbook frontier curve summarizes this distribution as a single point (its mean), but the cloud is still there, hiding behind the point.</p>
+  <p>The Monte Carlo simulator shows that even with a single set of input parameters, <em>outcomes</em> are uncertain. A 60/40 portfolio over a specific period doesn&rsquo;t produce one expected return; it produces a distribution of possible returns. The textbook frontier curve summarizes this distribution as a single point (its mean), but the cloud is still there, hiding behind the point. (The curve is actually a series of these points, one for each possible allocation &mdash; each point along the curve is itself a summary of a cloud like the one shown below.)</p>
+
+  <figure class="chart-figure">
+    <img src="img/sim_cloud_for_landing.png" alt="Cloud of simulated outcomes for a single 60/40 stocks-bonds allocation, with the mean shown as a large dot"/>
+    <figcaption class="chart-caption">A view from the main simulator: the cloud of simulated outcomes for a single 60/40 stocks-bonds allocation. The large dot is the mean &mdash; the single number the textbook would summarize this cloud as. This is what&rsquo;s behind a single point on the frontier curves shown in the chapters that follow, and it&rsquo;s what the cartoon below calls the &ldquo;left side&rdquo;: a single set of parameter values producing a distribution of outcomes. The chapters&rsquo; subject is the right side &mdash; what happens when the parameter values themselves are uncertain.</figcaption>
+  </figure>
+
   <p>The simulator could be elaborated in many ways &mdash; for example, by letting parameters evolve over time within each run rather than holding them constant. But these elaborations don&rsquo;t address the deeper question of what parameter values to start from in the first place.</p>
-  <p>This section examines that deeper question. Even with a single set of parameter values fully specifying a generative process, we have to ask which parameter set to use &mdash; and reasonable analysts would pick differently. Propagating this uncertainty means running the analysis across many plausible parameter sets and looking at the combined distribution of answers, not just the answer from one set.</p>
+  <p>This section examines that deeper question. Even with a single set of parameter values fully specifying a generative process, we have to ask what values to use &mdash; and reasonable analysts would pick differently. Propagating this uncertainty means running the analysis across many plausible combinations of values and looking at the combined distribution of answers, not just the answer from one combination.</p>
   <p>The animation below shows the contrast. On the left: a single parameter set drives one generative process, producing a distribution of outcomes &mdash; what the main simulator does. On the right: a distribution of parameter sets, each driving its own generative process, producing a wider combined distribution &mdash; what this section&rsquo;s chapters are about. The combined distribution is honest about both the within-run variation and the across-set variation; the simulator&rsquo;s single-set version is honest about only one.</p>
   <p><strong>A note on the cartoon&rsquo;s simplicity.</strong> The animation uses a single parameter (a probability) for visual clarity. Real generative models &mdash; including the main simulator &mdash; use several parameters at once (expected returns, volatilities, correlations). The same logic applies: a single set of parameter values produces one distribution of outcomes; many sets produce a combined distribution. The cartoon&rsquo;s pipeline shape generalizes to any number of parameters; the visual just gets harder to draw.</p>
 </section>
 
 <!-- ═══ Embedded two-pipelines cartoon ═══ -->
-<div class="pipelines-inset">
+<div class="cartoon-backdrop" id="cartoon-backdrop"></div>
+<div class="pipelines-inset" id="pipelines-inset">
+<button class="cartoon-close-btn" id="cartoon-close-btn">&times;</button>
 <h2>Two ways to think about uncertainty</h2>
 <p class="pipelines-subtitle">What changes when you acknowledge parameter uncertainty</p>
 
@@ -133,6 +162,7 @@ strong{color:#f0e6d8;font-weight:500}
 <button data-speed="1" class="active">1&times;</button>
 <button data-speed="2">2&times;</button>
 </div>
+<span class="cartoon-enlarge-hint" id="cartoon-enlarge-hint">&#x26F6; Enlarge</span>
 </div>
 
 <p class="pipelines-credit">Inspired by Figure 3.6 in Richard McElreath&rsquo;s <em style="color:#333">Statistical Rethinking</em> (2nd ed.).</p>
@@ -337,18 +367,18 @@ function processSteps(){
    Drawing helpers
    ================================================================ */
 var COL={
-  text:'#444', label:'#777', axis:'#bbb', axisLight:'#ddd',
-  box:'#e8e4e0',
-  leftBar:'#d0ccc6', leftStroke:'#9a9590', leftCurve:'#8a8580',
-  rightBar:'#bcd4e6', rightStroke:'#6a9ab8', rightCurve:'#3a7ca5',
-  accent:'#3a7ca5', accentLight:'rgba(58,124,165,0.12)',
-  curveFill:'rgba(58,124,165,0.06)', curveStroke:'#3a7ca5',
-  connector:'#ccc'
+  text:'#333', label:'#666', axis:'#aaa', axisLight:'#ccc',
+  box:'#dcd7d0',
+  leftBar:'#c5c0ba', leftStroke:'#888380', leftCurve:'#787370',
+  rightBar:'#aacce0', rightStroke:'#5890b0', rightCurve:'#2e6c95',
+  accent:'#2e6c95', accentLight:'rgba(46,108,149,0.14)',
+  curveFill:'rgba(46,108,149,0.08)', curveStroke:'#2e6c95',
+  connector:'#aaa'
 };
 
 function txt(str,x,y,opts){
   opts=opts||{};
-  var size=opts.size||12,color=opts.color||COL.text,align=opts.align||'left',baseline=opts.baseline||'middle',bold=opts.bold||false;
+  var size=(opts.size||12)+1,color=opts.color||COL.text,align=opts.align||'left',baseline=opts.baseline||'middle',bold=opts.bold||false;
   ctx.font=(bold?'600 ':'')+size+'px system-ui,-apple-system,sans-serif';
   ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline=baseline;
   ctx.fillText(str,x,y);
@@ -439,9 +469,9 @@ function render(){
   ctx.clearRect(0,0,W,H);
 
   ctx.beginPath();ctx.moveTo(MID,35);ctx.lineTo(MID,H-15);
-  ctx.strokeStyle='#e8e4e0';ctx.lineWidth=1;ctx.stroke();
+  ctx.strokeStyle='#dcd7d0';ctx.lineWidth=1;ctx.stroke();
 
-  txt('Fixed parameter',LCX,TIT_Y,{size:15,bold:true,align:'center',color:'#555'});
+  txt('Fixed parameter',LCX,TIT_Y,{size:15,bold:true,align:'center',color:'#444'});
   txt('Uncertain parameter',RCX,TIT_Y,{size:15,bold:true,align:'center',color:COL.accent});
 
   /* ════════ TOP TIER: PARAMETER ════════ */
@@ -451,8 +481,8 @@ function render(){
   drawBox(lAxisX-BP,PAR_Y-BP,lAxisW+BP*2,PAR_H+BP*2+4);
   drawAxisLine(lAxisX,lAxisY,lAxisW);
   var tickX=lAxisX+FIXED_P*lAxisW;
-  drawTick(tickX,lAxisY,PAR_H-10,{color:'#555',width:2.5});
-  txt('p = '+FIXED_P.toFixed(1),tickX,PAR_Y+3,{size:11,align:'center',color:'#555',baseline:'top'});
+  drawTick(tickX,lAxisY,PAR_H-10,{color:'#444',width:2.5});
+  txt('p = '+FIXED_P.toFixed(1),tickX,PAR_Y+3,{size:11,align:'center',color:'#444',baseline:'top'});
   txt('0',lAxisX,lAxisY+11,{size:9,align:'center',color:COL.label});
   txt('1',lAxisX+lAxisW,lAxisY+11,{size:9,align:'center',color:COL.label});
 
@@ -464,7 +494,7 @@ function render(){
 
   var refX=parAxisX+FIXED_P*parAxisW;
   ctx.beginPath();ctx.setLineDash([4,3]);ctx.moveTo(refX,rAxisY);ctx.lineTo(refX,PAR_Y+2);
-  ctx.strokeStyle='#bbb';ctx.lineWidth=0.8;ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='#aaa';ctx.lineWidth=0.8;ctx.stroke();ctx.setLineDash([]);
 
   var cSteps=150;
   var maxD=0;
@@ -484,7 +514,7 @@ function render(){
     var px=paramX(PARAMS[i]);
     var isVisited=visitedParams.has(i);
     ctx.beginPath();ctx.moveTo(px,rAxisY);ctx.lineTo(px,rAxisY+4);
-    ctx.strokeStyle=isVisited?COL.accent:'#bbb';ctx.lineWidth=isVisited?1.5:0.8;ctx.stroke();
+    ctx.strokeStyle=isVisited?COL.accent:'#aaa';ctx.lineWidth=isVisited?1.5:0.8;ctx.stroke();
   }
 
   var cpi=currentParamIdx();
@@ -520,7 +550,7 @@ function render(){
     var isCurrent=(running||elapsed>0)&&i===cpi;
 
     drawBox(mx-3,MID_TOP-3,MINI_W+6,MID_HT+6+2,
-      {color:isActive?(isCurrent?'rgba(58,124,165,0.3)':COL.box):'#f0eeea'});
+      {color:isActive?(isCurrent?'rgba(46,108,149,0.4)':COL.box):'#e8e4de'});
 
     if(!isActive)continue;
 
@@ -530,7 +560,7 @@ function render(){
     var strk=isCurrent?COL.accent:COL.rightStroke;
     drawBars(mx,MID_TOP,MINI_W,MID_HT,miniHists[i],MBARW,MBGAP,COL.rightBar,strk,miniMaxAll);
 
-    var labelColor=isCurrent?COL.accent:'#aaa';
+    var labelColor=isCurrent?COL.accent:'#888';
     txt(PARAMS[i].toFixed(1),paramX(PARAMS[i]),MID_TOP+MID_HT+12,{size:8,align:'center',color:labelColor});
   }
 
@@ -669,6 +699,42 @@ var observer = new IntersectionObserver(function(entries){
 }, {threshold: 0.3});
 observer.observe(cv);
 
+/* ════════ Enlarge / lightbox ════════ */
+var inset=document.getElementById('pipelines-inset');
+var backdrop=document.getElementById('cartoon-backdrop');
+var closeBtn=document.getElementById('cartoon-close-btn');
+var enlargeHint=document.getElementById('cartoon-enlarge-hint');
+
+function openEnlarge(){
+  inset.classList.add('is-enlarged');
+  backdrop.classList.add('is-open');
+  document.body.style.overflow='hidden';
+}
+function closeEnlarge(){
+  inset.classList.remove('is-enlarged');
+  backdrop.classList.remove('is-open');
+  document.body.style.overflow='';
+}
+enlargeHint.addEventListener('click',openEnlarge);
+closeBtn.addEventListener('click',closeEnlarge);
+backdrop.addEventListener('click',closeEnlarge);
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&inset.classList.contains('is-enlarged'))closeEnlarge();
+});
+
+})();
+</script>
+
+<!-- Image lightbox -->
+<div class="img-lightbox" id="img-lightbox"><img id="img-lightbox-img" src="" alt=""/></div>
+<script>
+(function(){
+  var lb=document.getElementById('img-lightbox'),lbImg=document.getElementById('img-lightbox-img');
+  document.querySelectorAll('.chart-figure img').forEach(function(img){
+    img.addEventListener('click',function(){lbImg.src=img.src;lbImg.alt=img.alt;lb.classList.add('is-open')});
+  });
+  lb.addEventListener('click',function(){lb.classList.remove('is-open')});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.classList.remove('is-open')});
 })();
 </script>
 
