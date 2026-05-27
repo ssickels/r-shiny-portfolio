@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Behind the Assumptions — Monte Carlo Portfolio Simulator</title>
+<meta property="og:title" content="Behind the Assumptions — Monte Carlo Portfolio Simulator"/>
+<meta property="og:description" content="The simulator takes parameters as given. This section asks what happens when they're not."/>
+<meta property="og:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://stevessite.com/behind-the-assumptions.html"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Behind the Assumptions — Monte Carlo Portfolio Simulator"/>
+<meta name="twitter:description" content="The simulator takes parameters as given. This section asks what happens when they're not."/>
+<meta name="twitter:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+
+.page-wrap{max-width:740px;margin:0 auto;padding:72px 24px 60px}
+
+.page-header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
+.page-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
+
+/* TL;DR box */
+.motivation-box{border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:24px 28px;margin-bottom:40px;background:rgba(255,255,255,0.03)}
+.motivation-box h2{font-size:0.78rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.45);margin-bottom:16px}
+.motivation-box p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem;line-height:1.65}
+.motivation-box p:last-child{margin-bottom:0}
+.motivation-box .bottom-line{border-top:1px solid rgba(200,185,160,0.1);padding-top:14px;margin-top:18px;color:rgba(200,185,160,0.65);font-size:0.93rem}
+
+section{margin-bottom:40px}
+section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem}
+section p:last-child{margin-bottom:0}
+em{color:#f0e6d8;font-style:italic}
+strong{color:#f0e6d8;font-weight:500}
+
+/* Pipelines cartoon inset */
+.pipelines-inset{background:#f8f7f4;border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:28px 20px 24px;margin-bottom:40px}
+.pipelines-inset h2{font-size:1.2rem;font-weight:normal;color:#333;margin-bottom:4px;font-family:Georgia,'Times New Roman',serif}
+.pipelines-inset .pipelines-subtitle{color:#888;font-size:0.88rem;margin-bottom:20px;font-style:italic}
+.pipelines-inset .pipelines-canvas-wrap{background:#fff;border:1px solid #ddd;border-radius:6px;overflow:hidden;margin-bottom:14px}
+.pipelines-inset canvas{display:block;width:100%;height:auto}
+.pipelines-inset .pipelines-controls{display:flex;align-items:center;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+.pipelines-inset .pipelines-controls button{padding:5px 14px;background:#fff;border:1px solid #ccc;border-radius:4px;color:#555;font-size:0.82rem;cursor:pointer;font-family:system-ui,sans-serif;transition:all 0.12s}
+.pipelines-inset .pipelines-controls button:hover{background:#f0f0f0;border-color:#999;color:#333}
+.pipelines-inset .pipelines-controls button.active{background:#444;color:#fff;border-color:#444}
+.pipelines-inset .pipelines-speed-group{display:flex;gap:0}
+.pipelines-inset .pipelines-speed-group button{border-radius:0}
+.pipelines-inset .pipelines-speed-group button:first-child{border-radius:4px 0 0 4px}
+.pipelines-inset .pipelines-speed-group button:last-child{border-radius:0 4px 4px 0}
+.pipelines-inset .pipelines-speed-group button+button{border-left:none}
+.pipelines-inset .pipelines-credit{font-size:0.82rem;color:#888;font-style:italic;margin-bottom:18px}
+.pipelines-inset .pipelines-caption{font-size:0.91rem;color:#555;line-height:1.75;font-family:Georgia,'Times New Roman',serif}
+.pipelines-inset .pipelines-caption p{margin-bottom:14px;color:#555}
+.pipelines-inset .pipelines-caption strong{color:#333;font-weight:600}
+.pipelines-inset .pipelines-caption em{color:#333;font-style:italic}
+.pipelines-inset .pipelines-quote{border-left:3px solid #ccc;padding-left:14px;margin:16px 0;color:#666;font-style:italic}
+.pipelines-inset .pipelines-panel-pair{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}
+.pipelines-inset .pipelines-panel-box{border:1px solid #ddd;border-radius:5px;padding:14px 16px;background:#faf9f7}
+.pipelines-inset .pipelines-panel-box p{margin-bottom:0;color:#555}
+.pipelines-inset .pipelines-panel-heading{font-size:0.93rem;font-weight:600;color:#555;margin-bottom:6px}
+.pipelines-inset .pipelines-panel-box.right .pipelines-panel-heading{color:#3a7ca5}
+@media(max-width:560px){.pipelines-inset .pipelines-panel-pair{grid-template-columns:1fr}}
+
+/* Chapter cards */
+.chapter-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px}
+@media(max-width:600px){.chapter-grid{grid-template-columns:1fr}}
+.chapter-card{display:block;text-decoration:none;border:1px solid rgba(200,185,160,0.15);border-radius:8px;padding:24px;background:rgba(255,255,255,0.03);transition:border-color 0.15s,background 0.15s}
+.chapter-card:hover{border-color:#1D9E75;background:rgba(29,158,117,0.04)}
+.chapter-card .chapter-num{font-size:0.72rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.45);margin-bottom:8px}
+.chapter-card h3{font-size:1.05rem;font-weight:400;color:#f0e6d8;margin-bottom:10px;line-height:1.4}
+.chapter-card p{color:#c4b5a0;font-size:0.9rem;line-height:1.6;margin-bottom:12px}
+.chapter-card .card-arrow{font-size:0.85rem;color:#1D9E75;transition:color 0.15s}
+.chapter-card:hover .card-arrow{color:#f0e6d8}
+
+/* Callout */
+.callout{border-left:3px solid #1D9E75;padding:14px 20px;margin:20px 0;color:rgba(200,185,160,0.65);font-size:0.95rem;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ═══ Page header ═══ -->
+<div class="page-header">
+  <h1>Behind the Assumptions</h1>
+  <p>The simulator takes parameters as given. This section asks what happens when they're not.</p>
+</div>
+
+<!-- ═══ TL;DR ═══ -->
+<div class="motivation-box">
+  <h2>If you only have a few minutes</h2>
+  <p>This section is long. The short version: the Markowitz portfolio optimization framework produces precise-looking &ldquo;optimal&rdquo; allocations, but the precision is largely illusory. When you account for realistic uncertainty in the inputs (<a href="/behind-2-parameter-uncertainty.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">Chapter 2</a>), drift in those inputs over time (<a href="/behind-3-drift.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">Chapter 3</a>), and the compounding effects of more than two assets (<a href="/behind-4-three-assets.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">Chapter 4</a>), the &ldquo;optimal&rdquo; portfolio dissolves into a wide cloud of equally-defensible answers, and the cloud is moving from era to era.</p>
+  <p>This isn&rsquo;t a flaw in the math &mdash; it&rsquo;s a feature of the gap between the framework&rsquo;s clean assumptions and the messy world it&rsquo;s applied to.</p>
+  <p>The interactive widgets in Chapters <a href="/behind-1-optimal.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">1</a>, <a href="/behind-2-parameter-uncertainty.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">2</a>, and <a href="/behind-4-three-assets.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">4</a> are the centerpiece of this section. If you don&rsquo;t read anything else, scroll through and play with those.</p>
+  <p class="bottom-line"><strong style="color:#f0e6d8">Bottom line</strong> (Chapter 4&rsquo;s closing reflection): the framework is genuinely useful as a thinking aid &mdash; it sharpens intuition about diversification and risk-return tradeoffs &mdash; but its specific numerical outputs shouldn&rsquo;t be taken as recommendations. They&rsquo;re a single point in a cloud of plausible answers, all drifting over time.</p>
+</div>
+
+<!-- ═══ Main intro ═══ -->
+<section>
+  <p>The Monte Carlo simulator on the <a href="/monte-carlo.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">main page</a> asks a specific question: given fixed assumptions about expected returns, volatilities, and correlations, what&rsquo;s the distribution of outcomes you might experience? That&rsquo;s a useful question, and the simulator&rsquo;s answer &mdash; distributions, not point estimates &mdash; is more honest than the standard textbook treatment.</p>
+  <p>But the question itself assumes a lot. It assumes the parameters are settled. It assumes they stay the same over your investment horizon. It assumes the framework you&rsquo;re using to compute &ldquo;optimal&rdquo; portfolios is reliable when fed those parameters. None of those assumptions are obviously true in the real world.</p>
+  <p>This section steps back one layer in the chain of assumptions. Each chapter takes one piece of the framework that the simulator treated as given and asks: what if it isn&rsquo;t?</p>
+</section>
+
+<!-- ═══ Two kinds of uncertainty — pre-cartoon framing ═══ -->
+<section>
+  <h2 id="two-ways">Two ways to think about uncertainty</h2>
+  <p>Before the chapters begin, it&rsquo;s worth being clear about what kind of uncertainty this section is examining, because there&rsquo;s another kind &mdash; addressed by the main simulator on the home page &mdash; that&rsquo;s easy to conflate with it.</p>
+  <p>The Monte Carlo simulator shows that even with a single set of input parameters, <em>outcomes</em> are uncertain. A 60/40 portfolio over a specific period doesn&rsquo;t produce one expected return; it produces a distribution of possible returns. The textbook frontier curve summarizes this distribution as a single point (its mean), but the cloud is still there, hiding behind the point.</p>
+  <p>The simulator could be elaborated in many ways &mdash; for example, by letting parameters evolve over time within each run rather than holding them constant. But these elaborations don&rsquo;t address the deeper question of what parameter values to start from in the first place.</p>
+  <p>This section examines that deeper question. Even with a single set of parameter values fully specifying a generative process, we have to ask which parameter set to use &mdash; and reasonable analysts would pick differently. Propagating this uncertainty means running the analysis across many plausible parameter sets and looking at the combined distribution of answers, not just the answer from one set.</p>
+  <p>The animation below shows the contrast. On the left: a single parameter set drives one generative process, producing a distribution of outcomes &mdash; what the main simulator does. On the right: a distribution of parameter sets, each driving its own generative process, producing a wider combined distribution &mdash; what this section&rsquo;s chapters are about. The combined distribution is honest about both the within-run variation and the across-set variation; the simulator&rsquo;s single-set version is honest about only one.</p>
+  <p><strong>A note on the cartoon&rsquo;s simplicity.</strong> The animation uses a single parameter (a probability) for visual clarity. Real generative models &mdash; including the main simulator &mdash; use several parameters at once (expected returns, volatilities, correlations). The same logic applies: a single set of parameter values produces one distribution of outcomes; many sets produce a combined distribution. The cartoon&rsquo;s pipeline shape generalizes to any number of parameters; the visual just gets harder to draw.</p>
+</section>
+
+<!-- ═══ Embedded two-pipelines cartoon ═══ -->
+<div class="pipelines-inset">
+<h2>Two ways to think about uncertainty</h2>
+<p class="pipelines-subtitle">What changes when you acknowledge parameter uncertainty</p>
+
+<div class="pipelines-canvas-wrap">
+<canvas id="pipelines-cv"></canvas>
+</div>
+
+<div class="pipelines-controls">
+<button id="pipelines-replay-btn">&#9654; Replay</button>
+<button id="pipelines-pause-btn">&#9646;&#9646; Pause</button>
+<div class="pipelines-speed-group">
+<button data-speed="0.5">0.5&times;</button>
+<button data-speed="1" class="active">1&times;</button>
+<button data-speed="2">2&times;</button>
+</div>
+</div>
+
+<p class="pipelines-credit">Inspired by Figure 3.6 in Richard McElreath&rsquo;s <em style="color:#333">Statistical Rethinking</em> (2nd ed.).</p>
+
+<div class="pipelines-caption">
+<div class="pipelines-panel-pair">
+<div class="pipelines-panel-box"><p class="pipelines-panel-heading">Fixed parameter</p><p>A single parameter value produces a distribution of outcomes. This is what a standard Monte Carlo simulator does &mdash; fixed parameters, distribution of outcomes. The simulator is honest about <em style="color:#333">outcome uncertainty</em>: given exactly these parameters, here&rsquo;s the range of possible histories.</p></div>
+<div class="pipelines-panel-box right"><p class="pipelines-panel-heading">Uncertain parameter</p><p>A distribution over parameter values propagates through to a wider distribution of outcomes. Each parameter value contributes its own sampling distribution, weighted by how plausible the parameter value is. The combined distribution at the bottom is wider than any single parameter&rsquo;s contribution.</p></div>
+</div>
+<p>The parameter uncertainty widgets on this page do part of the uncertain-parameter approach &mdash; they show the cloud of summary statistics (optimal allocations, Sharpe ratios) that comes from varying parameters. They don&rsquo;t combine that with the full sampling distributions for each parameter set, which would yield the full combined outcome distribution shown on the right. The cartoon shows what that full picture would look like in principle.</p>
+<p><strong>The structural point:</strong> relying on a single point estimate of a parameter &mdash; even if you correctly propagate outcome uncertainty given that estimate &mdash; produces an overconfident distribution.</p>
+<p class="pipelines-quote">McElreath calls this &ldquo;the illusion of certainty that arises from tossing away uncertainty about the parameters.&rdquo;</p>
+</div>
+</div>
+
+<!-- ═══ Chapter previews ═══ -->
+<div class="chapter-grid">
+  <a href="/behind-1-optimal.html" class="chapter-card">
+    <div class="chapter-num">Chapter 1</div>
+    <h3>What does &lsquo;optimal&rsquo; mean?</h3>
+    <p>Before we can examine the framework, we have to know what it&rsquo;s claiming. This chapter introduces the Sharpe ratio and the tangency portfolio &mdash; the standard way of comparing portfolios that differ in both expected return and risk, and the standard definition of &ldquo;optimal&rdquo; that falls out of that comparison.</p>
+    <span class="card-arrow">&rarr; Read Chapter 1</span>
+  </a>
+  <a href="/behind-2-parameter-uncertainty.html" class="chapter-card">
+    <div class="chapter-num">Chapter 2</div>
+    <h3>How much does the answer depend on the inputs?</h3>
+    <p>The framework gives precise-looking answers, but those answers depend on input parameters that come with real uncertainty. Even modest variation in those inputs produces wide variation in what the framework calls &ldquo;optimal.&rdquo; This chapter shows what happens when you propagate parameter uncertainty through the optimization: the precise-looking answer becomes a cloud of equally-defensible answers.</p>
+    <span class="card-arrow">&rarr; Read Chapter 2</span>
+  </a>
+  <a href="/behind-3-drift.html" class="chapter-card">
+    <div class="chapter-num">Chapter 3</div>
+    <h3>When parameters drift</h3>
+    <p>The inputs to portfolio optimization are typically derived from historical data &mdash; what stocks averaged over the past few decades, how volatile bonds were, how the two moved together. But the historical summaries themselves shift over time. A historical chart of stock-bond correlation makes this concrete: it isn&rsquo;t a number that holds steady; it takes different values in different eras, sometimes shifting sharply enough to flip sign.</p>
+    <span class="card-arrow">&rarr; Read Chapter 3</span>
+  </a>
+  <a href="/behind-4-three-assets.html" class="chapter-card">
+    <div class="chapter-num">Chapter 4</div>
+    <h3>Three assets and beyond</h3>
+    <p>With only two assets, &ldquo;optimization&rdquo; is trivial &mdash; every allocation is uniquely determined by the stock-bond split. With three or more assets, optimization becomes a real choice, and parameter uncertainty compounds. The same Monte Carlo treatment that produced a wide cloud in the two-asset case produces a richer and even more cautionary picture in three assets.</p>
+    <span class="card-arrow">&rarr; Read Chapter 4</span>
+  </a>
+</div>
+
+<!-- ═══ Closing note ═══ -->
+<section>
+  <p>Each chapter builds on the previous one. We recommend reading in order, but each chapter is self-contained enough to be useful on its own.</p>
+</section>
+
+<div class="callout">
+  <p style="margin-bottom:14px"><strong style="color:#f0e6d8">A note on what this section is doing.</strong> The simulator is a tool for thinking about uncertainty <em>given</em> a framework. This section is about uncertainty <em>in</em> the framework itself. Both kinds of uncertainty matter, and they&rsquo;re often confused with each other or collapsed into a single notion of &ldquo;risk.&rdquo;</p>
+  <p>The chapters that follow don&rsquo;t argue that the Markowitz framework is wrong &mdash; it&rsquo;s foundational, well-defended, and useful for the questions it was built to answer. They argue that taking its outputs literally, as precise recommendations rather than as rough guides to thinking, requires assumptions that don&rsquo;t hold up well in practice. The framework is more useful as a thinking aid than as a recommendation engine, and this section is an extended argument for why.</p>
+</div>
+
+</div><!-- .page-wrap -->
+
+<!-- ═══ Two-pipelines cartoon JS (IIFE) ═══ -->
+<script>
+(function(){
+/* ================================================================
+   Configuration
+   ================================================================ */
+var PARAMS = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
+var FIXED_P = 0.6;
+var BETA_A = 6, BETA_B = 4;
+var BN = 9;
+var TOTAL_DUR = 35;
+var MIN_DWELL = 1.0;
+var LEFT_TOTAL = 280;
+var RIGHT_TOTAL = 280;
+
+/* ================================================================
+   Math
+   ================================================================ */
+function lgamma(x){
+  if(x<0.5)return Math.log(Math.PI/Math.sin(Math.PI*x))-lgamma(1-x);
+  x-=1;var g=7;
+  var c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,
+    -176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  var a=c[0];var t=x+g+0.5;
+  for(var i=1;i<g+2;i++)a+=c[i]/(x+i);
+  return 0.5*Math.log(2*Math.PI)+(x+0.5)*Math.log(t)-t+Math.log(a);
+}
+function betaPdf(x,a,b){
+  if(x<=0||x>=1)return 0;
+  return Math.exp((a-1)*Math.log(x)+(b-1)*Math.log(1-x)-lgamma(a)-lgamma(b)+lgamma(a+b));
+}
+function binomSample(n,p){var s=0;for(var i=0;i<n;i++)if(Math.random()<p)s++;return s}
+
+/* ================================================================
+   Layout (logical pixels)
+   ================================================================ */
+var W=980, H=600;
+var cv=document.getElementById('pipelines-cv');
+var ctx=cv.getContext('2d');
+var dpr=window.devicePixelRatio||1;
+cv.width=W*dpr; cv.height=H*dpr;
+ctx.scale(dpr,dpr);
+
+var MID=W/2;
+var LX=30, LW=MID-50, LCX=LX+LW/2;
+var RX=MID+20, RW=W-RX-25, RCX=RX+RW/2;
+
+var TIT_Y=22;
+var PAR_Y=50, PAR_H=55;
+var CONN1_TOP=PAR_Y+PAR_H+10;
+var CONN1_MID=CONN1_TOP+12;
+var MID_LBL=CONN1_MID+14;
+var MID_TOP=MID_LBL+18, MID_HT=100;
+var CONN2_TOP=MID_TOP+MID_HT+14;
+var CONN2_MID=CONN2_TOP+12;
+var BOT_LBL=CONN2_MID+14;
+var BOT_TOP=BOT_LBL+34, BOT_HT=100;
+
+var HIST_W=410;
+var NBINS=BN+1;
+var BGAP=3, BARW=(HIST_W-(NBINS-1)*BGAP)/NBINS;
+
+var MINI_W=38;
+var MBGAP=0.5, MBARW=(MINI_W-(NBINS-1)*MBGAP)/NBINS;
+
+var LMID_W=MINI_W;
+var LMBGAP=MBGAP, LMBARW=MBARW;
+
+var parAxisX=RCX-HIST_W/2, parAxisW=HIST_W;
+function paramX(p){return parAxisX+p*parAxisW}
+
+var BP=6;
+
+/* ================================================================
+   Pre-computation
+   ================================================================ */
+var densities=PARAMS.map(function(p){return betaPdf(p,BETA_A,BETA_B)});
+var totalDens=densities.reduce(function(a,b){return a+b},0);
+
+var minTotal=MIN_DWELL*PARAMS.length;
+var remaining=TOTAL_DUR-minTotal;
+var dwellTimes=densities.map(function(d){return MIN_DWELL+remaining*d/totalDens});
+var dwellStarts=[0];
+for(var i=0;i<dwellTimes.length-1;i++)dwellStarts.push(dwellStarts[i]+dwellTimes[i]);
+var totalDuration=dwellStarts[dwellStarts.length-1]+dwellTimes[dwellTimes.length-1];
+
+var samplesPerParam=densities.map(function(d){return Math.max(3,Math.round(RIGHT_TOTAL*d/totalDens))});
+
+var steps=[];
+function generateSteps(){
+  steps=[];
+  var leftInt=totalDuration/LEFT_TOTAL;
+  for(var i=0;i<LEFT_TOTAL;i++){
+    steps.push({t:i*leftInt,panel:'L',outcome:binomSample(BN,FIXED_P)});
+  }
+  for(var pi=0;pi<PARAMS.length;pi++){
+    var ns=samplesPerParam[pi];
+    var dw=dwellTimes[pi];
+    for(var s=0;s<ns;s++){
+      steps.push({t:dwellStarts[pi]+(s+0.5)*dw/ns,panel:'R',pi:pi,outcome:binomSample(BN,PARAMS[pi])});
+    }
+  }
+  steps.sort(function(a,b){return a.t-b.t});
+}
+
+/* ================================================================
+   Animation state
+   ================================================================ */
+var leftHist=new Array(NBINS).fill(0);
+var miniHists=PARAMS.map(function(){return new Array(NBINS).fill(0)});
+var combHist=new Array(NBINS).fill(0);
+var visitedParams=new Set();
+var stepPtr=0;
+var elapsed=0;
+var running=false, paused=false;
+var speed=1;
+var prevTS=null;
+var animId=null;
+var postElapsed=0;
+var ARROW_DELAY=1.5;
+
+function resetState(){
+  leftHist=new Array(NBINS).fill(0);
+  miniHists=PARAMS.map(function(){return new Array(NBINS).fill(0)});
+  combHist=new Array(NBINS).fill(0);
+  visitedParams=new Set();
+  stepPtr=0; elapsed=0; prevTS=null; postElapsed=0;
+}
+
+function currentParamIdx(){
+  for(var i=0;i<PARAMS.length;i++){
+    if(elapsed<dwellStarts[i]+dwellTimes[i])return i;
+  }
+  return PARAMS.length-1;
+}
+
+function processSteps(){
+  while(stepPtr<steps.length&&steps[stepPtr].t<=elapsed){
+    var s=steps[stepPtr];
+    if(s.panel==='L'){leftHist[s.outcome]++}
+    else{miniHists[s.pi][s.outcome]++;combHist[s.outcome]++;visitedParams.add(s.pi)}
+    stepPtr++;
+  }
+}
+
+/* ================================================================
+   Drawing helpers
+   ================================================================ */
+var COL={
+  text:'#444', label:'#777', axis:'#bbb', axisLight:'#ddd',
+  box:'#e8e4e0',
+  leftBar:'#d0ccc6', leftStroke:'#9a9590', leftCurve:'#8a8580',
+  rightBar:'#bcd4e6', rightStroke:'#6a9ab8', rightCurve:'#3a7ca5',
+  accent:'#3a7ca5', accentLight:'rgba(58,124,165,0.12)',
+  curveFill:'rgba(58,124,165,0.06)', curveStroke:'#3a7ca5',
+  connector:'#ccc'
+};
+
+function txt(str,x,y,opts){
+  opts=opts||{};
+  var size=opts.size||12,color=opts.color||COL.text,align=opts.align||'left',baseline=opts.baseline||'middle',bold=opts.bold||false;
+  ctx.font=(bold?'600 ':'')+size+'px system-ui,-apple-system,sans-serif';
+  ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline=baseline;
+  ctx.fillText(str,x,y);
+}
+
+function drawBars(x,y,w,h,counts,barW,gap,fill,stroke,maxOverride){
+  var mx=maxOverride||Math.max.apply(null,counts.concat([1]));
+  ctx.lineWidth=0.7;
+  for(var i=0;i<counts.length;i++){
+    if(counts[i]===0)continue;
+    var bx=x+i*(barW+gap);
+    var bh=(counts[i]/mx)*h;
+    var by=y+h-bh;
+    ctx.fillStyle=fill;ctx.fillRect(bx,by,barW,bh);
+    ctx.strokeStyle=stroke;ctx.strokeRect(bx,by,barW,bh);
+  }
+}
+
+function drawAxisLine(x,y,w){
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+w,y);
+  ctx.strokeStyle=COL.axis;ctx.lineWidth=1;ctx.stroke();
+}
+
+function drawTick(x,y,h,opts){
+  opts=opts||{};
+  var color=opts.color||COL.text,width=opts.width||2;
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-h);
+  ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();
+}
+
+function drawTriangle(x,y,size,color){
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-size,y-size*1.5);ctx.lineTo(x+size,y-size*1.5);ctx.closePath();
+  ctx.fillStyle=color;ctx.fill();
+}
+
+function drawArrow(x,y1,y2,opts){
+  opts=opts||{};
+  var color=opts.color||COL.connector,dash=opts.dash||[3,3];
+  ctx.beginPath();ctx.setLineDash(dash);ctx.moveTo(x,y1);ctx.lineTo(x,y2);
+  ctx.strokeStyle=color;ctx.lineWidth=0.8;ctx.stroke();ctx.setLineDash([]);
+  var sz=3;
+  ctx.beginPath();ctx.moveTo(x,y2);ctx.lineTo(x-sz,y2-sz*1.6);ctx.lineTo(x+sz,y2-sz*1.6);ctx.closePath();
+  ctx.fillStyle=color;ctx.fill();
+}
+
+function drawBox(x,y,w,h,opts){
+  opts=opts||{};
+  var color=opts.color||COL.box,radius=opts.radius||4;
+  ctx.beginPath();ctx.roundRect(x,y,w,h,radius);
+  ctx.strokeStyle=color;ctx.lineWidth=0.8;ctx.stroke();
+}
+
+function drawSmoothCurve(histX,histY,histW,histH,counts,barW,gap,color,maxOverride){
+  var mx=maxOverride||Math.max.apply(null,counts.concat([1]));
+  if(mx===0)return;
+  var total=counts.reduce(function(a,b){return a+b},0);
+  if(total===0)return;
+  var pts=[];
+  for(var i=0;i<counts.length;i++){
+    var cx=histX+i*(barW+gap)+barW/2;
+    var cy=histY+histH-(counts[i]/mx)*histH;
+    pts.push({x:cx,y:cy});
+  }
+  var baseline=histY+histH;
+  var padL={x:pts[0].x-(barW+gap),y:baseline};
+  var padR={x:pts[pts.length-1].x+(barW+gap),y:baseline};
+  var all=[padL].concat(pts).concat([padR]);
+  ctx.beginPath();
+  ctx.moveTo(all[0].x,all[0].y);
+  for(var i=0;i<all.length-1;i++){
+    var p0=all[Math.max(0,i-1)];
+    var p1=all[i];
+    var p2=all[i+1];
+    var p3=all[Math.min(all.length-1,i+2)];
+    var cp1x=p1.x+(p2.x-p0.x)/6;
+    var cp1y=p1.y+(p2.y-p0.y)/6;
+    var cp2x=p2.x-(p3.x-p1.x)/6;
+    var cp2y=p2.y-(p3.y-p1.y)/6;
+    ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,p2.x,p2.y);
+  }
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+}
+
+/* ================================================================
+   Main render
+   ================================================================ */
+function render(){
+  ctx.clearRect(0,0,W,H);
+
+  ctx.beginPath();ctx.moveTo(MID,35);ctx.lineTo(MID,H-15);
+  ctx.strokeStyle='#e8e4e0';ctx.lineWidth=1;ctx.stroke();
+
+  txt('Fixed parameter',LCX,TIT_Y,{size:15,bold:true,align:'center',color:'#555'});
+  txt('Uncertain parameter',RCX,TIT_Y,{size:15,bold:true,align:'center',color:COL.accent});
+
+  /* ════════ TOP TIER: PARAMETER ════════ */
+  var lAxisX=LCX-HIST_W/2, lAxisW=HIST_W;
+  var lAxisY=PAR_Y+PAR_H;
+
+  drawBox(lAxisX-BP,PAR_Y-BP,lAxisW+BP*2,PAR_H+BP*2+4);
+  drawAxisLine(lAxisX,lAxisY,lAxisW);
+  var tickX=lAxisX+FIXED_P*lAxisW;
+  drawTick(tickX,lAxisY,PAR_H-10,{color:'#555',width:2.5});
+  txt('p = '+FIXED_P.toFixed(1),tickX,PAR_Y+3,{size:11,align:'center',color:'#555',baseline:'top'});
+  txt('0',lAxisX,lAxisY+11,{size:9,align:'center',color:COL.label});
+  txt('1',lAxisX+lAxisW,lAxisY+11,{size:9,align:'center',color:COL.label});
+
+  var rAxisY=PAR_Y+PAR_H;
+  drawBox(parAxisX-BP,PAR_Y-BP,parAxisW+BP*2,PAR_H+BP*2+4);
+  drawAxisLine(parAxisX,rAxisY,parAxisW);
+  txt('0',parAxisX,rAxisY+11,{size:9,align:'center',color:COL.label});
+  txt('1',parAxisX+parAxisW,rAxisY+11,{size:9,align:'center',color:COL.label});
+
+  var refX=parAxisX+FIXED_P*parAxisW;
+  ctx.beginPath();ctx.setLineDash([4,3]);ctx.moveTo(refX,rAxisY);ctx.lineTo(refX,PAR_Y+2);
+  ctx.strokeStyle='#bbb';ctx.lineWidth=0.8;ctx.stroke();ctx.setLineDash([]);
+
+  var cSteps=150;
+  var maxD=0;
+  for(var i=0;i<=cSteps;i++){var t=i/cSteps;var d=betaPdf(t,BETA_A,BETA_B);if(d>maxD)maxD=d}
+  ctx.beginPath();
+  ctx.moveTo(parAxisX,rAxisY);
+  for(var i=0;i<=cSteps;i++){
+    var t=i/cSteps;
+    var d=betaPdf(t,BETA_A,BETA_B);
+    ctx.lineTo(parAxisX+t*parAxisW,rAxisY-(d/maxD)*(PAR_H-12));
+  }
+  ctx.lineTo(parAxisX+parAxisW,rAxisY);ctx.closePath();
+  ctx.fillStyle=COL.curveFill;ctx.fill();
+  ctx.strokeStyle=COL.curveStroke;ctx.lineWidth=1.5;ctx.stroke();
+
+  for(var i=0;i<PARAMS.length;i++){
+    var px=paramX(PARAMS[i]);
+    var isVisited=visitedParams.has(i);
+    ctx.beginPath();ctx.moveTo(px,rAxisY);ctx.lineTo(px,rAxisY+4);
+    ctx.strokeStyle=isVisited?COL.accent:'#bbb';ctx.lineWidth=isVisited?1.5:0.8;ctx.stroke();
+  }
+
+  var cpi=currentParamIdx();
+  if(running||elapsed>0){
+    var cpx=paramX(PARAMS[cpi]);
+    drawTriangle(cpx,rAxisY+2,5,COL.accent);
+    txt('p = '+PARAMS[cpi].toFixed(2),cpx,PAR_Y+1,{size:11,align:'center',color:COL.accent,baseline:'top'});
+  }
+
+  /* ════════ CONNECTORS: TOP → MIDDLE ════════ */
+  drawArrow(tickX,lAxisY+16,MID_TOP-5);
+  txt('sample with this parameter',tickX+10,CONN1_MID,{size:10,color:COL.label});
+
+  if(running||elapsed>0){
+    var cpx=paramX(PARAMS[cpi]);
+    drawArrow(cpx,rAxisY+16,MID_TOP-5,{color:COL.accent,dash:[2,2]});
+  }
+
+  /* ════════ MIDDLE TIER: SAMPLING DISTRIBUTIONS ════════ */
+  txt('Sampling distribution',LCX,MID_LBL,{size:12,align:'center',color:COL.label,bold:true});
+  txt('Sampling distributions',RCX,MID_LBL,{size:12,align:'center',color:COL.label,bold:true});
+
+  var lhx=tickX-LMID_W/2;
+  drawBox(lhx-3,MID_TOP-3,LMID_W+6,MID_HT+6+2,{color:COL.box});
+  ctx.beginPath();ctx.moveTo(lhx,MID_TOP+MID_HT);ctx.lineTo(lhx+LMID_W,MID_TOP+MID_HT);
+  ctx.strokeStyle=COL.axisLight;ctx.lineWidth=0.6;ctx.stroke();
+  drawBars(lhx,MID_TOP,LMID_W,MID_HT,leftHist,LMBARW,LMBGAP,COL.leftBar,COL.leftStroke);
+
+  var miniMaxAll=Math.max.apply(null,[].concat.apply([],miniHists).concat([1]));
+  for(var i=0;i<PARAMS.length;i++){
+    var mx=paramX(PARAMS[i])-MINI_W/2;
+    var isActive=visitedParams.has(i);
+    var isCurrent=(running||elapsed>0)&&i===cpi;
+
+    drawBox(mx-3,MID_TOP-3,MINI_W+6,MID_HT+6+2,
+      {color:isActive?(isCurrent?'rgba(58,124,165,0.3)':COL.box):'#f0eeea'});
+
+    if(!isActive)continue;
+
+    ctx.beginPath();ctx.moveTo(mx,MID_TOP+MID_HT);ctx.lineTo(mx+MINI_W,MID_TOP+MID_HT);
+    ctx.strokeStyle=isCurrent?COL.accent:COL.axisLight;ctx.lineWidth=0.6;ctx.stroke();
+
+    var strk=isCurrent?COL.accent:COL.rightStroke;
+    drawBars(mx,MID_TOP,MINI_W,MID_HT,miniHists[i],MBARW,MBGAP,COL.rightBar,strk,miniMaxAll);
+
+    var labelColor=isCurrent?COL.accent:'#aaa';
+    txt(PARAMS[i].toFixed(1),paramX(PARAMS[i]),MID_TOP+MID_HT+12,{size:8,align:'center',color:labelColor});
+  }
+
+  /* ════════ CONNECTORS: MIDDLE → BOTTOM ════════ */
+  drawArrow(tickX,MID_TOP+MID_HT+20,BOT_TOP-5);
+  txt('same data',tickX+10,CONN2_MID,{size:10,color:COL.label});
+
+  drawArrow(RCX,MID_TOP+MID_HT+20,BOT_TOP-5);
+  txt('weighted combination',RCX+10,CONN2_MID,{size:10,color:COL.label});
+
+  /* ════════ BOTTOM TIER: OUTCOME DISTRIBUTIONS ════════ */
+  txt('Outcome distribution',LCX,BOT_LBL,{size:12,align:'center',color:COL.label,bold:true});
+  txt('Combined outcome distribution',RCX,BOT_LBL,{size:12,align:'center',color:COL.label,bold:true});
+
+  var lbx=LCX-HIST_W/2;
+  drawBox(lbx-BP,BOT_TOP-BP,HIST_W+BP*2,BOT_HT+BP*2+2);
+  drawAxisLine(lbx,BOT_TOP+BOT_HT,HIST_W);
+  txt('low',lbx,BOT_TOP+BOT_HT+11,{size:9,color:COL.label,align:'left'});
+  txt('high',lbx+HIST_W,BOT_TOP+BOT_HT+11,{size:9,color:COL.label,align:'right'});
+  txt('outcome',LCX,BOT_TOP+BOT_HT+24,{size:9,color:COL.label,align:'center'});
+  var botMax=Math.max(Math.max.apply(null,leftHist),Math.max.apply(null,combHist),1);
+  drawBars(lbx,BOT_TOP,HIST_W,BOT_HT,leftHist,BARW,BGAP,COL.leftBar,COL.leftStroke,botMax);
+
+  var rbx=RCX-HIST_W/2;
+  drawBox(rbx-BP,BOT_TOP-BP,HIST_W+BP*2,BOT_HT+BP*2+2);
+  drawAxisLine(rbx,BOT_TOP+BOT_HT,HIST_W);
+  txt('low',rbx,BOT_TOP+BOT_HT+11,{size:9,color:COL.label,align:'left'});
+  txt('high',rbx+HIST_W,BOT_TOP+BOT_HT+11,{size:9,color:COL.label,align:'right'});
+  txt('outcome',RCX,BOT_TOP+BOT_HT+24,{size:9,color:COL.label,align:'center'});
+  drawBars(rbx,BOT_TOP,HIST_W,BOT_HT,combHist,BARW,BGAP,COL.rightBar,COL.rightStroke,botMax);
+
+  /* ════════ SMOOTH CURVES + PERCENTILE ARROWS ════════ */
+  if(elapsed>=totalDuration){
+    drawSmoothCurve(lbx,BOT_TOP,HIST_W,BOT_HT,leftHist,BARW,BGAP,COL.leftCurve,botMax);
+    drawSmoothCurve(rbx,BOT_TOP,HIST_W,BOT_HT,combHist,BARW,BGAP,COL.rightCurve,botMax);
+    txt('narrower',LCX,BOT_TOP-12,{size:11,align:'center',color:COL.leftStroke,bold:true});
+    txt('wider \u2014 parameter uncertainty included',RCX,BOT_TOP-12,{size:11,align:'center',color:COL.accent,bold:true});
+
+    function pctBounds(counts,lo,hi){
+      var total=counts.reduce(function(a,b){return a+b},0);
+      if(total===0)return{lo:0,hi:counts.length-1};
+      var cum=0, loIdx=0, hiIdx=counts.length-1;
+      for(var i=0;i<counts.length;i++){cum+=counts[i];if(cum>=total*lo){loIdx=i;break}}
+      cum=0;
+      for(var i=counts.length-1;i>=0;i--){cum+=counts[i];if(cum>=total*(1-hi)){hiIdx=i;break}}
+      return{lo:loIdx,hi:hiIdx};
+    }
+    function drawSpanArrow(histX,bounds,barW,gap,y,color){
+      var x1=histX+bounds.lo*(barW+gap);
+      var x2=histX+bounds.hi*(barW+gap)+barW;
+      var cap=4;
+      ctx.strokeStyle=color;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x1,y-cap);ctx.lineTo(x1,y+cap);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x2,y-cap);ctx.lineTo(x2,y+cap);ctx.stroke();
+      var ah=4;
+      ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x1+ah*1.4,y-ah);ctx.lineTo(x1+ah*1.4,y+ah);ctx.closePath();ctx.fillStyle=color;ctx.fill();
+      ctx.beginPath();ctx.moveTo(x2,y);ctx.lineTo(x2-ah*1.4,y-ah);ctx.lineTo(x2-ah*1.4,y+ah);ctx.closePath();ctx.fill();
+    }
+    if(postElapsed>=ARROW_DELAY){
+      var arrowY=BOT_TOP+BOT_HT*0.3;
+      var lBounds=pctBounds(leftHist,0.10,0.90);
+      var rBounds=pctBounds(combHist,0.10,0.90);
+      drawSpanArrow(lbx,lBounds,BARW,BGAP,arrowY,COL.leftStroke);
+      drawSpanArrow(rbx,rBounds,BARW,BGAP,arrowY,COL.accent);
+    }
+  }
+}
+
+/* ================================================================
+   Animation loop
+   ================================================================ */
+function tick(ts){
+  if(!running)return;
+  if(prevTS===null)prevTS=ts;
+  if(!paused){
+    var dt=(ts-prevTS)/1000*speed;
+    if(elapsed<totalDuration){
+      elapsed=Math.min(elapsed+dt,totalDuration);
+      processSteps();
+    } else {
+      postElapsed+=dt;
+    }
+  }
+  prevTS=ts;
+  render();
+  var done=elapsed>=totalDuration&&postElapsed>=ARROW_DELAY;
+  if(!done){animId=requestAnimationFrame(tick)}
+  else{
+    running=false;
+    render();
+    document.getElementById('pipelines-pause-btn').textContent='\u23F8 Pause';
+  }
+}
+
+function startAnim(){
+  generateSteps();
+  resetState();
+  running=true;paused=false;
+  document.getElementById('pipelines-pause-btn').textContent='\u23F8 Pause';
+  animId=requestAnimationFrame(tick);
+}
+
+/* ================================================================
+   Controls
+   ================================================================ */
+document.getElementById('pipelines-replay-btn').addEventListener('click',function(){
+  if(animId)cancelAnimationFrame(animId);
+  startAnim();
+});
+
+document.getElementById('pipelines-pause-btn').addEventListener('click',function(){
+  if(!running&&elapsed>=totalDuration){startAnim();return}
+  paused=!paused;
+  document.getElementById('pipelines-pause-btn').textContent=paused?'\u25B6 Resume':'\u23F8 Pause';
+  if(!paused){prevTS=null;animId=requestAnimationFrame(tick)}
+});
+
+document.querySelectorAll('.pipelines-speed-group button').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    speed=parseFloat(btn.dataset.speed);
+    document.querySelectorAll('.pipelines-speed-group button').forEach(function(b){b.classList.remove('active')});
+    btn.classList.add('active');
+  });
+});
+
+/* ════════ IntersectionObserver auto-start ════════ */
+render();
+var observer = new IntersectionObserver(function(entries){
+  entries.forEach(function(entry){
+    if(entry.isIntersecting && !running && elapsed===0){
+      startAnim();
+      observer.disconnect();
+    }
+  });
+}, {threshold: 0.3});
+observer.observe(cv);
+
+})();
+</script>
+
+<script src="portfolio-nav.js"></script>
+</body>
+</html>

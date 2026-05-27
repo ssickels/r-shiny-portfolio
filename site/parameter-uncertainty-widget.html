@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Parameter Uncertainty — Portfolio Optimization</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.6}
+
+.page-wrap{max-width:1100px;margin:0 auto;padding:40px 24px 60px}
+
+.page-header{margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.6rem;font-weight:400;color:#f0e6d8;margin-bottom:6px}
+.page-header .subtitle{color:rgba(200,185,160,0.55);font-size:0.95rem}
+
+.widget-wrap{border:1px solid rgba(200,185,160,0.15);border-radius:8px;background:#241c14;margin-bottom:40px}
+
+/* ── Presets ── */
+.presets-section{padding:16px 16px 0}
+.presets-label{font-size:0.68rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.45);margin-bottom:8px}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:600px){.preset-grid{grid-template-columns:1fr}}
+.preset-card{background:rgba(255,255,255,0.02);border:1px solid rgba(200,185,160,0.12);border-radius:5px;padding:9px 13px;cursor:pointer;text-align:left;transition:all 0.15s;font-family:inherit;color:inherit}
+.preset-card:hover{border-color:rgba(200,185,160,0.3);background:rgba(255,255,255,0.04)}
+.preset-card.active{border-color:#1D9E75;background:rgba(29,158,117,0.08)}
+.preset-name{display:block;font-size:0.82rem;font-weight:500;color:#d4b896;margin-bottom:1px}
+.preset-card.active .preset-name{color:#2bc49a}
+.preset-desc{display:block;font-size:0.75rem;color:rgba(200,185,160,0.45);line-height:1.4}
+.preset-divider{font-size:0.72rem;color:rgba(200,185,160,0.3);text-align:center;padding:10px 0 2px;letter-spacing:0.02em}
+
+/* ── Controls ── */
+.controls-section{padding:8px 16px 12px}
+.controls-label{font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.35);margin-bottom:6px}
+
+.asset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+@media(max-width:768px){.asset-grid{grid-template-columns:1fr}}
+
+.asset-card,.corr-card{background:rgba(255,255,255,0.02);border:1px solid rgba(200,185,160,0.08);border-radius:5px;padding:8px 10px}
+.asset-card h3,.corr-card h3{font-size:0.76rem;font-weight:500;color:#d4b896;margin-bottom:5px;letter-spacing:0.02em}
+
+.param-row{margin-bottom:5px}
+.param-row:last-child{margin-bottom:0}
+.param-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px}
+.param-header .lbl{font-size:0.65rem;color:rgba(200,185,160,0.4);text-transform:uppercase;letter-spacing:0.04em}
+.param-header .vals{font-size:0.72rem;color:#d4b896;font-variant-numeric:tabular-nums}
+.param-header .vals .unc{color:rgba(200,185,160,0.35)}
+
+.slider-pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+
+input[type=range]{width:100%;height:3px;-webkit-appearance:none;appearance:none;background:rgba(200,185,160,0.18);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#d4b896;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#d4b896;border:none;cursor:pointer}
+input[type=range]::-moz-range-track{background:rgba(200,185,160,0.18);height:3px;border-radius:2px}
+input[type=range].unc{opacity:0.55}
+input[type=range].unc::-webkit-slider-thumb{width:9px;height:9px;background:rgba(200,185,160,0.55)}
+input[type=range].unc::-moz-range-thumb{width:9px;height:9px;background:rgba(200,185,160,0.55)}
+
+@keyframes param-flash{0%{background:rgba(29,158,117,0.22)}100%{background:transparent}}
+.slider-wrap{border-radius:3px;padding:2px 0}
+.slider-wrap.flash{animation:param-flash 1.5s ease-out}
+
+.corr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+@media(max-width:768px){.corr-grid{grid-template-columns:1fr}}
+
+/* ── Settings (collapsed) ── */
+details.settings-box{border-top:1px solid rgba(200,185,160,0.06);padding-top:6px}
+details.settings-box summary{font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.35);cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px}
+details.settings-box summary::-webkit-details-marker{display:none}
+details.settings-box summary::before{content:'▸';font-size:0.6rem;transition:transform 0.15s}
+details.settings-box[open] summary::before{transform:rotate(90deg)}
+.settings-inner{display:flex;align-items:center;gap:14px;padding:8px 0 2px;flex-wrap:wrap}
+.settings-ctrl{display:flex;align-items:center;gap:6px}
+.settings-ctrl label{font-size:0.65rem;color:rgba(200,185,160,0.4);white-space:nowrap}
+.settings-ctrl .val{color:#d4b896;font-size:0.65rem;min-width:30px;text-align:right}
+.settings-ctrl input[type=range]{width:110px}
+.btn-reset{padding:4px 14px;background:rgba(200,185,160,0.06);border:1px solid rgba(200,185,160,0.2);border-radius:3px;color:rgba(200,185,160,0.5);font-size:0.7rem;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.btn-reset:hover{background:rgba(200,185,160,0.12);color:#d4b896;border-color:rgba(200,185,160,0.35)}
+
+/* ── Plots ── */
+.plots-row{display:grid;grid-template-columns:1fr 1fr}
+@media(max-width:768px){.plots-row{grid-template-columns:1fr}}
+.plot-box{min-height:420px}
+
+/* ── Cloud toggle ── */
+.cloud-bar{padding:8px 18px;border-top:1px solid rgba(200,185,160,0.08);display:flex;align-items:center}
+.cloud-toggle{padding:5px 14px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.3);border-radius:4px;color:#2bc49a;font-size:0.78rem;cursor:pointer;transition:all 0.15s;font-family:inherit;margin-left:auto}
+.cloud-toggle:hover{background:rgba(29,158,117,0.15);border-color:rgba(29,158,117,0.5)}
+.cloud-toggle.off{color:rgba(200,185,160,0.4);border-color:rgba(200,185,160,0.15);background:transparent}
+.cloud-toggle.off:hover{color:#d4b896;border-color:rgba(200,185,160,0.3)}
+
+/* ── Plotly modebar (subtle, hover-only) ── */
+.plot-box .modebar{opacity:0.15!important;transition:opacity 0.2s!important}
+.plot-box:hover .modebar{opacity:0.6!important}
+.plot-box .modebar-btn path{fill:#c4b5a0!important}
+
+/* ── Caption & summary ── */
+.preset-caption{padding:12px 18px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.88rem;color:#c4b5a0;line-height:1.65}
+.preset-caption.hidden{display:none}
+
+.summary{padding:10px 18px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.78rem;color:#c4b5a0;display:flex;flex-wrap:wrap;gap:16px}
+.summary-item{display:flex;gap:4px;align-items:baseline}
+.sum-lbl{color:rgba(200,185,160,0.4);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em}
+.sum-val{color:#d4b896;font-variant-numeric:tabular-nums}
+
+/* ── Explanation ── */
+section.explanation{margin-top:40px}
+section.explanation h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section.explanation p{margin-bottom:14px;color:#c4b5a0;font-size:0.95rem;line-height:1.7}
+section.explanation em{color:#f0e6d8;font-style:italic}
+section.explanation strong{color:#f0e6d8;font-weight:500}
+.section-divider{margin:24px 0;border:none;border-top:1px solid rgba(200,185,160,0.1)}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <header class="page-header">
+    <h1>Parameter Uncertainty in Portfolio Optimization</h1>
+    <p class="subtitle">How small uncertainty in estimated parameters creates large uncertainty in &ldquo;optimal&rdquo; allocations</p>
+  </header>
+
+  <div class="widget-wrap">
+    <div class="presets-section">
+      <div class="presets-label">Choose a scenario</div>
+      <div class="preset-grid" id="preset-grid"></div>
+      <div class="preset-divider">Or adjust sliders below to explore further</div>
+    </div>
+
+    <div class="controls-section">
+      <div class="controls-label">Asset parameters</div>
+      <div class="asset-grid" id="asset-grid"></div>
+
+      <div class="controls-label">Correlations</div>
+      <div class="corr-grid" id="corr-grid"></div>
+
+      <details class="settings-box">
+        <summary>Settings</summary>
+        <div class="settings-inner" id="settings-row"></div>
+      </details>
+    </div>
+
+    <div class="plots-row">
+      <div class="plot-box" id="ternary-plot"></div>
+      <div class="plot-box" id="sharpe-plot"></div>
+    </div>
+
+    <div class="cloud-bar">
+      <button class="cloud-toggle" id="cloud-toggle">Hide cloud</button>
+    </div>
+
+    <div id="preset-caption" class="preset-caption hidden"></div>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <section class="explanation">
+    <h2>What this shows</h2>
+    <p>Standard portfolio optimization (Markowitz mean-variance) takes a set of input parameters &mdash; expected returns, volatilities, correlations &mdash; and produces a single &ldquo;optimal&rdquo; allocation. But those parameters are estimated from historical data, with real uncertainty. This widget illustrates what happens when you propagate parameter uncertainty through the optimization.</p>
+    <p>Set the central value and uncertainty for each parameter. The widget runs many Monte Carlo draws &mdash; each draw samples a complete set of parameters from your specified distributions, computes the resulting optimal (tangency) portfolio, and adds a dot to the cloud. The cloud shows the range of &ldquo;optimal&rdquo; allocations consistent with your parameter uncertainty.</p>
+    <hr class="section-divider"/>
+    <h2>What to notice</h2>
+    <p>Even modest parameter uncertainty often produces wide clouds in the allocation space. The optimization framework treats its inputs as exact and produces precise-looking answers &mdash; but those answers are <em>highly sensitive</em> to the inputs. The same data, with mild uncertainty acknowledged, supports a range of &ldquo;optimal&rdquo; portfolios that can look quite different.</p>
+    <p>This isn&rsquo;t a flaw in the math &mdash; it&rsquo;s an honest reflection of how much the answer depends on inputs that aren&rsquo;t precisely known. Real-world parameter uncertainty is also non-normal, non-independent, and time-varying; this widget uses normal independent distributions for clarity, which probably <strong>understates</strong> the true uncertainty.</p>
+  </section>
+</div>
+
+<script>
+/* ================================================================
+   Configuration
+   ================================================================ */
+const ASSETS = [
+  { key:'us',   name:'US Stocks',    retDef:8,  retUnc:1,   volDef:16, volUnc:2 },
+  { key:'intl', name:'Intl Stocks',  retDef:7,  retUnc:1,   volDef:18, volUnc:2 },
+  { key:'bond', name:'Bonds',        retDef:3,  retUnc:0.5, volDef:5,  volUnc:1 }
+];
+const CORRS = [
+  { key:'us_intl',   label:'US \u2194 Intl',  def:0.70, unc:0.15 },
+  { key:'us_bond',   label:'US \u2194 Bonds', def:0.10, unc:0.15 },
+  { key:'intl_bond', label:'Intl \u2194 Bonds',def:0.00, unc:0.15 }
+];
+const DEF_DRAWS=3000, DEF_RF=2.0;
+
+const R={
+  ret:{min:0,max:15,step:0.5}, retU:{min:0,max:5,step:0.25},
+  vol:{min:1,max:40,step:0.5}, volU:{min:0,max:10,step:0.5},
+  cor:{min:-0.5,max:1.0,step:0.05}, corU:{min:0,max:0.4,step:0.01},
+  draws:{min:100,max:20000,step:100}, rf:{min:0,max:8,step:0.25}
+};
+
+/* ── Presets ── */
+const PRESETS=[
+  { id:'low', name:'Low uncertainty',
+    desc:'Tight estimates, well-determined answer.',
+    caption:'With tight uncertainty on all parameters, the optimization is well-behaved. The cloud of optimal allocations is small \u2014 the \u201cbest\u201d answer is precise. This is closest to the textbook case where parameters are treated as known.',
+    v:{us_ret:8,us_retU:0.2,us_vol:16,us_volU:0.5, intl_ret:7,intl_retU:0.2,intl_vol:18,intl_volU:0.5, bond_ret:3,bond_retU:0.2,bond_vol:5,bond_volU:0.5, us_intl:0.70,us_intlU:0.05,us_bond:0.10,us_bondU:0.05,intl_bond:0.00,intl_bondU:0.05, draws:3000,rf:2}},
+  { id:'realistic', name:'Realistic uncertainty',
+    desc:'The typical case \u2014 wide spread from realistic noise.',
+    caption:'With realistic uncertainty \u2014 the kind you\u2019d actually have when estimating parameters from historical data \u2014 the cloud is visibly wide. The \u201coptimal\u201d allocation is no longer a single answer; it\u2019s a range of equally-defensible answers. This is the gap between textbook precision and real-world precision.',
+    v:{us_ret:8,us_retU:1,us_vol:16,us_volU:2, intl_ret:7,intl_retU:1,intl_vol:18,intl_volU:2, bond_ret:3,bond_retU:0.5,bond_vol:5,bond_volU:1, us_intl:0.70,us_intlU:0.15,us_bond:0.10,us_bondU:0.15,intl_bond:0.00,intl_bondU:0.15, draws:3000,rf:2}},
+  { id:'corr', name:'Correlation crisis',
+    desc:'When correlations become unstable, diversification falters.',
+    caption:'Correlations between asset classes are particularly unstable \u2014 they can shift dramatically during regime changes (the 2008 crisis being a famous example). Even with confident estimates of returns and volatilities, uncertainty about correlation alone can produce a wide spread in \u201coptimal\u201d allocations. This is the source of the \u201cdiversification fails when you need it most\u201d phenomenon.',
+    v:{us_ret:8,us_retU:1,us_vol:16,us_volU:2, intl_ret:7,intl_retU:1,intl_vol:18,intl_volU:2, bond_ret:3,bond_retU:0.5,bond_vol:5,bond_volU:1, us_intl:0.70,us_intlU:0.35,us_bond:0.10,us_bondU:0.35,intl_bond:0.00,intl_bondU:0.35, draws:3000,rf:2}},
+  { id:'return', name:'Return uncertainty',
+    desc:'Expected returns are the hardest parameter to estimate.',
+    caption:'Expected returns are notoriously hard to estimate \u2014 historical averages are noisy over any human-relevant time horizon. Even with precise estimates of volatility and correlation, realistic return uncertainty produces a wide spread in optimal allocations. Note that this uncertainty is fundamental: it isn\u2019t reduced by having more data, since asset return distributions themselves may shift.',
+    v:{us_ret:8,us_retU:2.5,us_vol:16,us_volU:1, intl_ret:7,intl_retU:2.5,intl_vol:18,intl_volU:1, bond_ret:3,bond_retU:1,bond_vol:5,bond_volU:1, us_intl:0.70,us_intlU:0.10,us_bond:0.10,us_bondU:0.10,intl_bond:0.00,intl_bondU:0.10, draws:3000,rf:2}}
+];
+
+/* runtime */
+const els={};
+const displayFns=[];
+let activePreset=null;
+let cloudVisible=true;
+
+/* ================================================================
+   Math
+   ================================================================ */
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function clamp(x,lo,hi){return x<lo?lo:x>hi?hi:x}
+function dot(a,b){let s=0;for(let i=0;i<a.length;i++)s+=a[i]*b[i];return s}
+function mv(m,v){return m.map(r=>dot(r,v))}
+function qf(v,m){return dot(v,mv(m,v))}
+
+function inv(m){
+  const n=m.length;
+  if(n===1){return Math.abs(m[0][0])<1e-14?null:[[1/m[0][0]]]}
+  if(n===2){const d=m[0][0]*m[1][1]-m[0][1]*m[1][0];if(Math.abs(d)<1e-14)return null;const i=1/d;return[[m[1][1]*i,-m[0][1]*i],[-m[1][0]*i,m[0][0]*i]]}
+  if(n===3){
+    const[a,b,c]=[m[0][0],m[0][1],m[0][2]],
+         [d,e,f]=[m[1][0],m[1][1],m[1][2]],
+         [g,h,ii]=[m[2][0],m[2][1],m[2][2]];
+    const det=a*(e*ii-f*h)-b*(d*ii-f*g)+c*(d*h-e*g);
+    if(Math.abs(det)<1e-14)return null;const j=1/det;
+    return[[(e*ii-f*h)*j,(c*h-b*ii)*j,(b*f-c*e)*j],[(f*g-d*ii)*j,(a*ii-c*g)*j,(c*d-a*f)*j],[(d*h-e*g)*j,(b*g-a*h)*j,(a*e-b*d)*j]];
+  }
+  return null;
+}
+function buildCov(sig,rho){
+  return[[sig[0]**2,rho[0]*sig[0]*sig[1],rho[1]*sig[0]*sig[2]],[rho[0]*sig[0]*sig[1],sig[1]**2,rho[2]*sig[1]*sig[2]],[rho[1]*sig[0]*sig[2],rho[2]*sig[1]*sig[2],sig[2]**2]];
+}
+
+/* ================================================================
+   Tangency portfolio — long-only, 3 assets
+   ================================================================ */
+function tangency(mu,cov,rf){
+  const n=3,excess=mu.map(m=>m-rf);
+  if(excess.every(e=>e<=0))return null;
+  let bestS=-Infinity,bestW=null;
+  for(let mask=1;mask<(1<<n);mask++){
+    const idx=[];for(let i=0;i<n;i++)if(mask&(1<<i))idx.push(i);
+    const se=idx.map(i=>excess[i]);if(se.every(e=>e<=0))continue;
+    const sc=idx.map(i=>idx.map(j=>cov[i][j]));
+    const si=inv(sc);if(!si)continue;
+    const w=mv(si,se),ws=w.reduce((a,b)=>a+b,0);
+    if(ws<=1e-12||w.some(wi=>wi<-1e-10))continue;
+    const wn=w.map(wi=>wi/ws),pr=dot(wn,se),pv=qf(wn,sc);
+    if(pv<=1e-14)continue;const sh=pr/Math.sqrt(pv);
+    if(sh>bestS){bestS=sh;bestW=new Array(n).fill(0);for(let k=0;k<idx.length;k++)bestW[idx[k]]=wn[k]}
+  }
+  if(!bestW)return null;
+  return{w:bestW,sharpe:bestS,ret:dot(bestW,mu),vol:Math.sqrt(qf(bestW,cov))};
+}
+
+/* ================================================================
+   Monte Carlo
+   ================================================================ */
+function simulate(){
+  const rf=val('rf')/100, N=Math.round(val('draws'));
+  const cMu=ASSETS.map(a=>val(a.key+'_ret')/100), cSig=ASSETS.map(a=>val(a.key+'_vol')/100), cRho=CORRS.map(c=>val(c.key));
+  const uMu=ASSETS.map(a=>val(a.key+'_retU')/100), uSig=ASSETS.map(a=>val(a.key+'_volU')/100), uRho=CORRS.map(c=>val(c.key+'U'));
+  const results=[];let rej=0;
+  for(let t=0;t<N;t++){
+    const mu=cMu.map((m,i)=>m+uMu[i]*randn());
+    const sig=cSig.map((s,i)=>Math.max(0.001,s+uSig[i]*randn()));
+    const rho=cRho.map((r,i)=>clamp(r+uRho[i]*randn(),-0.999,0.999));
+    const dR=1-rho[0]**2-rho[1]**2-rho[2]**2+2*rho[0]*rho[1]*rho[2];
+    if(dR<=0.001){rej++;continue}
+    const res=tangency(mu,buildCov(sig,rho),rf);
+    if(res)results.push(res);else rej++;
+  }
+  const central=tangency(cMu,buildCov(cSig,cRho),rf);
+  renderPlots(results,central,N,rej);
+  renderSummary(results,central,N,rej);
+}
+function val(id){return parseFloat(els[id].value)}
+
+/* ================================================================
+   Plotting
+   ================================================================ */
+let plotsReady=false;
+function renderPlots(res,cen,N,rej){
+  const uW=res.map(r=>r.w[0]*100),iW=res.map(r=>r.w[1]*100),bW=res.map(r=>r.w[2]*100),sh=res.map(r=>r.sharpe);
+  const tData=[{type:'scatterternary',mode:'markers',a:uW,b:iW,c:bW,
+    marker:{size:4,opacity:0.5,color:sh,colorscale:'Viridis',showscale:true,
+      colorbar:{title:{text:'Sharpe',font:{size:11,color:'#c4b5a0'}},tickfont:{size:10,color:'#c4b5a0'},len:0.75,thickness:12,outlinewidth:0,bgcolor:'rgba(0,0,0,0)'}},
+    name:'MC draws',hovertemplate:'US %{a:.1f}%<br>Intl %{b:.1f}%<br>Bonds %{c:.1f}%<br>Sharpe %{marker.color:.3f}<extra></extra>'}];
+  if(cen)tData.push({type:'scatterternary',mode:'markers',a:[cen.w[0]*100],b:[cen.w[1]*100],c:[cen.w[2]*100],
+    marker:{size:14,color:'#ff4444',symbol:'diamond',line:{color:'#fff',width:2}},name:'Central',
+    hovertemplate:'Central<br>US %{a:.1f}%<br>Intl %{b:.1f}%<br>Bonds %{c:.1f}%<extra></extra>'});
+  const ax={min:0,linecolor:'#999',gridcolor:'rgba(0,0,0,0.08)',tickfont:{size:9,color:'#666'}};
+  const tL={ternary:{sum:100,aaxis:Object.assign({title:{text:'US Stocks',font:{size:12,color:'#c4b5a0'}}},ax),baxis:Object.assign({title:{text:'Intl Stocks',font:{size:12,color:'#c4b5a0'}}},ax),caxis:Object.assign({title:{text:'Bonds',font:{size:12,color:'#c4b5a0'}}},ax),bgcolor:'#faf8f4'},
+    paper_bgcolor:'#241c14',font:{color:'#c4b5a0',family:'system-ui,-apple-system,sans-serif',size:11},margin:{t:50,b:35,l:35,r:35},showlegend:false,title:{text:'Optimal Allocation Cloud',font:{size:14,color:'#e8ddd0'},y:0.98}};
+
+  const hData=[{type:'histogram',x:sh,nbinsx:40,marker:{color:'rgba(29,158,117,0.6)',line:{color:'#1D9E75',width:1}},hovertemplate:'Sharpe %{x:.3f}<br>Count %{y}<extra></extra>'}];
+  const hL={paper_bgcolor:'#241c14',plot_bgcolor:'#faf8f4',font:{color:'#c4b5a0',family:'system-ui,-apple-system,sans-serif',size:11},
+    xaxis:{title:{text:'Sharpe Ratio',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.12)'},
+    yaxis:{title:{text:'Count',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.12)'},
+    margin:{t:50,b:50,l:55,r:20},title:{text:'Distribution of Optimal Sharpe Ratios',font:{size:14,color:'#e8ddd0'},y:0.98},showlegend:false,bargap:0.05,
+    shapes:cen?[{type:'line',x0:cen.sharpe,x1:cen.sharpe,y0:0,y1:1,yref:'paper',line:{color:'#ff4444',width:2,dash:'dash'}}]:[],
+    annotations:cen?[{x:cen.sharpe,y:1,yref:'paper',text:'Central',showarrow:false,font:{color:'#ff4444',size:10},yanchor:'bottom',yshift:2}]:[]};
+
+  const cfg={responsive:true,displayModeBar:true,
+    modeBarButtonsToRemove:['zoom2d','pan2d','select2d','lasso2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+    toImageButtonOptions:{format:'png',filename:'allocation-cloud',height:800,width:1200,scale:2},
+    displaylogo:false};
+  const cfgH={...cfg,toImageButtonOptions:{format:'png',filename:'sharpe-histogram',height:800,width:1200,scale:2}};
+  if(!plotsReady){Plotly.newPlot('ternary-plot',tData,tL,cfg);Plotly.newPlot('sharpe-plot',hData,hL,cfgH);plotsReady=true}
+  else{Plotly.react('ternary-plot',tData,tL,cfg);Plotly.react('sharpe-plot',hData,hL,cfgH)}
+  /* restore cloud visibility state after re-render */
+  if(!cloudVisible){
+    /* ternary: trace 0 = MC dots, trace 1 = central diamond */
+    Plotly.restyle('ternary-plot',{visible:[false]},[0]);
+    /* sharpe: trace 0 = histogram */
+    Plotly.restyle('sharpe-plot',{visible:[false]},[0]);
+  }
+}
+
+function renderSummary(res,cen,N,rej){
+  const el=document.getElementById('summary');
+  if(!res.length){el.innerHTML='<span style="color:rgba(200,185,160,0.4)">No valid draws. Try reducing uncertainty.</span>';return}
+  const L=['US','Intl','Bonds'];
+  const mW=[0,1,2].map(i=>{const v=res.map(r=>r.w[i]);return v.reduce((a,b)=>a+b,0)/v.length});
+  const sW=[0,1,2].map(i=>{const m=mW[i];return Math.sqrt(res.reduce((a,r)=>a+(r.w[i]-m)**2,0)/res.length)});
+  const shs=res.map(r=>r.sharpe),mSh=shs.reduce((a,b)=>a+b,0)/shs.length;
+  const sSh=Math.sqrt(shs.reduce((a,b)=>a+(b-mSh)**2,0)/shs.length);
+  let h='';
+  if(cen)h+=`<div class="summary-item"><span class="sum-lbl">Central:</span><span class="sum-val">${cen.w.map((w,i)=>`${L[i]}&nbsp;${(w*100).toFixed(1)}%`).join(' &middot; ')} (Sharpe ${cen.sharpe.toFixed(3)})</span></div>`;
+  h+=`<div class="summary-item"><span class="sum-lbl">Mean&pm;SD:</span><span class="sum-val">${mW.map((m,i)=>`${L[i]}&nbsp;${(m*100).toFixed(1)}&pm;${(sW[i]*100).toFixed(1)}%`).join(' &middot; ')}</span></div>`;
+  h+=`<div class="summary-item"><span class="sum-lbl">Sharpe:</span><span class="sum-val">${mSh.toFixed(3)} &pm; ${sSh.toFixed(3)}</span></div>`;
+  h+=`<div class="summary-item"><span class="sum-lbl">Valid:</span><span class="sum-val">${res.length}/${N}${rej?` (${rej} rej)`:''}</span></div>`;
+  el.innerHTML=h;
+}
+
+/* ================================================================
+   Cloud toggle
+   ================================================================ */
+function toggleCloud(){
+  cloudVisible=!cloudVisible;
+  const btn=document.getElementById('cloud-toggle');
+  btn.textContent=cloudVisible?'Hide cloud':'Show cloud';
+  btn.classList.toggle('off',!cloudVisible);
+  /* ternary: trace 0 = MC dots */
+  Plotly.restyle('ternary-plot',{visible:[cloudVisible]},[0]);
+  /* sharpe: trace 0 = histogram */
+  Plotly.restyle('sharpe-plot',{visible:[cloudVisible]},[0]);
+}
+
+/* ================================================================
+   Presets
+   ================================================================ */
+function applyPreset(id){
+  const p=PRESETS.find(p=>p.id===id);if(!p)return;
+  /* detect which individual sliders change */
+  const changedWraps=new Set();
+  for(const[k,v]of Object.entries(p.v)){
+    if(els[k]&&Math.abs(parseFloat(els[k].value)-v)>0.001){
+      const wrap=els[k].closest('.slider-wrap');if(wrap)changedWraps.add(wrap);
+    }
+  }
+  activePreset=id;
+  for(const[k,v]of Object.entries(p.v)){if(els[k])els[k].value=v}
+  displayFns.forEach(fn=>fn());
+  document.getElementById('draws_d').textContent=p.v.draws||DEF_DRAWS;
+  document.getElementById('rf_d').textContent=(p.v.rf??DEF_RF).toFixed(1)+'%';
+  document.querySelectorAll('.preset-card').forEach(c=>c.classList.toggle('active',c.dataset.preset===id));
+  const cap=document.getElementById('preset-caption');cap.textContent=p.caption;cap.classList.remove('hidden');
+  changedWraps.forEach(w=>{w.classList.remove('flash');void w.offsetWidth;w.classList.add('flash');
+    w.addEventListener('animationend',()=>w.classList.remove('flash'),{once:true})});
+  simulate();
+}
+function clearPreset(){
+  if(!activePreset)return;activePreset=null;
+  document.querySelectorAll('.preset-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('preset-caption').classList.add('hidden');
+}
+
+/* ================================================================
+   UI
+   ================================================================ */
+function mkSliderPair(parent,id,label,cDef,uDef,cR,uR,cFmt,uFmt){
+  const row=document.createElement('div');row.className='param-row';
+  const hdr=document.createElement('div');hdr.className='param-header';
+  const lbl=document.createElement('span');lbl.className='lbl';lbl.textContent=label;
+  const vls=document.createElement('span');vls.className='vals';vls.id=id+'_disp';
+  hdr.append(lbl,vls);
+  const pair=document.createElement('div');pair.className='slider-pair';
+  const cs=document.createElement('input');cs.type='range';cs.min=cR.min;cs.max=cR.max;cs.step=cR.step;cs.value=cDef;cs.id=id;
+  const us=document.createElement('input');us.type='range';us.className='unc';us.min=uR.min;us.max=uR.max;us.step=uR.step;us.value=uDef;us.id=id+'U';
+  const cw=document.createElement('div');cw.className='slider-wrap';cw.appendChild(cs);
+  const uw=document.createElement('div');uw.className='slider-wrap';uw.appendChild(us);
+  pair.append(cw,uw);row.append(hdr,pair);parent.appendChild(row);
+  els[id]=cs;els[id+'U']=us;
+  const upd=()=>{vls.innerHTML=`${cFmt(cs.value)} <span class="unc">\u00b1 ${uFmt(us.value)}</span>`};
+  displayFns.push(upd);upd();
+  cs.addEventListener('input',()=>{upd();clearPreset();debouncedSim()});
+  us.addEventListener('input',()=>{upd();clearPreset();debouncedSim()});
+}
+function pctFmt(v){return parseFloat(v).toFixed(1)+'%'}
+function pctFmt2(v){return parseFloat(v).toFixed(2)+'%'}
+function corFmt(v){return parseFloat(v).toFixed(2)}
+
+function buildUI(){
+  /* presets */
+  const pg=document.getElementById('preset-grid');
+  PRESETS.forEach(p=>{
+    const btn=document.createElement('button');btn.className='preset-card';btn.dataset.preset=p.id;
+    btn.innerHTML=`<span class="preset-name">${p.name}</span><span class="preset-desc">${p.desc}</span>`;
+    btn.addEventListener('click',()=>applyPreset(p.id));
+    pg.appendChild(btn);
+  });
+
+  /* asset cards */
+  const ag=document.getElementById('asset-grid');
+  ASSETS.forEach(a=>{
+    const card=document.createElement('div');card.className='asset-card';
+    const h3=document.createElement('h3');h3.textContent=a.name;card.appendChild(h3);
+    ag.appendChild(card);
+    mkSliderPair(card,a.key+'_ret','Expected return',a.retDef,a.retUnc,R.ret,R.retU,pctFmt,pctFmt2);
+    mkSliderPair(card,a.key+'_vol','Volatility',a.volDef,a.volUnc,R.vol,R.volU,pctFmt,pctFmt);
+  });
+
+  /* correlations */
+  const cg=document.getElementById('corr-grid');
+  CORRS.forEach(c=>{
+    const card=document.createElement('div');card.className='corr-card';
+    const h3=document.createElement('h3');h3.textContent=c.label;card.appendChild(h3);
+    cg.appendChild(card);
+    mkSliderPair(card,c.key,'Correlation',c.def,c.unc,R.cor,R.corU,corFmt,corFmt);
+  });
+
+  /* settings */
+  const sr=document.getElementById('settings-row');
+  const dc=document.createElement('div');dc.className='settings-ctrl';
+  dc.innerHTML=`<label>Draws</label><span class="val" id="draws_d">${DEF_DRAWS}</span>`;
+  const ds=document.createElement('input');ds.type='range';ds.min=R.draws.min;ds.max=R.draws.max;ds.step=R.draws.step;ds.value=DEF_DRAWS;ds.id='draws';
+  dc.insertBefore(ds,dc.querySelector('.val'));sr.appendChild(dc);
+  els.draws=ds;const dd=dc.querySelector('#draws_d');
+  ds.addEventListener('input',()=>{dd.textContent=ds.value;clearPreset();debouncedSim()});
+
+  const rc=document.createElement('div');rc.className='settings-ctrl';
+  rc.innerHTML=`<label>Risk-free rate</label><span class="val" id="rf_d">${DEF_RF.toFixed(1)}%</span>`;
+  const rs=document.createElement('input');rs.type='range';rs.min=R.rf.min;rs.max=R.rf.max;rs.step=R.rf.step;rs.value=DEF_RF;rs.id='rf';
+  rc.insertBefore(rs,rc.querySelector('.val'));sr.appendChild(rc);
+  els.rf=rs;const rd=rc.querySelector('#rf_d');
+  rs.addEventListener('input',()=>{rd.textContent=parseFloat(rs.value).toFixed(1)+'%';clearPreset();debouncedSim()});
+
+  const btn=document.createElement('button');btn.className='btn-reset';btn.textContent='Reset';
+  btn.addEventListener('click',()=>applyPreset('realistic'));
+  sr.appendChild(btn);
+
+  /* cloud toggle */
+  document.getElementById('cloud-toggle').addEventListener('click',toggleCloud);
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
+const debouncedSim=debounce(simulate,200);
+buildUI();
+applyPreset('realistic');
+</script>
+</body>
+</html>

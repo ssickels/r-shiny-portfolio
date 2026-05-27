@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>When Parameters Drift — Behind the Assumptions</title>
+<meta property="og:title" content="When Parameters Drift — Behind the Assumptions"/>
+<meta property="og:description" content="Even if you could estimate the parameters perfectly from a historical window, the parameters themselves change."/>
+<meta property="og:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://stevessite.com/behind-3-drift.html"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="When Parameters Drift — Behind the Assumptions"/>
+<meta name="twitter:description" content="Even if you could estimate the parameters perfectly from a historical window, the parameters themselves change."/>
+<meta name="twitter:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+
+.page-wrap{max-width:740px;margin:0 auto;padding:72px 24px 60px}
+
+/* Breadcrumb */
+.breadcrumb{font-size:0.82rem;color:rgba(200,185,160,0.45);margin-bottom:20px}
+.breadcrumb a{color:rgba(200,185,160,0.55);text-decoration:none;transition:color 0.15s}
+.breadcrumb a:hover{color:#f0e6d8}
+.breadcrumb .sep{margin:0 6px}
+
+.page-header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
+.page-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
+
+section{margin-bottom:40px}
+section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem}
+section p:last-child{margin-bottom:0}
+section ul{margin:14px 0;padding-left:24px;color:#c4b5a0;font-size:0.97rem}
+section li{margin-bottom:10px}
+section li:last-child{margin-bottom:0}
+em{color:#f0e6d8;font-style:italic}
+strong{color:#f0e6d8;font-weight:500}
+
+/* Chart figure */
+.chart-figure{margin:24px 0 40px}
+.chart-figure img{width:100%;border-radius:6px;border:1px solid rgba(200,185,160,0.15);cursor:pointer;transition:opacity 0.15s}
+.chart-figure img:hover{opacity:0.85}
+.chart-caption{font-size:0.82rem;color:rgba(200,185,160,0.5);font-style:italic;line-height:1.55;margin-top:10px}
+
+/* Lightbox */
+.lightbox{display:none;position:fixed;inset:0;z-index:99999;background:rgba(10,8,6,0.92);backdrop-filter:blur(4px);align-items:center;justify-content:center;cursor:pointer;padding:24px}
+.lightbox.is-open{display:flex}
+.lightbox img{max-width:95vw;max-height:92vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.6);cursor:default}
+.lightbox-close{position:absolute;top:16px;right:20px;color:rgba(200,185,160,0.6);font-size:28px;font-weight:300;cursor:pointer;line-height:1;transition:color 0.15s}
+.lightbox-close:hover{color:#e8ddd0}
+
+/* Chapter nav */
+.chapter-nav{display:flex;justify-content:space-between;align-items:flex-start;margin-top:48px;padding-top:24px;border-top:1px solid rgba(200,185,160,0.15);gap:24px}
+.chapter-nav a{text-decoration:none;transition:color 0.15s}
+.chapter-nav .nav-prev,.chapter-nav .nav-next{display:flex;flex-direction:column;gap:4px}
+.chapter-nav .nav-prev{align-items:flex-start}
+.chapter-nav .nav-next{align-items:flex-end;margin-left:auto;text-align:right}
+.chapter-nav .nav-dir{font-size:0.78rem;color:rgba(200,185,160,0.45)}
+.chapter-nav .nav-title{font-size:0.95rem;color:#1D9E75}
+.chapter-nav a:hover .nav-title{color:#f0e6d8}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ═══ Breadcrumb ═══ -->
+<div class="breadcrumb">
+  <a href="/behind-the-assumptions.html">&larr; Behind the Assumptions</a>
+  <span class="sep">&middot;</span>
+  Chapter 3 of 4
+</div>
+
+<!-- ═══ Title ═══ -->
+<div class="page-header">
+  <h1>When parameters drift</h1>
+  <p>Even if you could estimate the parameters perfectly from a historical window, the parameters themselves change.</p>
+</div>
+
+<!-- ═══ Opening ═══ -->
+<section>
+  <p>The <a href="/behind-2-parameter-uncertainty.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">previous chapter</a> showed that within a single set of historical data, there&rsquo;s substantial uncertainty about what the &ldquo;right&rdquo; inputs to the framework are &mdash; and that this uncertainty propagates into wide variation in the &ldquo;optimal&rdquo; allocation. But that discussion implicitly assumed something else: that the inputs we&rsquo;re uncertain about are themselves stable. That with enough data, or better estimation methods, we could pin them down.</p>
+  <p>This chapter examines that assumption. It turns out the inputs aren&rsquo;t stable. The historical summaries we&rsquo;d compute from data drift over time, sometimes gradually, sometimes sharply. The &ldquo;true parameters&rdquo; the previous chapter was implicitly chasing aren&rsquo;t sitting still &mdash; they&rsquo;re moving targets.</p>
+</section>
+
+<!-- ═══ The mean-variance framework has no time dimension ═══ -->
+<section>
+  <h2>The mean-variance framework has no time dimension</h2>
+  <p>Notice what the Markowitz framework asks of you. It asks for a set of parameters &mdash; expected returns, volatilities, correlations &mdash; and produces a frontier of efficient portfolios, plus a special point on that frontier (the tangency portfolio, if you&rsquo;ve also specified a risk-free rate). It doesn&rsquo;t ask <em>when</em> those parameters apply, how long they&rsquo;ll persist, or what to do when they change. The framework is single-period: given these parameters now, here&rsquo;s the set of efficient allocations.</p>
+  <p>This is worth flagging because the framework&rsquo;s outputs are often treated as recommendations for real-world investment decisions, which always play out over time. Markowitz&rsquo;s original work was more careful &mdash; it described efficient portfolios as ones not dominated on mean and variance, leaving the choice among them to the investor. But in subsequent practice, the tangency portfolio in particular has often been treated as straightforwardly &ldquo;the optimal portfolio,&rdquo; and mean-variance optimization software often presents outputs in recommendation-like form.</p>
+  <p>When the framework is used this way &mdash; its outputs treated as forward-looking recommendations &mdash; the time question becomes urgent. The framework was designed to characterize efficient portfolios under a given set of inputs. It wasn&rsquo;t designed to handle inputs that change. In practice, the standard approach is to estimate parameters from a recent historical window (say, the last 10 or 20 years), feed them into the framework, get a recommendation, and apply that recommendation going forward. The implicit assumption is that the parameters from the historical window will be roughly the same in the future.</p>
+  <p>How well does this assumption hold up?</p>
+</section>
+
+<!-- ═══ A concrete example: stock-bond correlation ═══ -->
+<section>
+  <h2>A concrete example: stock-bond correlation</h2>
+  <p>Of all the inputs to portfolio optimization, correlation is the most consequential for the case for diversification. If stocks and bonds are uncorrelated or negatively correlated, holding both reduces portfolio volatility for any given expected return &mdash; that&rsquo;s the mathematical foundation of the standard 60/40 portfolio and similar diversified strategies. If they become strongly positively correlated, the diversification benefit collapses, and the portfolio behaves more like a leveraged equity position than a balanced strategy.</p>
+  <p>So: what <em>is</em> the correlation between stocks and bonds?</p>
+  <p>The chart below shows the 36-month rolling correlation between monthly S&amp;P 500 returns and 10-year Treasury returns, from 1965 to the present. The chart is a single line, but it tells a story that single-number summaries can&rsquo;t.</p>
+</section>
+
+<!-- ═══ Chart ═══ -->
+<figure class="chart-figure">
+  <img src="img/stock_bond_correlation.png" alt="36-month rolling correlation of S&amp;P 500 vs. 10-year Treasury returns, 1965 to present"/>
+  <figcaption class="chart-caption">36-month rolling correlation of monthly S&amp;P 500 returns vs. 10-year Treasury returns, 1965 to present. Data from Yahoo Finance (S&amp;P 500) and FRED (10-year Treasury).</figcaption>
+</figure>
+
+<!-- ═══ Post-chart prose ═══ -->
+<section>
+  <p>What you see: correlation was solidly positive &mdash; often 0.3 or higher &mdash; through the late 1990s. Around 2000, it dropped sharply and went negative, where it stayed for most of the next two decades. Around 2022, it flipped back to positive.</p>
+  <p>These aren&rsquo;t gradual drifts. They&rsquo;re regime shifts: the correlation moved from one persistent value to a meaningfully different persistent value over a relatively short span. A portfolio constructed in 1995 using &ldquo;the historical stock-bond correlation&rdquo; would have used a number that was about to become obsolete. A portfolio constructed in 2010 using the same approach would have used a number that, by 2022, had also become obsolete.</p>
+  <p>Stock-bond correlation isn&rsquo;t a fixed feature of the markets &mdash; it&rsquo;s a number we calculate from data, and what we get depends on what data and what method. The chart above is one such calculation; others would show the same qualitative story (drift between regimes) with different specific numbers.</p>
+</section>
+
+<!-- ═══ What this means for the framework ═══ -->
+<section>
+  <h2>What this means for the framework</h2>
+  <p>Recall what the framework does: it takes parameters as inputs and produces an &ldquo;optimal&rdquo; allocation. If the parameters change, the &ldquo;optimal&rdquo; allocation changes too &mdash; sometimes substantially.</p>
+  <p>A 60/40 stock-bond portfolio is often justified by appeals to diversification benefits that depend on stock-bond correlation being low or negative. During the long period of negative correlation (roughly 2000&ndash;2022), this justification was empirically supported &mdash; the diversification benefit was real and substantial, with bonds reliably gaining when stocks fell. In 2022, when correlations flipped positive, that justification temporarily evaporated. Stocks and bonds fell together. The 60/40 portfolio had its worst year in decades, not because the framework recommended it incorrectly given the inputs, but because the inputs that had supported the recommendation were no longer accurate.</p>
+  <figure class="chart-figure">
+    <img src="img/chap2_realistic_uncertainty.png" alt="Cloud of optimal tangency portfolios under realistic parameter uncertainty, from Chapter 2's widget"/>
+    <figcaption class="chart-caption">From Chapter 2&rsquo;s widget: a cloud of &ldquo;optimal&rdquo; tangency portfolios under realistic parameter uncertainty (Realistic preset, default values). Each dot is the framework&rsquo;s optimal answer for one defensible set of input values; together they span the wide range of equally-defensible answers within a single historical window.</figcaption>
+  </figure>
+  <p>This is a different kind of problem than the parameter uncertainty discussed in the previous chapter. There, the issue was that within a given historical window, multiple defensible estimates produce different recommendations. Here, the issue is that the underlying quantities being estimated aren&rsquo;t stable across windows. Even with infinite data from a particular era, you&rsquo;d get an estimate that captures that era&rsquo;s behavior, not the future&rsquo;s.</p>
+  <p>The mean-variance framework has no way to model this. It treats its inputs as features of a stationary world, and produces recommendations that assume the inputs will continue to apply. When the inputs shift, the framework has nothing to say &mdash; until someone re-estimates with a more recent window and re-runs the optimization, producing a different &ldquo;optimal&rdquo; allocation. The recommendations keep moving, not because the analyst&rsquo;s method is improving, but because the underlying world is changing.</p>
+</section>
+
+<!-- ═══ What's the right input to use, then? ═══ -->
+<section>
+  <h2>What&rsquo;s the right input to use, then?</h2>
+  <p>There isn&rsquo;t a clean answer. Reasonable approaches include:</p>
+  <ul>
+    <li>Use a long historical window and accept that you&rsquo;ll be averaging across different regimes.</li>
+    <li>Use a recent window and accept that you&rsquo;ll be heavily influenced by whatever regime happens to be current.</li>
+    <li>Use forward-looking judgment to adjust historical estimates &mdash; but this just relocates the problem to &ldquo;how do you form forward-looking judgments?&rdquo;</li>
+    <li>Use scenario analysis: instead of picking a single input, examine how the recommendation changes across plausible regimes.</li>
+    <li>Build models of regime change explicitly (these exist in the literature &mdash; regime-switching models, Bayesian time-varying parameter models) but they&rsquo;re substantially more complex than the standard framework, and they shift the problem rather than solving it.</li>
+  </ul>
+  <p>None of these approaches make the underlying problem go away. The framework was designed for a world with stable parameters. The actual world has parameters that drift, sometimes sharply, and any single-period optimization is making an implicit bet that the parameters won&rsquo;t change much during the period being optimized over.</p>
+</section>
+
+<!-- ═══ Combining drift with input uncertainty ═══ -->
+<section>
+  <h2>Combining drift with input uncertainty</h2>
+  <p>The previous chapter showed that, within a given set of historical data, parameter uncertainty produces wide spreads in the &ldquo;optimal&rdquo; allocation. This chapter shows that the parameters themselves drift over time. These problems compound.</p>
+  <p>If you imagine the cloud of &ldquo;optimal&rdquo; allocations from the previous chapter&rsquo;s widget &mdash; the cloud you get from parameter uncertainty alone &mdash; and then imagine that cloud moving over time as the parameters drift, you have a more complete picture of how unstable the framework&rsquo;s recommendations actually are. The &ldquo;optimal&rdquo; portfolio isn&rsquo;t a single point. It isn&rsquo;t even a cloud. It&rsquo;s a cloud that&rsquo;s shifting position from era to era, sometimes substantially.</p>
+  <p>That&rsquo;s a long way from the precise-looking output the framework produces.</p>
+  <p>The <a href="/behind-4-three-assets.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">next chapter</a> looks at what happens when you add another layer of complexity: more than two assets. In the two-asset case, &ldquo;optimization&rdquo; is somewhat trivial &mdash; there&rsquo;s only one degree of freedom, the stock-bond split. With three or more assets, the optimization becomes a real choice, and the problems we&rsquo;ve been examining get richer.</p>
+</section>
+
+<!-- ═══ Chapter navigation ═══ -->
+<nav class="chapter-nav">
+  <a href="/behind-2-parameter-uncertainty.html" class="nav-prev">
+    <span class="nav-dir">&larr; Previous</span>
+    <span class="nav-title">How much does the answer depend on the inputs?</span>
+  </a>
+  <a href="/behind-4-three-assets.html" class="nav-next">
+    <span class="nav-dir">Next &rarr;</span>
+    <span class="nav-title">Three assets and beyond</span>
+  </a>
+</nav>
+
+</div><!-- .page-wrap -->
+
+<div class="lightbox" id="lightbox">
+  <span class="lightbox-close">&times;</span>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+(function(){
+  var lb = document.getElementById('lightbox');
+  var lbImg = document.getElementById('lightbox-img');
+
+  document.querySelectorAll('.chart-figure img').forEach(function(img){
+    img.addEventListener('click', function(){
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lb.classList.add('is-open');
+    });
+  });
+
+  lb.addEventListener('click', function(e){
+    if(e.target !== lbImg) lb.classList.remove('is-open');
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') lb.classList.remove('is-open');
+  });
+})();
+</script>
+
+<script src="portfolio-nav.js"></script>
+</body>
+</html>

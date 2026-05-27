@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Three Assets and Beyond — Behind the Assumptions</title>
+<meta property="og:title" content="Three Assets and Beyond — Behind the Assumptions"/>
+<meta property="og:description" content="With more than two assets, optimization becomes a real choice, and the problems we've examined compound."/>
+<meta property="og:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://stevessite.com/behind-4-three-assets.html"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Three Assets and Beyond — Behind the Assumptions"/>
+<meta name="twitter:description" content="With more than two assets, optimization becomes a real choice, and the problems we've examined compound."/>
+<meta name="twitter:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+
+.page-wrap{max-width:740px;margin:0 auto;padding:72px 24px 60px}
+
+/* Breadcrumb */
+.breadcrumb{font-size:0.82rem;color:rgba(200,185,160,0.45);margin-bottom:20px}
+.breadcrumb a{color:rgba(200,185,160,0.55);text-decoration:none;transition:color 0.15s}
+.breadcrumb a:hover{color:#f0e6d8}
+.breadcrumb .sep{margin:0 6px}
+
+.page-header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
+.page-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
+
+section{margin-bottom:40px}
+section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section h3{font-size:1.0rem;font-weight:400;color:#d4b896;margin-top:28px;margin-bottom:10px}
+section p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem}
+section p:last-child{margin-bottom:0}
+section ul{margin:14px 0;padding-left:24px;color:#c4b5a0;font-size:0.97rem}
+section li{margin-bottom:10px}
+section li:last-child{margin-bottom:0}
+em{color:#f0e6d8;font-style:italic}
+strong{color:#f0e6d8;font-weight:500}
+
+/* ── Widget ── */
+.widget-wrap{border:1px solid rgba(200,185,160,0.15);border-radius:8px;background:#241c14;margin-bottom:40px}
+
+.presets-section{padding:16px 16px 0}
+.presets-label{font-size:0.68rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.45);margin-bottom:8px}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:600px){.preset-grid{grid-template-columns:1fr}}
+.preset-card{background:rgba(255,255,255,0.02);border:1px solid rgba(200,185,160,0.12);border-radius:5px;padding:9px 13px;cursor:pointer;text-align:left;transition:all 0.15s;font-family:inherit;color:inherit}
+.preset-card:hover{border-color:rgba(200,185,160,0.3);background:rgba(255,255,255,0.04)}
+.preset-card.active{border-color:#1D9E75;background:rgba(29,158,117,0.08)}
+.preset-name{display:block;font-size:0.82rem;font-weight:500;color:#d4b896;margin-bottom:1px}
+.preset-card.active .preset-name{color:#2bc49a}
+.preset-desc{display:block;font-size:0.75rem;color:rgba(200,185,160,0.45);line-height:1.4}
+.preset-divider{font-size:0.72rem;color:rgba(200,185,160,0.3);text-align:center;padding:10px 0 2px;letter-spacing:0.02em}
+
+.controls-section{padding:8px 16px 12px}
+.controls-label{font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.35);margin-bottom:6px}
+
+.asset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+@media(max-width:768px){.asset-grid{grid-template-columns:1fr}}
+
+.asset-card,.corr-card{background:rgba(255,255,255,0.02);border:1px solid rgba(200,185,160,0.08);border-radius:5px;padding:8px 10px}
+.asset-card h3,.corr-card h3{font-size:0.76rem;font-weight:500;color:#d4b896;margin-bottom:5px;letter-spacing:0.02em;margin-top:0}
+
+.param-row{margin-bottom:5px}
+.param-row:last-child{margin-bottom:0}
+.param-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px}
+.param-header .lbl{font-size:0.65rem;color:rgba(200,185,160,0.4);text-transform:uppercase;letter-spacing:0.04em}
+.param-header .vals{font-size:0.72rem;color:#d4b896;font-variant-numeric:tabular-nums}
+.param-header .vals .unc{color:rgba(200,185,160,0.35)}
+
+.slider-pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+
+input[type=range]{width:100%;height:3px;-webkit-appearance:none;appearance:none;background:rgba(200,185,160,0.18);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#d4b896;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#d4b896;border:none;cursor:pointer}
+input[type=range]::-moz-range-track{background:rgba(200,185,160,0.18);height:3px;border-radius:2px}
+input[type=range].unc{opacity:0.55}
+input[type=range].unc::-webkit-slider-thumb{width:9px;height:9px;background:rgba(200,185,160,0.55)}
+input[type=range].unc::-moz-range-thumb{width:9px;height:9px;background:rgba(200,185,160,0.55)}
+
+@keyframes param-flash{0%{background:rgba(29,158,117,0.22)}100%{background:transparent}}
+.slider-wrap{border-radius:3px;padding:2px 0}
+.slider-wrap.flash{animation:param-flash 1.5s ease-out}
+
+.corr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+@media(max-width:768px){.corr-grid{grid-template-columns:1fr}}
+
+details.settings-box{border-top:1px solid rgba(200,185,160,0.06);padding-top:6px}
+details.settings-box summary{font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.35);cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px}
+details.settings-box summary::-webkit-details-marker{display:none}
+details.settings-box summary::before{content:'▸';font-size:0.6rem;transition:transform 0.15s}
+details.settings-box[open] summary::before{transform:rotate(90deg)}
+.settings-inner{display:flex;align-items:center;gap:14px;padding:8px 0 2px;flex-wrap:wrap}
+.settings-ctrl{display:flex;align-items:center;gap:6px}
+.settings-ctrl label{font-size:0.65rem;color:rgba(200,185,160,0.4);white-space:nowrap}
+.settings-ctrl .val{color:#d4b896;font-size:0.65rem;min-width:30px;text-align:right}
+.settings-ctrl input[type=range]{width:110px}
+.btn-reset{padding:4px 14px;background:rgba(200,185,160,0.06);border:1px solid rgba(200,185,160,0.2);border-radius:3px;color:rgba(200,185,160,0.5);font-size:0.7rem;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.btn-reset:hover{background:rgba(200,185,160,0.12);color:#d4b896;border-color:rgba(200,185,160,0.35)}
+
+.plots-row{display:grid;grid-template-columns:1fr}
+.plot-box{min-height:420px}
+.plot-box-short{min-height:300px}
+
+.cloud-bar{padding:8px 18px;border-top:1px solid rgba(200,185,160,0.08);display:flex;align-items:center}
+.cloud-toggle{padding:5px 14px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.3);border-radius:4px;color:#2bc49a;font-size:0.78rem;cursor:pointer;transition:all 0.15s;font-family:inherit;margin-left:auto}
+.cloud-toggle:hover{background:rgba(29,158,117,0.15);border-color:rgba(29,158,117,0.5)}
+.cloud-toggle.off{color:rgba(200,185,160,0.4);border-color:rgba(200,185,160,0.15);background:transparent}
+.cloud-toggle.off:hover{color:#d4b896;border-color:rgba(200,185,160,0.3)}
+
+.plot-box .modebar{opacity:0.15!important;transition:opacity 0.2s!important}
+.plot-box:hover .modebar{opacity:0.6!important}
+.plot-box .modebar-btn path{fill:#c4b5a0!important}
+
+.preset-caption{padding:12px 18px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.88rem;color:#c4b5a0;line-height:1.65}
+.preset-caption.hidden{display:none}
+
+.summary{padding:10px 18px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.78rem;color:#c4b5a0;display:flex;flex-wrap:wrap;gap:16px}
+.summary-item{display:flex;gap:4px;align-items:baseline}
+.sum-lbl{color:rgba(200,185,160,0.4);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em}
+.sum-val{color:#d4b896;font-variant-numeric:tabular-nums}
+
+/* ── Personal sections ── */
+.personal{border-left:3px solid rgba(29,158,117,0.35);padding-left:20px;margin-left:0}
+.personal-label{font-size:0.72rem;color:rgba(29,158,117,0.6);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:16px;font-weight:500}
+
+/* ── Blockquote ── */
+blockquote{border-left:3px solid rgba(200,185,160,0.25);padding:16px 20px;margin:20px 0;background:rgba(255,255,255,0.02);border-radius:0 4px 4px 0;color:#c4b5a0;font-size:0.95rem;line-height:1.7;font-style:italic}
+
+/* ── Chapter nav ── */
+.chapter-nav{display:flex;justify-content:space-between;align-items:flex-start;margin-top:48px;padding-top:24px;border-top:1px solid rgba(200,185,160,0.15);gap:24px}
+.chapter-nav a{text-decoration:none;transition:color 0.15s}
+.chapter-nav .nav-prev,.chapter-nav .nav-next{display:flex;flex-direction:column;gap:4px}
+.chapter-nav .nav-prev{align-items:flex-start}
+.chapter-nav .nav-next{align-items:flex-end;margin-left:auto;text-align:right}
+.chapter-nav .nav-dir{font-size:0.78rem;color:rgba(200,185,160,0.45)}
+.chapter-nav .nav-title{font-size:0.95rem;color:#1D9E75}
+.chapter-nav a:hover .nav-title{color:#f0e6d8}
+
+/* ── Return link ── */
+.return-link{text-align:center;margin-top:16px}
+.return-link a{color:rgba(200,185,160,0.5);text-decoration:none;font-size:0.88rem;transition:color 0.15s}
+.return-link a:hover{color:#f0e6d8}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ═══ Breadcrumb ═══ -->
+<div class="breadcrumb">
+  <a href="/behind-the-assumptions.html">&larr; Behind the Assumptions</a>
+  <span class="sep">&middot;</span>
+  Chapter 4 of 4
+</div>
+
+<!-- ═══ Title ═══ -->
+<div class="page-header">
+  <h1>Three assets and beyond &mdash; additional challenges</h1>
+  <p>With more than two assets, optimization becomes a real choice, and the problems we&rsquo;ve examined compound.</p>
+</div>
+
+<!-- ═══ Opening ═══ -->
+<section>
+  <p>So far, every example in this section has used two assets: stocks and bonds. That&rsquo;s enough to introduce the framework, the Sharpe ratio, parameter uncertainty, and drift. But it understates the difficulty in one specific way: with only two assets, &ldquo;optimization&rdquo; is a misleading word.</p>
+  <p>Think about it. With two assets, every allocation is uniquely determined by a single number &mdash; the stock weight. The bond weight is whatever&rsquo;s left. There&rsquo;s no genuine optimization problem; there&rsquo;s just a single dimension to slide along. The &ldquo;optimal&rdquo; point on the frontier is wherever the Sharpe ratio happens to be highest, and finding it is a one-dimensional search.</p>
+  <p>Real portfolios don&rsquo;t look like this. A typical investor&rsquo;s portfolio might include US stocks, international stocks, bonds of varying durations, possibly real estate, possibly cash. Even a relatively simple three-fund portfolio (US stocks, international stocks, bonds) has two degrees of freedom. The &ldquo;optimization&rdquo; is now choosing a point in a two-dimensional space, and there are many more allocations to consider.</p>
+  <p>What happens to the framework&rsquo;s behavior when there are real optimization choices to make? That&rsquo;s what this chapter examines.</p>
+</section>
+
+<!-- ═══ Three-asset optimization ═══ -->
+<section>
+  <h2>Three-asset optimization</h2>
+  <p>With three assets, the frontier is no longer a curve in 2D &mdash; it&rsquo;s a surface in 3D, projected down to a curve when you plot expected return against volatility. The tangency portfolio is still well-defined: it&rsquo;s still the allocation that maximizes Sharpe ratio. But finding it now requires solving a real optimization problem: there are two weights to choose (the third is implied), and the choice depends on all the inputs simultaneously.</p>
+  <p>This matters because the optimization is sensitive to the inputs in ways the two-asset case can obscure. With two assets, if you change the correlation slightly, the tangency portfolio shifts along a one-dimensional axis &mdash; more stocks or fewer. With three assets, if you change a correlation, the optimal allocation can shift in any direction in the allocation simplex (triangle). The choice of &ldquo;more US, less international, same bonds&rdquo; versus &ldquo;less US, more international, same bonds&rdquo; versus &ldquo;less US, less international, more bonds&rdquo; can swing meaningfully on small changes in inputs.</p>
+  <p>The widget below shows what this looks like under parameter uncertainty.</p>
+</section>
+
+<!-- ═══ Widget ═══ -->
+<div class="widget-wrap">
+  <div class="presets-section">
+    <div class="presets-label">Choose a scenario</div>
+    <div class="preset-grid" id="preset-grid"></div>
+    <div class="preset-divider">Or adjust sliders below to explore further</div>
+  </div>
+
+  <div class="controls-section">
+    <div class="controls-label">Asset parameters</div>
+    <div class="asset-grid" id="asset-grid"></div>
+
+    <div class="controls-label">Correlations</div>
+    <div class="corr-grid" id="corr-grid"></div>
+
+    <details class="settings-box">
+      <summary>Settings</summary>
+      <div class="settings-inner" id="settings-row"></div>
+    </details>
+  </div>
+
+  <div class="plots-row">
+    <div class="plot-box" id="ternary-plot"></div>
+    <div class="plot-box plot-box-short" id="sharpe-plot"></div>
+  </div>
+
+  <div class="cloud-bar">
+    <button class="cloud-toggle" id="cloud-toggle">Hide cloud</button>
+  </div>
+
+  <div id="preset-caption" class="preset-caption hidden"></div>
+  <div class="summary" id="summary"></div>
+</div>
+
+<!-- ═══ Post-widget prose ═══ -->
+<section>
+  <p>The allocation cloud is plotted on a triangular diagram called a ternary plot. Each corner represents 100% in one asset; the opposite edge represents 0% in that asset. Any point inside represents some mixture of all three, with the weights summing to 1. (A point near the bottom edge has roughly 0% in US stocks; a point near the lower-left corner has roughly 100% in international.) The triangular shape captures the constraint that the three weights must sum to 1.</p>
+  <p>Each dot is the tangency portfolio for one Monte Carlo draw of the parameters. The central allocation (computed from the central parameter values, no Monte Carlo noise) is marked distinctly.</p>
+  <p>Try the <em>Realistic uncertainty</em> preset. The cloud is wide &mdash; much wider than the comparable two-asset case might have suggested. Some draws favor heavy US stock allocations; others favor international; others favor bonds. The &ldquo;optimal&rdquo; allocation under realistic input uncertainty is not a precise point but a region, and the region spans much of the simplex.</p>
+  <p>The other presets show the same patterns we saw in the two-asset case, in three dimensions: tight clouds under low uncertainty, dramatic shifts under correlation uncertainty, vertical scatter under return uncertainty. The qualitative lessons from <a href="/behind-2-parameter-uncertainty.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">Chapter 2</a> carry over. They just play out in a larger space.</p>
+</section>
+
+<!-- ═══ Why three assets is more challenging than two ═══ -->
+<section>
+  <h2>Why three assets is more challenging than two</h2>
+  <p>There are several reasons the three-asset case is more cautionary than the two-asset case, beyond just &ldquo;there are more dimensions to vary.&rdquo;</p>
+  <p><strong>More parameters, more sources of uncertainty.</strong> Two assets need five parameters (two expected returns, two volatilities, one correlation). Three assets need nine (three expected returns, three volatilities, three pairwise correlations). Each additional parameter brings its own uncertainty, and the uncertainties combine.</p>
+  <p><strong>Correlations matter more.</strong> With two assets, there&rsquo;s only one correlation to worry about. With three, there are three pairwise correlations, and they interact. A correlation matrix isn&rsquo;t just a collection of pairwise numbers; it has to be internally consistent (positive semi-definite). Small changes in one correlation can require compensating changes in others to keep the matrix valid. This is partly why the three-asset widget rejects a few Monte Carlo draws &mdash; some combinations of sampled correlations don&rsquo;t correspond to any consistent set of asset relationships.</p>
+  <p><strong>The optimization is more sensitive.</strong> With more dimensions to move in, small input changes can produce larger swings in the optimal allocation. The &ldquo;corner solutions&rdquo; where the optimizer drives one or more asset weights to zero are easier to fall into with three assets than with two &mdash; a draw where international stocks happen to have a slightly elevated correlation with US stocks might end up putting zero weight on international entirely.</p>
+  <p><strong>It&rsquo;s still understated.</strong> Three assets is still a simplified picture. Real portfolios often have ten or twenty distinct asset categories. The number of pairwise correlations grows quadratically: for ten assets, that&rsquo;s 45 correlations to specify, each with its own uncertainty. The framework&rsquo;s apparent precision in the face of all this uncertainty becomes harder and harder to take seriously the more assets you add.</p>
+</section>
+
+<!-- ═══ What this section has shown, in summary ═══ -->
+<section>
+  <h2>What this section has shown, in summary</h2>
+  <p>It&rsquo;s worth pulling the thread together.</p>
+  <p><a href="/behind-1-optimal.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">Chapter 1</a> established what the framework claims: given a set of input parameters, it produces a frontier of efficient portfolios and a special &ldquo;tangency&rdquo; portfolio that maximizes the Sharpe ratio. This output looks precise.</p>
+  <p><a href="/behind-2-parameter-uncertainty.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">Chapter 2</a> showed that under realistic uncertainty about the input parameters &mdash; the kind you&rsquo;d actually have when estimating from historical data &mdash; the &ldquo;tangency portfolio&rdquo; becomes a cloud of equally-defensible allocations rather than a precise point.</p>
+  <p><a href="/behind-3-drift.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">Chapter 3</a> showed that the input parameters themselves drift over time, sometimes sharply. The cloud from Chapter 2 isn&rsquo;t sitting still; it&rsquo;s moving across eras. Whatever the &ldquo;right&rdquo; inputs are, they aren&rsquo;t a single set of numbers &mdash; they&rsquo;re era-dependent.</p>
+  <p>Chapter 4 has shown that with more than two assets &mdash; i.e., with most real-world portfolios &mdash; these problems compound. There are more parameters to be uncertain about, the optimization is more sensitive to them, and the resulting allocation cloud spans a richer space.</p>
+  <p>Taken together, the picture is: the framework produces precise-looking outputs that, when examined carefully, dissolve into wide regions of equally-defensible answers, all of which are moving over time. This isn&rsquo;t a flaw in the math &mdash; the math is exact. It&rsquo;s a feature of the gap between the framework&rsquo;s clean assumptions and the messy world it&rsquo;s being applied to.</p>
+</section>
+
+<!-- ═══ What might this be useful for? ═══ -->
+<section class="personal">
+  <div class="personal-label">Author&rsquo;s perspective</div>
+  <h2>What might this be useful for?</h2>
+  <p>The previous chapters laid out what the framework can and can&rsquo;t deliver. This is where I want to break the more neutral tone of the rest of this site and share my own perspective, clearly labeled as such.</p>
+  <p>For me personally, all this efficient-frontier and tangency-portfolio material is mostly of academic interest. I find the mean-variance framework genuinely beautiful as an intellectual construction &mdash; the geometry of the frontier, the clean derivation of the tangency portfolio, the way it captures something real about return-risk tradeoffs. But I don&rsquo;t use it to make actual allocation decisions. The chapters above are why.</p>
+  <p>For practical planning &mdash; getting a feel for the rough magnitudes involved, understanding why diversification works at all, comparing the qualitative shape of different allocation strategies &mdash; the framework is useful. It does sharpen intuition about how stocks and bonds interact, why correlation matters, why some allocations dominate others. These are real benefits even if the specific numerical outputs aren&rsquo;t trustworthy.</p>
+  <p>For specific allocation decisions &mdash; should I be at 60/40 or 70/30, should I add international or commodities, what&rsquo;s the right allocation for my situation &mdash; I&rsquo;d want much more than the framework provides. I&rsquo;d want to think about my own time horizon, my own ability to stay invested through drawdowns. I&rsquo;d want to consider tax implications, liquidity needs, and possible regime shifts that no historical estimate captures. The framework doesn&rsquo;t help with most of this.</p>
+  <p>One indirect benefit, though, of having worked through these chapters: I have a more confident answer to a question I&rsquo;d been curious about for a while. The question was something like: for people who like a mathematical or engineering or &ldquo;technical analysis&rdquo; approach to investing, is there actually value being added by the quantitative tools? I&rsquo;ve been using a buy-and-hold approach with low-cost index funds and periodic rebalancing for years, and it&rsquo;s been working fine for me &mdash; but I was genuinely curious whether the more sophisticated approaches offered something I was missing.</p>
+  <p>After working through the issues in this section, my answer is: not really, at least not in any form I&rsquo;d want to act on. The quantitative tools have problems at least as serious as the heuristics they&rsquo;re meant to replace. The &ldquo;optimal&rdquo; allocations they produce are better seen as clouds of equally-defensible answers, drifting over time, with little to commend any particular point in the cloud over any other. A judgment-based approach grounded in personal circumstances and a few robust principles isn&rsquo;t naive in light of this &mdash; it&rsquo;s well-matched to what we actually know and don&rsquo;t know.</p>
+  <p>This isn&rsquo;t a dramatic conclusion for me personally. I wasn&rsquo;t going to switch strategies regardless of what I found. But it does turn something I&rsquo;d been doing on intuition into something I can defend with reasons. The buy-and-hold approach isn&rsquo;t a fallback for people who can&rsquo;t do the math; it&rsquo;s an approach that&rsquo;s appropriately calibrated to the actual epistemic situation. The math doesn&rsquo;t reveal an answer that judgment was missing; it reveals that no precise answer is recoverable in the first place, given a reasonable accounting of uncertainty.</p>
+  <p>This is my own view. Other people, with different needs and different ways of thinking about portfolio choice, might reasonably weigh things differently. Someone managing institutional money with explicit benchmarks might find mean-variance analysis more directly applicable than I do. Someone using it as one input among many, alongside scenario analysis and judgment, might extract more value from it than I do. Someone who finds the precision useful as a focal point for discussion, even knowing the precision is partly illusory, might find it indispensable.</p>
+  <p>What I&rsquo;d argue against is taking the framework&rsquo;s outputs at face value &mdash; treating a tangency portfolio computed from one set of historical estimates as &ldquo;the optimal allocation&rdquo; rather than as one point in a cloud of plausible answers, all moving over time. The framework is a thinking aid, not a recommendation engine. It earns its keep when it sharpens intuition; it overstates its case when it produces a single number.</p>
+</section>
+
+<!-- ═══ Coda ═══ -->
+<section class="personal">
+  <h2>A concluding aside: where this thinking came from</h2>
+  <p>The work in this section has been about specific issues in portfolio theory &mdash; what the Sharpe ratio claims, how sensitive the framework is to its inputs, how those inputs drift over time, how more than two assets compound the problems. But for me, the portfolio theory isn&rsquo;t really the point. It&rsquo;s a domain where a particular way of thinking about uncertainty and models can be applied, and where the application reveals something concrete and useful.</p>
+  <p>The way of thinking is older and more general than the application here, and I want to credit its sources before closing out the section.</p>
+
+  <h3>What got me started</h3>
+  <p>I took an intro statistics course in college, which just didn&rsquo;t click. Years later, working through Richard McElreath&rsquo;s <a href="https://xcelab.net/rm/" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)"><em>Statistical Rethinking</em></a> (second edition), I encountered a different approach: Bayesian reasoning supported by simulation. The combination clicked in a way the earlier material never had.</p>
+  <p>Two things made the difference. First, the underlying epistemological stance &mdash; that what we have is data, and what we&rsquo;re uncertain about is the models that might explain it &mdash; felt natural and honest in a way the frequentist framing never did. Second, simulation made distributions visible. Rather than computing summary statistics and trusting their interpretation, I could write code that drew from a generative model, sampled outcomes, and showed me the resulting spread on screen. The abstraction became concrete.</p>
+  <p>That experience &mdash; seeing distributions emerge from a generative model, rather than being told to assume they were there &mdash; has shaped everything that followed, including the work in this section.</p>
+
+  <h3>The underlying principle</h3>
+  <p>McElreath articulates the principle that&rsquo;s been operating throughout this section more precisely than I could. In a passage about what he calls the posterior predictive distribution &mdash; the distribution of predictions you get from a model when you account for uncertainty in the model&rsquo;s parameters, not just the parameters&rsquo; best estimates &mdash; he writes:</p>
+  <blockquote>This distribution propagates uncertainty about parameter to uncertainty about prediction&hellip; it is honest. While the model does a good job of predicting the data &mdash; the most likely observation is indeed the observed data &mdash; predictions are still quite spread out. If instead you were to use only a single parameter value to compute implied predictions&hellip; you&rsquo;d produce an overconfident distribution of predictions&hellip; The usual effect of this overconfidence will be to lead you to believe that the model is more consistent with the data than it really is &mdash; the predictions will cluster around the observations more tightly. This illusion arises from tossing away uncertainty about the parameters.</blockquote>
+  <p>Replace &ldquo;predictions&rdquo; with &ldquo;optimal allocations&rdquo; and &ldquo;parameter&rdquo; with &ldquo;expected returns, volatilities, correlations,&rdquo; and you have the argument this entire section has been making. The textbook Markowitz framework uses point estimates of its inputs and produces an apparently precise &ldquo;optimal&rdquo; portfolio. This is the overconfident, single-parameter-value approach McElreath describes. The uncertainty widgets in Chapters <a href="/behind-2-parameter-uncertainty.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">2</a> and <a href="/behind-4-three-assets.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">4</a> show what happens when you don&rsquo;t toss away the uncertainty: the precision dissolves into a wide cloud of equally-defensible answers, and the resulting distribution is &mdash; in McElreath&rsquo;s word &mdash; <em>honest</em>.</p>
+
+  <h3>How this maps onto the work</h3>
+  <p>The two visualizations on this site that matter most to me are both concrete instances of this principle, applied at different levels.</p>
+  <p>The Monte Carlo simulator on the <a href="/monte-carlo.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">main page</a> propagates outcome uncertainty given fixed parameters. The textbook frontier curve summarizes this uncertainty as a single point (the mean), making the model appear more certain than it is. The simulator shows the cloud of outcomes the point summarizes. This is McElreath&rsquo;s principle applied to outcomes: don&rsquo;t toss away the uncertainty hidden behind the summary.</p>
+  <p>The parameter uncertainty widgets in this section propagate the additional layer of uncertainty about the parameters themselves. The textbook framework treats parameters as given; the widgets show what happens when you treat them as a range of plausible values. The &ldquo;optimal&rdquo; allocation becomes a cloud rather than a point. This is McElreath&rsquo;s principle applied to the inputs as well as the outputs.</p>
+  <p>The <a href="/behind-the-assumptions.html#two-ways" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">animated cartoon on the landing page</a> tries to show both layers at once &mdash; the structural distinction between propagating outcome uncertainty alone (the left panel) versus propagating both outcome and parameter uncertainty (the right panel). Combining both layers in a portfolio context &mdash; outcome uncertainty given parameter uncertainty &mdash; would give the fullest, most honest picture. The widgets in this section don&rsquo;t quite do that, for computational and visual reasons. But the principle is the same in either layer: tossing away uncertainty creates an illusion of precision; propagating it through reveals the actual spread.</p>
+
+  <h3>A note on values</h3>
+  <p>There&rsquo;s one more dimension of honesty worth naming, which the chapters above didn&rsquo;t address directly. The Sharpe ratio, and the framework built on it, treats upside variance and downside variance symmetrically. A portfolio that occasionally has very good months gets penalized for that variability in the same way one with occasionally very bad months does.</p>
+  <p>Almost no one actually feels this way about money. We&rsquo;re more upset by losses than we&rsquo;re delighted by equivalent gains &mdash; this is one of the most replicated findings in behavioral economics, and it matches everyday experience. The framework&rsquo;s symmetry isn&rsquo;t a neutral mathematical property; it&rsquo;s a values choice, hidden inside what looks like a clean mathematical formulation.</p>
+  <p>Other choices exist. The Sortino ratio penalizes only downside variance. Conditional Value-at-Risk focuses on tail losses. Each captures a different value system. The framework&rsquo;s apparent objectivity comes partly from not making this choice explicit.</p>
+  <p>This is a different kind of honesty than the kind McElreath is talking about, but it&rsquo;s continuous with it. Both involve refusing to let a tidy mathematical surface hide what&rsquo;s actually being assumed.</p>
+
+  <h3>What this isn&rsquo;t</h3>
+  <p>To be precise about what I&rsquo;m and am not claiming: this section uses Bayesian epistemology and the simulation-based reasoning that supports it, but it doesn&rsquo;t do Bayesian inference in any formal sense. There are no priors, likelihoods, or posteriors being computed. I&rsquo;m not updating beliefs in light of new data via Bayes&rsquo; rule.</p>
+  <p>What I&rsquo;m using is the broader stance that comes out of that tradition: that distributions matter more than point estimates, that models are uncertain in ways that summaries hide, and that simulation from generative models lets us see distributions that summaries flatten. These ideas predate any particular technical machinery and are useful independently of it.</p>
+  <p>For readers who want to understand these ideas deeply, McElreath&rsquo;s book is the place to start. He&rsquo;s a vastly more knowledgeable and clear thinker about all this (and more!) than I am, and the present section is, in a real sense, an extended application of ideas his book made available to me.</p>
+</section>
+
+<!-- ═══ Chapter navigation ═══ -->
+<nav class="chapter-nav">
+  <a href="/behind-3-drift.html" class="nav-prev">
+    <span class="nav-dir">&larr; Previous</span>
+    <span class="nav-title">When parameters drift</span>
+  </a>
+</nav>
+<div class="return-link">
+  <a href="/behind-the-assumptions.html">&uarr; Behind the Assumptions (overview)</a>
+</div>
+
+</div><!-- .page-wrap -->
+
+<script>
+(function(){
+/* ================================================================
+   Configuration
+   ================================================================ */
+var ASSETS = [
+  { key:'us',   name:'US Stocks',    retDef:8,  retUnc:1,   volDef:16, volUnc:2 },
+  { key:'intl', name:'Intl Stocks',  retDef:7,  retUnc:1,   volDef:18, volUnc:2 },
+  { key:'bond', name:'Bonds',        retDef:3,  retUnc:0.5, volDef:5,  volUnc:1 }
+];
+var CORRS = [
+  { key:'us_intl',   label:'US \u2194 Intl',  def:0.70, unc:0.15 },
+  { key:'us_bond',   label:'US \u2194 Bonds', def:0.10, unc:0.15 },
+  { key:'intl_bond', label:'Intl \u2194 Bonds',def:0.00, unc:0.15 }
+];
+var DEF_DRAWS=3000, DEF_RF=2.0;
+
+var R={
+  ret:{min:0,max:15,step:0.5}, retU:{min:0,max:5,step:0.25},
+  vol:{min:1,max:40,step:0.5}, volU:{min:0,max:10,step:0.5},
+  cor:{min:-0.5,max:1.0,step:0.05}, corU:{min:0,max:0.4,step:0.01},
+  draws:{min:100,max:20000,step:100}, rf:{min:0,max:8,step:0.25}
+};
+
+/* ── Presets ── */
+var PRESETS=[
+  { id:'low', name:'Low uncertainty',
+    desc:'Tight estimates, well-determined answer.',
+    caption:'With tight uncertainty on all parameters, the optimization is well-behaved. The cloud of optimal allocations is small \u2014 the \u201cbest\u201d answer is precise. This is closest to the textbook case where parameters are treated as known.',
+    v:{us_ret:8,us_retU:0.2,us_vol:16,us_volU:0.5, intl_ret:7,intl_retU:0.2,intl_vol:18,intl_volU:0.5, bond_ret:3,bond_retU:0.2,bond_vol:5,bond_volU:0.5, us_intl:0.70,us_intlU:0.05,us_bond:0.10,us_bondU:0.05,intl_bond:0.00,intl_bondU:0.05, draws:3000,rf:2}},
+  { id:'realistic', name:'Realistic uncertainty',
+    desc:'The typical case \u2014 wide spread from realistic noise.',
+    caption:'With realistic uncertainty \u2014 the kind you\u2019d actually have when estimating parameters from historical data \u2014 the cloud is visibly wide. The \u201coptimal\u201d allocation is no longer a single answer; it\u2019s a range of equally-defensible answers. This is the gap between textbook precision and real-world precision.',
+    v:{us_ret:8,us_retU:1,us_vol:16,us_volU:2, intl_ret:7,intl_retU:1,intl_vol:18,intl_volU:2, bond_ret:3,bond_retU:0.5,bond_vol:5,bond_volU:1, us_intl:0.70,us_intlU:0.15,us_bond:0.10,us_bondU:0.15,intl_bond:0.00,intl_bondU:0.15, draws:3000,rf:2}},
+  { id:'corr', name:'Correlation crisis',
+    desc:'When correlations become unstable, diversification falters.',
+    caption:'Correlations between asset classes are particularly unstable \u2014 they can shift dramatically during regime changes (the 2008 crisis being a famous example). Even with confident estimates of returns and volatilities, uncertainty about correlation alone can produce a wide spread in \u201coptimal\u201d allocations. This is the source of the \u201cdiversification fails when you need it most\u201d phenomenon.',
+    v:{us_ret:8,us_retU:1,us_vol:16,us_volU:2, intl_ret:7,intl_retU:1,intl_vol:18,intl_volU:2, bond_ret:3,bond_retU:0.5,bond_vol:5,bond_volU:1, us_intl:0.70,us_intlU:0.35,us_bond:0.10,us_bondU:0.35,intl_bond:0.00,intl_bondU:0.35, draws:3000,rf:2}},
+  { id:'return', name:'Return uncertainty',
+    desc:'Expected returns are the hardest parameter to estimate.',
+    caption:'Expected returns are notoriously hard to estimate \u2014 historical averages are noisy over any human-relevant time horizon. Even with precise estimates of volatility and correlation, realistic return uncertainty produces a wide spread in optimal allocations. Note that this uncertainty is fundamental: it isn\u2019t reduced by having more data, since asset return distributions themselves may shift.',
+    v:{us_ret:8,us_retU:2.5,us_vol:16,us_volU:1, intl_ret:7,intl_retU:2.5,intl_vol:18,intl_volU:1, bond_ret:3,bond_retU:1,bond_vol:5,bond_volU:1, us_intl:0.70,us_intlU:0.10,us_bond:0.10,us_bondU:0.10,intl_bond:0.00,intl_bondU:0.10, draws:3000,rf:2}}
+];
+
+/* runtime */
+var els={};
+var displayFns=[];
+var activePreset=null;
+var cloudVisible=true;
+
+/* ================================================================
+   Math
+   ================================================================ */
+function randn(){var u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function clamp(x,lo,hi){return x<lo?lo:x>hi?hi:x}
+function dot(a,b){var s=0;for(var i=0;i<a.length;i++)s+=a[i]*b[i];return s}
+function mv(m,v){return m.map(function(r){return dot(r,v)})}
+function qf(v,m){return dot(v,mv(m,v))}
+
+function inv(m){
+  var n=m.length;
+  if(n===1){return Math.abs(m[0][0])<1e-14?null:[[1/m[0][0]]]}
+  if(n===2){var d=m[0][0]*m[1][1]-m[0][1]*m[1][0];if(Math.abs(d)<1e-14)return null;var ii=1/d;return[[m[1][1]*ii,-m[0][1]*ii],[-m[1][0]*ii,m[0][0]*ii]]}
+  if(n===3){
+    var a=m[0][0],b=m[0][1],c=m[0][2],
+        dd=m[1][0],e=m[1][1],f=m[1][2],
+        g=m[2][0],h=m[2][1],iii=m[2][2];
+    var det=a*(e*iii-f*h)-b*(dd*iii-f*g)+c*(dd*h-e*g);
+    if(Math.abs(det)<1e-14)return null;var j=1/det;
+    return[[(e*iii-f*h)*j,(c*h-b*iii)*j,(b*f-c*e)*j],[(f*g-dd*iii)*j,(a*iii-c*g)*j,(c*dd-a*f)*j],[(dd*h-e*g)*j,(b*g-a*h)*j,(a*e-b*dd)*j]];
+  }
+  return null;
+}
+function buildCov(sig,rho){
+  return[[sig[0]*sig[0],rho[0]*sig[0]*sig[1],rho[1]*sig[0]*sig[2]],[rho[0]*sig[0]*sig[1],sig[1]*sig[1],rho[2]*sig[1]*sig[2]],[rho[1]*sig[0]*sig[2],rho[2]*sig[1]*sig[2],sig[2]*sig[2]]];
+}
+
+/* ================================================================
+   Tangency portfolio — long-only, 3 assets
+   ================================================================ */
+function tangency(mu,cov,rf){
+  var n=3,excess=mu.map(function(m){return m-rf});
+  if(excess.every(function(e){return e<=0}))return null;
+  var bestS=-Infinity,bestW=null;
+  for(var mask=1;mask<(1<<n);mask++){
+    var idx=[];for(var i=0;i<n;i++)if(mask&(1<<i))idx.push(i);
+    var se=idx.map(function(i){return excess[i]});if(se.every(function(e){return e<=0}))continue;
+    var sc=idx.map(function(i){return idx.map(function(j){return cov[i][j]})});
+    var si=inv(sc);if(!si)continue;
+    var w=mv(si,se),ws=w.reduce(function(a,b){return a+b},0);
+    if(ws<=1e-12||w.some(function(wi){return wi<-1e-10}))continue;
+    var wn=w.map(function(wi){return wi/ws}),pr=dot(wn,se),pv=qf(wn,sc);
+    if(pv<=1e-14)continue;var sh=pr/Math.sqrt(pv);
+    if(sh>bestS){bestS=sh;bestW=new Array(n).fill(0);for(var k=0;k<idx.length;k++)bestW[idx[k]]=wn[k]}
+  }
+  if(!bestW)return null;
+  return{w:bestW,sharpe:bestS,ret:dot(bestW,mu),vol:Math.sqrt(qf(bestW,cov))};
+}
+
+/* ================================================================
+   Monte Carlo
+   ================================================================ */
+function simulate(){
+  var rf=val('rf')/100, N=Math.round(val('draws'));
+  var cMu=ASSETS.map(function(a){return val(a.key+'_ret')/100}), cSig=ASSETS.map(function(a){return val(a.key+'_vol')/100}), cRho=CORRS.map(function(c){return val(c.key)});
+  var uMu=ASSETS.map(function(a){return val(a.key+'_retU')/100}), uSig=ASSETS.map(function(a){return val(a.key+'_volU')/100}), uRho=CORRS.map(function(c){return val(c.key+'U')});
+  var results=[];var rej=0;
+  for(var t=0;t<N;t++){
+    var mu=cMu.map(function(m,i){return m+uMu[i]*randn()});
+    var sig=cSig.map(function(s,i){return Math.max(0.001,s+uSig[i]*randn())});
+    var rho=cRho.map(function(r,i){return clamp(r+uRho[i]*randn(),-0.999,0.999)});
+    var dR=1-rho[0]*rho[0]-rho[1]*rho[1]-rho[2]*rho[2]+2*rho[0]*rho[1]*rho[2];
+    if(dR<=0.001){rej++;continue}
+    var res=tangency(mu,buildCov(sig,rho),rf);
+    if(res)results.push(res);else rej++;
+  }
+  var central=tangency(cMu,buildCov(cSig,cRho),rf);
+  renderPlots(results,central,N,rej);
+  renderSummary(results,central,N,rej);
+}
+function val(id){return parseFloat(els[id].value)}
+
+/* ================================================================
+   Plotting
+   ================================================================ */
+var plotsReady=false;
+function renderPlots(res,cen,N,rej){
+  var uW=res.map(function(r){return r.w[0]*100}),iW=res.map(function(r){return r.w[1]*100}),bW=res.map(function(r){return r.w[2]*100}),sh=res.map(function(r){return r.sharpe});
+  var tData=[{type:'scatterternary',mode:'markers',a:uW,b:iW,c:bW,
+    marker:{size:4,opacity:0.5,color:sh,colorscale:'Viridis',showscale:true,
+      colorbar:{title:{text:'Sharpe',font:{size:11,color:'#c4b5a0'}},tickfont:{size:10,color:'#c4b5a0'},len:0.75,thickness:12,outlinewidth:0,bgcolor:'rgba(0,0,0,0)'}},
+    name:'MC draws',hovertemplate:'US %{a:.1f}%<br>Intl %{b:.1f}%<br>Bonds %{c:.1f}%<br>Sharpe %{marker.color:.3f}<extra></extra>'}];
+  if(cen)tData.push({type:'scatterternary',mode:'markers',a:[cen.w[0]*100],b:[cen.w[1]*100],c:[cen.w[2]*100],
+    marker:{size:14,color:'#ff4444',symbol:'diamond',line:{color:'#fff',width:2}},name:'Central',
+    hovertemplate:'Central<br>US %{a:.1f}%<br>Intl %{b:.1f}%<br>Bonds %{c:.1f}%<extra></extra>'});
+  var ax={min:0,linecolor:'#999',gridcolor:'rgba(0,0,0,0.08)',tickfont:{size:9,color:'#666'}};
+  var tL={ternary:{sum:100,aaxis:Object.assign({title:{text:'US Stocks',font:{size:12,color:'#c4b5a0'}}},ax),baxis:Object.assign({title:{text:'Intl Stocks',font:{size:12,color:'#c4b5a0'}}},ax),caxis:Object.assign({title:{text:'Bonds',font:{size:12,color:'#c4b5a0'}}},ax),bgcolor:'#faf8f4'},
+    paper_bgcolor:'#241c14',font:{color:'#c4b5a0',family:'system-ui,-apple-system,sans-serif',size:11},margin:{t:50,b:35,l:35,r:35},showlegend:false,title:{text:'Optimal Allocation Cloud',font:{size:14,color:'#e8ddd0'},y:0.98}};
+
+  var hData=[{type:'histogram',x:sh,nbinsx:40,marker:{color:'rgba(29,158,117,0.6)',line:{color:'#1D9E75',width:1}},hovertemplate:'Sharpe %{x:.3f}<br>Count %{y}<extra></extra>'}];
+  var hL={paper_bgcolor:'#241c14',plot_bgcolor:'#faf8f4',font:{color:'#c4b5a0',family:'system-ui,-apple-system,sans-serif',size:11},
+    xaxis:{title:{text:'Sharpe Ratio',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.12)'},
+    yaxis:{title:{text:'Count',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.12)'},
+    margin:{t:50,b:50,l:55,r:20},title:{text:'Distribution of Optimal Sharpe Ratios',font:{size:14,color:'#e8ddd0'},y:0.98},showlegend:false,bargap:0.05,
+    shapes:cen?[{type:'line',x0:cen.sharpe,x1:cen.sharpe,y0:0,y1:1,yref:'paper',line:{color:'#ff4444',width:2,dash:'dash'}}]:[],
+    annotations:cen?[{x:cen.sharpe,y:1,yref:'paper',text:'Central',showarrow:false,font:{color:'#ff4444',size:10},yanchor:'bottom',yshift:2}]:[]};
+
+  var cfg={responsive:true,displayModeBar:true,
+    modeBarButtonsToRemove:['zoom2d','pan2d','select2d','lasso2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+    toImageButtonOptions:{format:'png',filename:'allocation-cloud',height:800,width:1200,scale:2},
+    displaylogo:false};
+  var cfgH={responsive:true,displayModeBar:true,
+    modeBarButtonsToRemove:['zoom2d','pan2d','select2d','lasso2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+    toImageButtonOptions:{format:'png',filename:'sharpe-histogram',height:800,width:1200,scale:2},
+    displaylogo:false};
+  if(!plotsReady){Plotly.newPlot('ternary-plot',tData,tL,cfg);Plotly.newPlot('sharpe-plot',hData,hL,cfgH);plotsReady=true}
+  else{Plotly.react('ternary-plot',tData,tL,cfg);Plotly.react('sharpe-plot',hData,hL,cfgH)}
+  if(!cloudVisible){
+    Plotly.restyle('ternary-plot',{visible:[false]},[0]);
+    Plotly.restyle('sharpe-plot',{visible:[false]},[0]);
+  }
+}
+
+function renderSummary(res,cen,N,rej){
+  var el=document.getElementById('summary');
+  if(!res.length){el.innerHTML='<span style="color:rgba(200,185,160,0.4)">No valid draws. Try reducing uncertainty.</span>';return}
+  var L=['US','Intl','Bonds'];
+  var mW=[0,1,2].map(function(i){var v=res.map(function(r){return r.w[i]});return v.reduce(function(a,b){return a+b},0)/v.length});
+  var sW=[0,1,2].map(function(i){var m=mW[i];return Math.sqrt(res.reduce(function(a,r){return a+(r.w[i]-m)*(r.w[i]-m)},0)/res.length)});
+  var shs=res.map(function(r){return r.sharpe}),mSh=shs.reduce(function(a,b){return a+b},0)/shs.length;
+  var sSh=Math.sqrt(shs.reduce(function(a,b){return a+(b-mSh)*(b-mSh)},0)/shs.length);
+  var h='';
+  if(cen)h+='<div class="summary-item"><span class="sum-lbl">Central:</span><span class="sum-val">'+cen.w.map(function(w,i){return L[i]+'&nbsp;'+(w*100).toFixed(1)+'%'}).join(' &middot; ')+' (Sharpe '+cen.sharpe.toFixed(3)+')</span></div>';
+  h+='<div class="summary-item"><span class="sum-lbl">Mean&pm;SD:</span><span class="sum-val">'+mW.map(function(m,i){return L[i]+'&nbsp;'+(m*100).toFixed(1)+'&pm;'+(sW[i]*100).toFixed(1)+'%'}).join(' &middot; ')+'</span></div>';
+  h+='<div class="summary-item"><span class="sum-lbl">Sharpe:</span><span class="sum-val">'+mSh.toFixed(3)+' &pm; '+sSh.toFixed(3)+'</span></div>';
+  h+='<div class="summary-item"><span class="sum-lbl">Valid:</span><span class="sum-val">'+res.length+'/'+N+(rej?' ('+rej+' rej)':'')+'</span></div>';
+  el.innerHTML=h;
+}
+
+/* ================================================================
+   Cloud toggle
+   ================================================================ */
+function toggleCloud(){
+  cloudVisible=!cloudVisible;
+  var btn=document.getElementById('cloud-toggle');
+  btn.textContent=cloudVisible?'Hide cloud':'Show cloud';
+  btn.classList.toggle('off',!cloudVisible);
+  Plotly.restyle('ternary-plot',{visible:[cloudVisible]},[0]);
+  Plotly.restyle('sharpe-plot',{visible:[cloudVisible]},[0]);
+}
+
+/* ================================================================
+   Presets
+   ================================================================ */
+function applyPreset(id){
+  var p=PRESETS.find(function(p){return p.id===id});if(!p)return;
+  var changedWraps=new Set();
+  var keys=Object.keys(p.v);
+  for(var ki=0;ki<keys.length;ki++){
+    var k=keys[ki],v=p.v[k];
+    if(els[k]&&Math.abs(parseFloat(els[k].value)-v)>0.001){
+      var wrap=els[k].closest('.slider-wrap');if(wrap)changedWraps.add(wrap);
+    }
+  }
+  activePreset=id;
+  for(var ki2=0;ki2<keys.length;ki2++){var k2=keys[ki2];if(els[k2])els[k2].value=p.v[k2]}
+  displayFns.forEach(function(fn){fn()});
+  document.getElementById('draws_d').textContent=p.v.draws||DEF_DRAWS;
+  document.getElementById('rf_d').textContent=(p.v.rf!=null?p.v.rf:DEF_RF).toFixed(1)+'%';
+  document.querySelectorAll('.preset-card').forEach(function(c){c.classList.toggle('active',c.dataset.preset===id)});
+  var cap=document.getElementById('preset-caption');cap.textContent=p.caption;cap.classList.remove('hidden');
+  changedWraps.forEach(function(w){w.classList.remove('flash');void w.offsetWidth;w.classList.add('flash');
+    w.addEventListener('animationend',function(){w.classList.remove('flash')},{once:true})});
+  simulate();
+}
+function clearPreset(){
+  if(!activePreset)return;activePreset=null;
+  document.querySelectorAll('.preset-card').forEach(function(c){c.classList.remove('active')});
+  document.getElementById('preset-caption').classList.add('hidden');
+}
+
+/* ================================================================
+   UI
+   ================================================================ */
+function mkSliderPair(parent,id,label,cDef,uDef,cR,uR,cFmt,uFmt){
+  var row=document.createElement('div');row.className='param-row';
+  var hdr=document.createElement('div');hdr.className='param-header';
+  var lbl=document.createElement('span');lbl.className='lbl';lbl.textContent=label;
+  var vls=document.createElement('span');vls.className='vals';vls.id=id+'_disp';
+  hdr.append(lbl,vls);
+  var pair=document.createElement('div');pair.className='slider-pair';
+  var cs=document.createElement('input');cs.type='range';cs.min=cR.min;cs.max=cR.max;cs.step=cR.step;cs.value=cDef;cs.id=id;
+  var us=document.createElement('input');us.type='range';us.className='unc';us.min=uR.min;us.max=uR.max;us.step=uR.step;us.value=uDef;us.id=id+'U';
+  var cw=document.createElement('div');cw.className='slider-wrap';cw.appendChild(cs);
+  var uw=document.createElement('div');uw.className='slider-wrap';uw.appendChild(us);
+  pair.append(cw,uw);row.append(hdr,pair);parent.appendChild(row);
+  els[id]=cs;els[id+'U']=us;
+  var upd=function(){vls.innerHTML=cFmt(cs.value)+' <span class="unc">\u00b1 '+uFmt(us.value)+'</span>'};
+  displayFns.push(upd);upd();
+  cs.addEventListener('input',function(){upd();clearPreset();debouncedSim()});
+  us.addEventListener('input',function(){upd();clearPreset();debouncedSim()});
+}
+function pctFmt(v){return parseFloat(v).toFixed(1)+'%'}
+function pctFmt2(v){return parseFloat(v).toFixed(2)+'%'}
+function corFmt(v){return parseFloat(v).toFixed(2)}
+
+function buildUI(){
+  var pg=document.getElementById('preset-grid');
+  PRESETS.forEach(function(p){
+    var btn=document.createElement('button');btn.className='preset-card';btn.dataset.preset=p.id;
+    btn.innerHTML='<span class="preset-name">'+p.name+'</span><span class="preset-desc">'+p.desc+'</span>';
+    btn.addEventListener('click',function(){applyPreset(p.id)});
+    pg.appendChild(btn);
+  });
+
+  var ag=document.getElementById('asset-grid');
+  ASSETS.forEach(function(a){
+    var card=document.createElement('div');card.className='asset-card';
+    var h3=document.createElement('h3');h3.textContent=a.name;card.appendChild(h3);
+    ag.appendChild(card);
+    mkSliderPair(card,a.key+'_ret','Expected return',a.retDef,a.retUnc,R.ret,R.retU,pctFmt,pctFmt2);
+    mkSliderPair(card,a.key+'_vol','Volatility',a.volDef,a.volUnc,R.vol,R.volU,pctFmt,pctFmt);
+  });
+
+  var cg=document.getElementById('corr-grid');
+  CORRS.forEach(function(c){
+    var card=document.createElement('div');card.className='corr-card';
+    var h3=document.createElement('h3');h3.textContent=c.label;card.appendChild(h3);
+    cg.appendChild(card);
+    mkSliderPair(card,c.key,'Correlation',c.def,c.unc,R.cor,R.corU,corFmt,corFmt);
+  });
+
+  var sr=document.getElementById('settings-row');
+  var dc=document.createElement('div');dc.className='settings-ctrl';
+  dc.innerHTML='<label>Draws</label><span class="val" id="draws_d">'+DEF_DRAWS+'</span>';
+  var ds=document.createElement('input');ds.type='range';ds.min=R.draws.min;ds.max=R.draws.max;ds.step=R.draws.step;ds.value=DEF_DRAWS;ds.id='draws';
+  dc.insertBefore(ds,dc.querySelector('.val'));sr.appendChild(dc);
+  els.draws=ds;var dd=dc.querySelector('#draws_d');
+  ds.addEventListener('input',function(){dd.textContent=ds.value;clearPreset();debouncedSim()});
+
+  var rc=document.createElement('div');rc.className='settings-ctrl';
+  rc.innerHTML='<label>Risk-free rate</label><span class="val" id="rf_d">'+DEF_RF.toFixed(1)+'%</span>';
+  var rs=document.createElement('input');rs.type='range';rs.min=R.rf.min;rs.max=R.rf.max;rs.step=R.rf.step;rs.value=DEF_RF;rs.id='rf';
+  rc.insertBefore(rs,rc.querySelector('.val'));sr.appendChild(rc);
+  els.rf=rs;var rd=rc.querySelector('#rf_d');
+  rs.addEventListener('input',function(){rd.textContent=parseFloat(rs.value).toFixed(1)+'%';clearPreset();debouncedSim()});
+
+  var btn=document.createElement('button');btn.className='btn-reset';btn.textContent='Reset';
+  btn.addEventListener('click',function(){applyPreset('realistic')});
+  sr.appendChild(btn);
+
+  document.getElementById('cloud-toggle').addEventListener('click',toggleCloud);
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+function debounce(fn,ms){var t;return function(){var args=arguments,ctx=this;clearTimeout(t);t=setTimeout(function(){fn.apply(ctx,args)},ms)}}
+var debouncedSim=debounce(simulate,200);
+buildUI();
+applyPreset('realistic');
+})();
+</script>
+
+<script src="portfolio-nav.js"></script>
+</body>
+</html>

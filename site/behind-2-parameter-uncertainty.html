@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>How Much Does the Answer Depend on the Inputs? — Behind the Assumptions</title>
+<meta property="og:title" content="How Much Does the Answer Depend on the Inputs? — Behind the Assumptions"/>
+<meta property="og:description" content="Even modest variation in input parameters produces wide variation in the 'optimal' allocation."/>
+<meta property="og:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://stevessite.com/behind-2-parameter-uncertainty.html"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="How Much Does the Answer Depend on the Inputs? — Behind the Assumptions"/>
+<meta name="twitter:description" content="Even modest variation in input parameters produces wide variation in the 'optimal' allocation."/>
+<meta name="twitter:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+
+.page-wrap{max-width:740px;margin:0 auto;padding:72px 24px 60px}
+
+/* Breadcrumb */
+.breadcrumb{font-size:0.82rem;color:rgba(200,185,160,0.45);margin-bottom:20px}
+.breadcrumb a{color:rgba(200,185,160,0.55);text-decoration:none;transition:color 0.15s}
+.breadcrumb a:hover{color:#f0e6d8}
+.breadcrumb .sep{margin:0 6px}
+
+.page-header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
+.page-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
+
+section{margin-bottom:40px}
+section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem}
+section p:last-child{margin-bottom:0}
+em{color:#f0e6d8;font-style:italic}
+strong{color:#f0e6d8;font-weight:500}
+
+/* Widget */
+.widget-wrap{border:1px solid rgba(200,185,160,0.15);border-radius:8px;background:#241c14;margin:24px 0 40px}
+
+/* Presets */
+.presets-section{padding:16px 16px 0}
+.presets-label{font-size:0.68rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.45);margin-bottom:8px}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:600px){.preset-grid{grid-template-columns:1fr}}
+.preset-card{background:rgba(255,255,255,0.02);border:1px solid rgba(200,185,160,0.12);border-radius:5px;padding:9px 13px;cursor:pointer;text-align:left;transition:all 0.15s;font-family:inherit;color:inherit}
+.preset-card:hover{border-color:rgba(200,185,160,0.3);background:rgba(255,255,255,0.04)}
+.preset-card.active{border-color:#1D9E75;background:rgba(29,158,117,0.08)}
+.preset-name{display:block;font-size:0.82rem;font-weight:500;color:#d4b896;margin-bottom:1px}
+.preset-card.active .preset-name{color:#2bc49a}
+.preset-desc{display:block;font-size:0.75rem;color:rgba(200,185,160,0.45);line-height:1.4}
+.preset-divider{font-size:0.72rem;color:rgba(200,185,160,0.3);text-align:center;padding:10px 0 2px;letter-spacing:0.02em}
+
+/* Controls */
+.controls-section{padding:8px 16px 12px}
+.controls-label{font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.35);margin-bottom:6px}
+
+.asset-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:600px){.asset-grid{grid-template-columns:1fr}}
+
+.asset-card,.corr-card{background:rgba(255,255,255,0.02);border:1px solid rgba(200,185,160,0.08);border-radius:5px;padding:8px 10px}
+.asset-card h3,.corr-card h3{font-size:0.76rem;font-weight:500;color:#d4b896;margin-bottom:5px;letter-spacing:0.02em}
+
+.param-row{margin-bottom:5px}
+.param-row:last-child{margin-bottom:0}
+.param-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px}
+.param-header .lbl{font-size:0.65rem;color:rgba(200,185,160,0.4);text-transform:uppercase;letter-spacing:0.04em}
+.param-header .vals{font-size:0.72rem;color:#d4b896;font-variant-numeric:tabular-nums}
+.param-header .vals .unc{color:rgba(200,185,160,0.35)}
+
+.slider-pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+
+input[type=range]{width:100%;height:3px;-webkit-appearance:none;appearance:none;background:rgba(200,185,160,0.18);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#d4b896;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#d4b896;border:none;cursor:pointer}
+input[type=range]::-moz-range-track{background:rgba(200,185,160,0.18);height:3px;border-radius:2px}
+input[type=range].unc{opacity:0.55}
+input[type=range].unc::-webkit-slider-thumb{width:9px;height:9px;background:rgba(200,185,160,0.55)}
+input[type=range].unc::-moz-range-thumb{width:9px;height:9px;background:rgba(200,185,160,0.55)}
+
+@keyframes param-flash{0%{background:rgba(29,158,117,0.22)}100%{background:transparent}}
+.slider-wrap{border-radius:3px;padding:2px 0}
+.slider-wrap.flash{animation:param-flash 1.5s ease-out}
+
+.corr-row{margin-bottom:8px}
+
+/* Settings (collapsed) */
+details.settings-box{border-top:1px solid rgba(200,185,160,0.06);padding-top:6px}
+details.settings-box summary{font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.35);cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px}
+details.settings-box summary::-webkit-details-marker{display:none}
+details.settings-box summary::before{content:'\25B8';font-size:0.6rem;transition:transform 0.15s}
+details.settings-box[open] summary::before{transform:rotate(90deg)}
+.settings-inner{display:flex;align-items:center;gap:14px;padding:8px 0 2px;flex-wrap:wrap}
+.settings-ctrl{display:flex;align-items:center;gap:6px}
+.settings-ctrl label{font-size:0.65rem;color:rgba(200,185,160,0.4);white-space:nowrap}
+.settings-ctrl .val{color:#d4b896;font-size:0.65rem;min-width:30px;text-align:right}
+.settings-ctrl input[type=range]{width:110px}
+.btn-reset{padding:4px 14px;background:rgba(200,185,160,0.06);border:1px solid rgba(200,185,160,0.2);border-radius:3px;color:rgba(200,185,160,0.5);font-size:0.7rem;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.btn-reset:hover{background:rgba(200,185,160,0.12);color:#d4b896;border-color:rgba(200,185,160,0.35)}
+
+/* Plots */
+.plots-row{display:grid;grid-template-columns:1fr}
+.plot-box{min-height:420px}
+.plot-box-short{min-height:300px}
+
+/* Step-through controls */
+.step-bar{padding:8px 18px;border-top:1px solid rgba(200,185,160,0.08);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.step-btn{padding:5px 14px;background:rgba(74,158,255,0.08);border:1px solid rgba(74,158,255,0.3);border-radius:4px;color:#7ab8ff;font-size:0.78rem;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.step-btn:hover{background:rgba(74,158,255,0.15);border-color:rgba(74,158,255,0.5)}
+.step-info{font-size:0.78rem;color:#7ab8ff;font-variant-numeric:tabular-nums}
+.step-clear{padding:3px 10px;background:transparent;border:1px solid rgba(200,185,160,0.15);border-radius:3px;color:rgba(200,185,160,0.4);font-size:0.7rem;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.step-clear:hover{color:#d4b896;border-color:rgba(200,185,160,0.3)}
+.cloud-toggle{padding:5px 14px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.3);border-radius:4px;color:#2bc49a;font-size:0.78rem;cursor:pointer;transition:all 0.15s;font-family:inherit;margin-left:auto}
+.cloud-toggle:hover{background:rgba(29,158,117,0.15);border-color:rgba(29,158,117,0.5)}
+.cloud-toggle.off{color:rgba(200,185,160,0.4);border-color:rgba(200,185,160,0.15);background:transparent}
+.cloud-toggle.off:hover{color:#d4b896;border-color:rgba(200,185,160,0.3)}
+.hidden{display:none}
+
+/* Caption & summary */
+.preset-caption{padding:12px 18px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.88rem;color:#c4b5a0;line-height:1.65}
+.preset-caption.hidden{display:none}
+
+.summary{padding:10px 18px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.78rem;color:#c4b5a0;display:flex;flex-wrap:wrap;gap:16px}
+.summary-item{display:flex;gap:4px;align-items:baseline}
+.sum-lbl{color:rgba(200,185,160,0.4);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em}
+.sum-val{color:#d4b896;font-variant-numeric:tabular-nums}
+
+/* Plotly modebar */
+.plot-box .modebar{opacity:0.15!important;transition:opacity 0.2s!important}
+.plot-box:hover .modebar{opacity:0.6!important}
+.plot-box .modebar-btn path{fill:#c4b5a0!important}
+
+/* Chapter nav */
+.chapter-nav{display:flex;justify-content:space-between;align-items:flex-start;margin-top:48px;padding-top:24px;border-top:1px solid rgba(200,185,160,0.15);gap:24px}
+.chapter-nav a{text-decoration:none;transition:color 0.15s}
+.chapter-nav .nav-prev,.chapter-nav .nav-next{display:flex;flex-direction:column;gap:4px}
+.chapter-nav .nav-prev{align-items:flex-start}
+.chapter-nav .nav-next{align-items:flex-end;margin-left:auto;text-align:right}
+.chapter-nav .nav-dir{font-size:0.78rem;color:rgba(200,185,160,0.45)}
+.chapter-nav .nav-title{font-size:0.95rem;color:#1D9E75}
+.chapter-nav a:hover .nav-title{color:#f0e6d8}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ═══ Breadcrumb ═══ -->
+<div class="breadcrumb">
+  <a href="/behind-the-assumptions.html">&larr; Behind the Assumptions</a>
+  <span class="sep">&middot;</span>
+  Chapter 2 of 4
+</div>
+
+<!-- ═══ Title ═══ -->
+<div class="page-header">
+  <h1>How much does the answer depend on the inputs?</h1>
+  <p>Even modest variation in input parameters produces wide variation in the &ldquo;optimal&rdquo; allocation.</p>
+</div>
+
+<!-- ═══ Opening ═══ -->
+<section>
+  <p><a href="/behind-1-optimal.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">Chapter 1</a> introduced the tangency portfolio as the framework&rsquo;s answer to &ldquo;which allocation is optimal?&rdquo; The geometry is clean, the math is closed-form, and the slider on the primer widget shows a specific number &mdash; the tangency portfolio is, say, 41% stocks and 59% bonds. That&rsquo;s a precise answer.</p>
+  <p>But the answer depends on what you put in. Change the expected return of stocks from 8% to 7%, and the tangency portfolio shifts. Change the correlation from 0.1 to 0.3, and it shifts again. Change the volatility of bonds, and again. The framework treats every input as exact, then produces an exact-looking output.</p>
+  <p>The question this chapter examines is: how much does the output depend on the inputs?</p>
+</section>
+
+<!-- ═══ Where the inputs come from ═══ -->
+<section>
+  <h2>Where the inputs come from</h2>
+  <p>The parameters fed into mean-variance optimization &mdash; expected returns, volatilities, correlations &mdash; have to come from somewhere. In practice, they&rsquo;re typically derived from historical data, often with adjustments for forward-looking judgment. You&rsquo;d compute the average return of stocks over some past window, the standard deviation of that return series, the correlation between stock and bond returns over the same window. Then you&rsquo;d plug these numbers into the framework as if they were the parameters.</p>
+  <p>The trouble is that those summaries are uncertain. Different historical windows give different summaries. Different methods of computing the summaries (arithmetic vs. geometric averages, raw vs. log returns, equal-weighted vs. decay-weighted) give different answers. Different judgments about how to adjust historical data for current conditions give different answers. There&rsquo;s no single &ldquo;right&rdquo; set of inputs &mdash; there&rsquo;s a range of defensible choices, and the framework treats every choice as exact.</p>
+  <p>This is what&rsquo;s commonly called <em>parameter uncertainty</em>: not the variability of outcomes given fixed parameters (which the main simulator addresses), but the uncertainty about the parameters themselves. (The <a href="/behind-the-assumptions.html#two-ways" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">animated cartoon on the landing page</a> visualizes this distinction directly &mdash; single parameters produce one outcome distribution; many parameter sets produce a wider combined distribution. The widget below addresses parameter uncertainty specifically &mdash; the spread in the framework&rsquo;s &ldquo;optimal&rdquo; answer across plausible inputs. It doesn&rsquo;t combine that with the outcome variation each input would produce, which is what the cartoon&rsquo;s full right-side picture would require.)</p>
+</section>
+
+<!-- ═══ What it looks like ═══ -->
+<section>
+  <h2>What it looks like</h2>
+  <p>The widget below takes the two-asset framework from Chapter 1 and adds an outer layer: instead of fixing each parameter at a single value, it lets you specify a central value and an uncertainty range for each parameter. It then runs many Monte Carlo draws &mdash; each draw samples a complete set of parameters from your specified ranges, computes the resulting frontier and tangency portfolio, and plots both.</p>
+  <p>Start with the <em>Realistic uncertainty</em> preset. The frontier becomes a cloud of curves; the tangency portfolios scatter widely across the cloud. The single answer the framework was producing is now visibly a range of answers. Each Monte Carlo draw is an equally-defensible set of parameters; each produces its own &ldquo;optimal&rdquo; allocation; together they span a wide region.</p>
+</section>
+
+<!-- ═══ Embedded widget ═══ -->
+<div class="widget-wrap">
+  <div class="presets-section">
+    <div class="presets-label">Choose a scenario</div>
+    <div class="preset-grid" id="preset-grid"></div>
+    <div class="preset-divider">Or adjust sliders below to explore further</div>
+  </div>
+
+  <div class="controls-section">
+    <div class="controls-label">Asset parameters</div>
+    <div class="asset-grid" id="asset-grid"></div>
+
+    <div class="controls-label">Correlation</div>
+    <div class="corr-row" id="corr-row"></div>
+
+    <details class="settings-box">
+      <summary>Settings</summary>
+      <div class="settings-inner" id="settings-row"></div>
+    </details>
+  </div>
+
+  <div class="plots-row">
+    <div class="plot-box" id="frontier-plot"></div>
+    <div class="plot-box plot-box-short" id="alloc-plot"></div>
+  </div>
+
+  <div class="step-bar">
+    <button class="step-btn" id="step-btn">&#9654; Step through draws</button>
+    <span class="step-info" id="step-info"></span>
+    <button class="step-clear hidden" id="step-clear">Clear</button>
+    <button class="cloud-toggle" id="cloud-toggle">Hide cloud</button>
+  </div>
+
+  <div id="preset-caption" class="preset-caption hidden"></div>
+  <div class="summary" id="summary"></div>
+</div>
+
+<!-- ═══ Post-widget prose ═══ -->
+<section>
+  <p>The preset captions explain what each scenario shows. <em>Low uncertainty</em> demonstrates that when the inputs are pinned down tightly, the optimization is well-behaved and the answer is precise. <em>Realistic uncertainty</em> shows what happens at the kind of uncertainty levels you&rsquo;d actually have when estimating from historical data. <em>Correlation crisis</em> isolates the effect of correlation alone, demonstrating that uncertainty in just one parameter &mdash; correlation &mdash; can produce wide spreads in optimal allocations. <em>Return uncertainty</em> does the same for expected returns, which are notoriously hard to estimate from historical data.</p>
+  <p>In all four cases, the qualitative picture is the same: the framework&rsquo;s &ldquo;optimal&rdquo; answer is far less precise than it appears.</p>
+</section>
+
+<!-- ═══ What this means ═══ -->
+<section>
+  <h2>What this means</h2>
+  <p>The framework isn&rsquo;t broken. Mean-variance optimization does exactly what it&rsquo;s designed to do &mdash; given a specific set of inputs, it produces the allocation that maximizes Sharpe ratio. The trouble is that the inputs aren&rsquo;t actually specific. They&rsquo;re estimates with uncertainty, and the framework&rsquo;s apparent precision comes from treating the estimates as if they were exact.</p>
+  <p>When you propagate the uncertainty through, the &ldquo;optimal&rdquo; portfolio becomes a region rather than a point. Different defensible inputs produce different defensible answers. The framework doesn&rsquo;t tell you which one is right &mdash; it can&rsquo;t, because the question doesn&rsquo;t have a single answer once you take the input uncertainty seriously.</p>
+  <p>This has practical consequences. If your &ldquo;optimal&rdquo; allocation under one set of plausible inputs is 40% stocks, and under another set of equally plausible inputs is 70% stocks, the framework isn&rsquo;t really recommending either one. It&rsquo;s saying: under these specific inputs, this is the answer. Pick different inputs, get a different answer.</p>
+</section>
+
+<!-- ═══ What this isn't ═══ -->
+<section>
+  <h2>What this isn&rsquo;t</h2>
+  <p>This chapter isn&rsquo;t arguing that you should ignore the framework&rsquo;s outputs. The qualitative shape of the results &mdash; that diversification matters, that the tradeoff between return and risk is real, that correlations affect how strongly diversification helps &mdash; is robust across the parameter cloud. You can take the framework seriously as a guide to how to <em>think</em> about portfolio construction without taking its specific numerical outputs as recommendations.</p>
+  <p>But it does argue against treating the outputs as more precise than they are. A tangency portfolio computed from one set of historical estimates is one point in a cloud of equally-defensible answers. Reporting it as &ldquo;the optimal allocation&rdquo; overclaims what the framework can support.</p>
+  <p>The next chapter takes this one step further. So far the parameters have been treated as uncertain but stable &mdash; we&rsquo;ve shown wide variation in the optimization&rsquo;s answer when the parameters are allowed to vary, but the variation has been around a fixed center. The next chapter looks at what happens when the parameters themselves shift over time. Whatever the &ldquo;right&rdquo; inputs are, they&rsquo;re not the same inputs in every era &mdash; and there&rsquo;s no reason to assume the future will use or be represented by the same inputs as the past. The framework has no built-in way to handle this.</p>
+</section>
+
+<!-- ═══ Chapter navigation ═══ -->
+<nav class="chapter-nav">
+  <a href="/behind-1-optimal.html" class="nav-prev">
+    <span class="nav-dir">&larr; Previous</span>
+    <span class="nav-title">What does &lsquo;optimal&rsquo; mean?</span>
+  </a>
+  <a href="/behind-3-drift.html" class="nav-next">
+    <span class="nav-dir">Next &rarr;</span>
+    <span class="nav-title">When parameters drift</span>
+  </a>
+</nav>
+
+</div><!-- .page-wrap -->
+
+<!-- ═══ Widget JS ═══ -->
+<script>
+(function(){
+/* ================================================================
+   Configuration
+   ================================================================ */
+var ASSETS=[
+  {key:'stk',name:'Stocks',retDef:8,retUnc:1,volDef:16,volUnc:2},
+  {key:'bnd',name:'Bonds', retDef:3,retUnc:0.5,volDef:5,volUnc:1}
+];
+var CORR={key:'stk_bnd',label:'Stocks \u2194 Bonds',def:0.10,unc:0.15};
+var DEF_DRAWS=500, DEF_RF=2.0;
+
+var R={
+  ret:{min:0,max:15,step:0.5}, retU:{min:0,max:5,step:0.25},
+  vol:{min:1,max:40,step:0.5}, volU:{min:0,max:10,step:0.5},
+  cor:{min:-0.5,max:1.0,step:0.05}, corU:{min:0,max:0.4,step:0.01},
+  draws:{min:50,max:2000,step:50}, rf:{min:0,max:8,step:0.25}
+};
+
+var PRESETS=[
+  {id:'low',name:'Low uncertainty',
+   desc:'Tight estimates, well-determined answer.',
+   caption:'With tight uncertainty on all parameters, the optimization is well-behaved. The frontier curves barely spread and the tangency points cluster tightly. The \u201cbest\u201d answer is precise. This is closest to the textbook case where parameters are treated as known.',
+   v:{stk_ret:8,stk_retU:0.2,stk_vol:16,stk_volU:0.5,bnd_ret:3,bnd_retU:0.1,bnd_vol:5,bnd_volU:0.3,stk_bnd:0.10,stk_bndU:0.05,draws:500,rf:2}},
+  {id:'realistic',name:'Realistic uncertainty',
+   desc:'The typical case \u2014 wide spread from realistic noise.',
+   caption:'With realistic uncertainty \u2014 the kind you\u2019d actually have when estimating parameters from historical data \u2014 the frontier becomes a fuzzy band and the tangency points scatter widely. The \u201coptimal\u201d allocation is no longer a single answer; it\u2019s a range of equally-defensible answers.',
+   v:{stk_ret:8,stk_retU:1,stk_vol:16,stk_volU:2,bnd_ret:3,bnd_retU:0.5,bnd_vol:5,bnd_volU:1,stk_bnd:0.10,stk_bndU:0.15,draws:500,rf:2}},
+  {id:'corr',name:'Correlation crisis',
+   desc:'When correlations become unstable, diversification falters.',
+   caption:'Correlations between asset classes are particularly unstable \u2014 they can shift dramatically during regime changes. Even with confident estimates of returns and volatilities, uncertainty about correlation alone produces a wide spread in the frontier\u2019s curvature and in \u201coptimal\u201d allocations. This is the source of the \u201cdiversification fails when you need it most\u201d phenomenon.',
+   v:{stk_ret:8,stk_retU:0.5,stk_vol:16,stk_volU:1,bnd_ret:3,bnd_retU:0.3,bnd_vol:5,bnd_volU:0.5,stk_bnd:0.10,stk_bndU:0.35,draws:500,rf:2}},
+  {id:'return',name:'Return uncertainty',
+   desc:'Expected returns are the hardest parameter to estimate.',
+   caption:'Expected returns are notoriously hard to estimate \u2014 historical averages are noisy over any human-relevant time horizon. Even with precise estimates of volatility and correlation, realistic return uncertainty produces a wide vertical spread in the frontier and a wide scatter of tangency points. This uncertainty is fundamental: it isn\u2019t reduced by more data, since return distributions themselves may shift.',
+   v:{stk_ret:8,stk_retU:2.5,stk_vol:16,stk_volU:1,bnd_ret:3,bnd_retU:1,bnd_vol:5,bnd_volU:0.5,stk_bnd:0.10,stk_bndU:0.10,draws:500,rf:2}}
+];
+
+var els={};
+var displayFns=[];
+var activePreset=null;
+
+/* step-through state */
+var allDraws=[];
+var stepIdx=-1;
+var stepHLCount=0;
+var baseAllocShapes=[];
+var cloudVisible=true;
+var binHLCount=0;
+var binActive=false;
+var activeBinX=null;
+
+/* ================================================================
+   Math
+   ================================================================ */
+function randn(){var u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function clamp(x,lo,hi){return x<lo?lo:x>hi?hi:x}
+
+var N_PTS=30;
+function frontier(muS,muB,sigS,sigB,rho){
+  var vols=[],rets=[];
+  for(var i=0;i<=N_PTS;i++){
+    var w=i/N_PTS;
+    rets.push(w*muS+(1-w)*muB);
+    vols.push(Math.sqrt(w*w*sigS*sigS+(1-w)*(1-w)*sigB*sigB+2*w*(1-w)*rho*sigS*sigB));
+  }
+  return{vols:vols,rets:rets};
+}
+
+function tangencyW(muS,muB,sigS,sigB,rho,rf){
+  var es=muS-rf, eb=muB-rf;
+  if(es<=0&&eb<=0)return null;
+  if(es<=0)return 0;if(eb<=0)return 1;
+  var num=es*sigB*sigB-eb*rho*sigS*sigB;
+  var den=es*sigB*sigB+eb*sigS*sigS-(es+eb)*rho*sigS*sigB;
+  if(Math.abs(den)<1e-14)return es/sigS>=eb/sigB?1:0;
+  return clamp(num/den,0,1);
+}
+
+/* ================================================================
+   Monte Carlo
+   ================================================================ */
+function simulate(){
+  var rf=val('rf')/100, N=Math.round(val('draws'));
+  var cMuS=val('stk_ret')/100, cMuB=val('bnd_ret')/100;
+  var cSigS=val('stk_vol')/100, cSigB=val('bnd_vol')/100;
+  var cRho=val('stk_bnd');
+  var uMuS=val('stk_retU')/100, uMuB=val('bnd_retU')/100;
+  var uSigS=val('stk_volU')/100, uSigB=val('bnd_volU')/100;
+  var uRho=val('stk_bndU');
+
+  var fVols=[],fRets=[];
+  var tanPts=[];
+  allDraws=[];
+  var rej=0;
+
+  for(var t=0;t<N;t++){
+    var muS=cMuS+uMuS*randn(), muB=cMuB+uMuB*randn();
+    var sigS=Math.max(0.001,cSigS+uSigS*randn());
+    var sigB=Math.max(0.001,cSigB+uSigB*randn());
+    var rho=clamp(cRho+uRho*randn(),-0.999,0.999);
+
+    var f=frontier(muS,muB,sigS,sigB,rho);
+    for(var i=0;i<=N_PTS;i++){fVols.push(f.vols[i]*100);fRets.push(f.rets[i]*100)}
+    fVols.push(null);fRets.push(null);
+
+    var w=tangencyW(muS,muB,sigS,sigB,rho,rf);
+    if(w===null){rej++;continue}
+    var tRet=w*muS+(1-w)*muB;
+    var tVol=Math.sqrt(w*w*sigS*sigS+(1-w)*(1-w)*sigB*sigB+2*w*(1-w)*rho*sigS*sigB);
+    var sharpe=(tRet-rf)/tVol;
+    tanPts.push({w:w,vol:tVol,ret:tRet,sharpe:sharpe});
+    allDraws.push({curve:f,tan:{w:w,vol:tVol,ret:tRet,sharpe:sharpe}});
+  }
+
+  stepIdx=-1; stepHLCount=0; binHLCount=0; binActive=false;
+  document.getElementById('step-info').textContent='';
+  document.getElementById('step-clear').classList.add('hidden');
+
+  var cF=frontier(cMuS,cMuB,cSigS,cSigB,cRho);
+  var cW=tangencyW(cMuS,cMuB,cSigS,cSigB,cRho,rf);
+  var central=null;
+  if(cW!==null){
+    var cR=cW*cMuS+(1-cW)*cMuB;
+    var cV=Math.sqrt(cW*cW*cSigS*cSigS+(1-cW)*(1-cW)*cSigB*cSigB+2*cW*(1-cW)*cRho*cSigS*cSigB);
+    central={w:cW,vol:cV,ret:cR,sharpe:(cR-rf)/cV};
+  }
+
+  renderPlots(fVols,fRets,cF,tanPts,central,N,rej);
+  renderSummary(tanPts,central,N,rej);
+}
+function val(id){return parseFloat(els[id].value)}
+
+/* ================================================================
+   Plotting
+   ================================================================ */
+var plotsReady=false;
+function renderPlots(fVols,fRets,cF,tanPts,central,N,rej){
+
+  var traces=[];
+
+  traces.push({type:'scatter',mode:'lines',x:fVols,y:fRets,
+    line:{color:'rgba(29,158,117,0.06)',width:1},
+    connectgaps:false,hoverinfo:'skip',showlegend:false});
+
+  traces.push({type:'scatter',mode:'lines',
+    x:cF.vols.map(function(v){return v*100}),y:cF.rets.map(function(r){return r*100}),
+    line:{color:'#d4b896',width:2.5},
+    name:'Central frontier',hovertemplate:'Vol %{x:.1f}%<br>Return %{y:.2f}%<extra></extra>'});
+
+  if(tanPts.length){
+    traces.push({type:'scatter',mode:'markers',
+      x:tanPts.map(function(p){return p.vol*100}),y:tanPts.map(function(p){return p.ret*100}),
+      marker:{size:5,opacity:0.6,color:tanPts.map(function(p){return p.sharpe}),colorscale:'Viridis',
+        showscale:true,colorbar:{title:{text:'Sharpe',font:{size:11,color:'#c4b5a0'}},tickfont:{size:10,color:'#c4b5a0'},len:0.6,thickness:12,outlinewidth:0,bgcolor:'rgba(0,0,0,0)',x:1.02}},
+      name:'Tangency points',
+      hovertemplate:'Vol %{x:.1f}%<br>Return %{y:.2f}%<br>Sharpe %{marker.color:.3f}<extra></extra>'});
+  }
+
+  if(central){
+    traces.push({type:'scatter',mode:'markers',
+      x:[central.vol*100],y:[central.ret*100],
+      marker:{size:14,color:'#ff4444',symbol:'diamond',line:{color:'#fff',width:2}},
+      name:'Central tangency',
+      hovertemplate:'Central<br>Vol %{x:.1f}%<br>Return %{y:.2f}%<br>Stocks '+(central.w*100).toFixed(1)+'%<extra></extra>'});
+  }
+
+  var fL={
+    paper_bgcolor:'#241c14',plot_bgcolor:'#faf8f4',
+    font:{color:'#c4b5a0',family:'system-ui,-apple-system,sans-serif',size:11},
+    xaxis:{title:{text:'Portfolio Volatility (%)',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.1)'},
+    yaxis:{title:{text:'Expected Return (%)',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.1)'},
+    margin:{t:50,b:50,l:55,r:60},
+    title:{text:'Frontier Curves & Tangency Cloud',font:{size:14,color:'#e8ddd0'},y:0.98},
+    showlegend:false
+  };
+
+  var stkW=tanPts.map(function(p){return p.w*100});
+  baseAllocShapes=central?[{type:'line',x0:central.w*100,x1:central.w*100,y0:0,y1:1,yref:'paper',line:{color:'#ff4444',width:2,dash:'dash'}}]:[];
+  var aData=[{type:'histogram',x:stkW,nbinsx:40,
+    marker:{color:'rgba(29,158,117,0.55)',line:{color:'#1D9E75',width:1}},
+    hovertemplate:'Stocks %{x:.1f}%<br>Count %{y}<extra></extra>'}];
+  var aL={paper_bgcolor:'#241c14',plot_bgcolor:'#faf8f4',
+    font:{color:'#c4b5a0',family:'system-ui,-apple-system,sans-serif',size:11},
+    xaxis:{title:{text:'Stock Allocation (%)',font:{size:12}},range:[0,100],gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.12)'},
+    yaxis:{title:{text:'Count',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.12)'},
+    margin:{t:50,b:50,l:50,r:20},
+    title:{text:'Optimal Stock Allocation',font:{size:14,color:'#e8ddd0'},y:0.98},
+    showlegend:false,bargap:0.05,
+    shapes:baseAllocShapes.slice(),
+    annotations:central?[{x:central.w*100,y:1,yref:'paper',text:'Central: '+(central.w*100).toFixed(1)+'%',showarrow:false,font:{color:'#ff4444',size:10},yanchor:'bottom',yshift:2}]:[]};
+
+  var cfg={responsive:true,displayModeBar:true,
+    modeBarButtonsToRemove:['zoom2d','pan2d','select2d','lasso2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+    toImageButtonOptions:{format:'png',filename:'frontier-plot',height:800,width:1200,scale:2},
+    displaylogo:false};
+  var cfgA={responsive:true,displayModeBar:true,
+    modeBarButtonsToRemove:['zoom2d','pan2d','select2d','lasso2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+    toImageButtonOptions:{format:'png',filename:'allocation-histogram',height:800,width:1200,scale:2},
+    displaylogo:false};
+  if(!plotsReady){
+    Plotly.newPlot('frontier-plot',traces,fL,cfg);
+    Plotly.newPlot('alloc-plot',aData,aL,cfgA);
+    document.getElementById('alloc-plot').on('plotly_click',filterByBin);
+    plotsReady=true;
+  } else{Plotly.react('frontier-plot',traces,fL,cfg);Plotly.react('alloc-plot',aData,aL,cfgA)}
+  if(!cloudVisible){
+    Plotly.restyle('frontier-plot',{visible:[false]},[0,2]);
+    Plotly.restyle('alloc-plot',{visible:[false]},[0]);
+  }
+}
+
+function renderSummary(tanPts,central,N,rej){
+  var el=document.getElementById('summary');
+  if(!tanPts.length){el.innerHTML='<span style="color:rgba(200,185,160,0.4)">No valid draws.</span>';return}
+  var ws=tanPts.map(function(p){return p.w}),mW=ws.reduce(function(a,b){return a+b},0)/ws.length;
+  var sW=Math.sqrt(ws.reduce(function(a,b){return a+(b-mW)*(b-mW)},0)/ws.length);
+  var shs=tanPts.map(function(p){return p.sharpe}),mSh=shs.reduce(function(a,b){return a+b},0)/shs.length;
+  var sSh=Math.sqrt(shs.reduce(function(a,b){return a+(b-mSh)*(b-mSh)},0)/shs.length);
+  var h='';
+  if(central)h+='<div class="summary-item"><span class="sum-lbl">Central:</span><span class="sum-val">Stocks&nbsp;'+(central.w*100).toFixed(1)+'% / Bonds&nbsp;'+((1-central.w)*100).toFixed(1)+'% (Sharpe '+central.sharpe.toFixed(3)+')</span></div>';
+  h+='<div class="summary-item"><span class="sum-lbl">Mean\u00b1SD:</span><span class="sum-val">Stocks&nbsp;'+(mW*100).toFixed(1)+'\u00b1'+(sW*100).toFixed(1)+'% (Sharpe '+mSh.toFixed(3)+' \u00b1 '+sSh.toFixed(3)+')</span></div>';
+  h+='<div class="summary-item"><span class="sum-lbl">Valid:</span><span class="sum-val">'+tanPts.length+'/'+N+(rej?' ('+rej+' rej)':'')+'</span></div>';
+  el.innerHTML=h;
+}
+
+/* ================================================================
+   Step-through
+   ================================================================ */
+function stepForward(){
+  if(!allDraws.length)return;
+  if(binActive) clearBinFilter();
+  if(stepHLCount>0){
+    var idx=[];for(var i=0;i<stepHLCount;i++)idx.push(-(i+1));
+    Plotly.deleteTraces('frontier-plot',idx);
+    stepHLCount=0;
+  }
+  stepIdx=(stepIdx+1)%allDraws.length;
+  var d=allDraws[stepIdx];
+  Plotly.addTraces('frontier-plot',[
+    {type:'scatter',mode:'lines',
+     x:d.curve.vols.map(function(v){return v*100}),y:d.curve.rets.map(function(r){return r*100}),
+     line:{color:'#4a9eff',width:2.5},hoverinfo:'skip',showlegend:false},
+    {type:'scatter',mode:'markers',
+     x:[d.tan.vol*100],y:[d.tan.ret*100],
+     marker:{size:13,color:'#4a9eff',symbol:'circle',line:{color:'#fff',width:2}},
+     showlegend:false,
+     hovertemplate:'Draw '+(stepIdx+1)+'<br>Stocks '+(d.tan.w*100).toFixed(1)+'%<br>Sharpe '+d.tan.sharpe.toFixed(3)+'<extra></extra>'}
+  ]);
+  stepHLCount=2;
+  var shapes=baseAllocShapes.slice();
+  shapes.push({type:'line',x0:d.tan.w*100,x1:d.tan.w*100,y0:0,y1:1,yref:'paper',
+    line:{color:'#4a9eff',width:2.5}});
+  Plotly.relayout('alloc-plot',{shapes:shapes});
+  document.getElementById('step-info').textContent=
+    'Draw '+(stepIdx+1)+' of '+allDraws.length+' \u2014 Stocks '+(d.tan.w*100).toFixed(1)+'%, Sharpe '+d.tan.sharpe.toFixed(3);
+  document.getElementById('step-clear').classList.remove('hidden');
+}
+
+function clearStep(){
+  if(stepHLCount>0){
+    var idx=[];for(var i=0;i<stepHLCount;i++)idx.push(-(i+1));
+    Plotly.deleteTraces('frontier-plot',idx);
+    stepHLCount=0;
+  }
+  if(binActive) clearBinFilter(); else {
+    Plotly.relayout('alloc-plot',{shapes:baseAllocShapes.slice()});
+  }
+  stepIdx=-1;
+  document.getElementById('step-info').textContent='';
+  document.getElementById('step-clear').classList.add('hidden');
+}
+
+function toggleCloud(){
+  cloudVisible=!cloudVisible;
+  var btn=document.getElementById('cloud-toggle');
+  btn.textContent=cloudVisible?'Hide cloud':'Show cloud';
+  btn.classList.toggle('off',!cloudVisible);
+  Plotly.restyle('frontier-plot',{visible:[cloudVisible]},[0,2]);
+  Plotly.restyle('alloc-plot',{visible:[cloudVisible]},[0]);
+}
+
+/* ================================================================
+   Bin filter — click histogram bar to filter cloud
+   ================================================================ */
+function clearBinFilter(){
+  if(!binActive)return;
+  if(binHLCount>0){
+    var idx=[];for(var i=0;i<binHLCount;i++)idx.push(-(i+1));
+    Plotly.deleteTraces('frontier-plot',idx);
+    binHLCount=0;
+  }
+  Plotly.restyle('frontier-plot',{'line.color':'rgba(29,158,117,0.06)'},[0]);
+  Plotly.restyle('frontier-plot',{'marker.opacity':0.6},[2]);
+  Plotly.restyle('alloc-plot',{'marker.color':'rgba(29,158,117,0.55)'},[0]);
+  binActive=false;
+  activeBinX=null;
+  document.getElementById('step-info').textContent='';
+  document.getElementById('step-clear').classList.add('hidden');
+  Plotly.relayout('alloc-plot',{shapes:baseAllocShapes.slice()});
+}
+
+function filterByBin(ev){
+  if(!ev||!ev.points||!ev.points.length)return;
+  var pt=ev.points[0];
+  var indices=pt.pointNumbers;
+  if(!indices||!indices.length)return;
+  if(binActive&&activeBinX===pt.x){clearBinFilter();return}
+  if(stepHLCount>0){
+    var idx=[];for(var i=0;i<stepHLCount;i++)idx.push(-(i+1));
+    Plotly.deleteTraces('frontier-plot',idx);
+    stepHLCount=0;
+    stepIdx=-1;
+  }
+  if(binHLCount>0){
+    var idx2=[];for(var i=0;i<binHLCount;i++)idx2.push(-(i+1));
+    Plotly.deleteTraces('frontier-plot',idx2);
+    binHLCount=0;
+  }
+  Plotly.restyle('frontier-plot',{'line.color':'rgba(29,158,117,0.015)'},[0]);
+  Plotly.restyle('frontier-plot',{'marker.opacity':0.12},[2]);
+  var binSize=pt.data.xbins?pt.data.xbins.size:(100/40);
+  var binStart=pt.x-binSize/2, binEnd=pt.x+binSize/2;
+  var shapes=baseAllocShapes.slice();
+  shapes.push({type:'rect',x0:binStart,x1:binEnd,y0:0,y1:1,yref:'paper',
+    fillcolor:'rgba(74,158,255,0.15)',line:{color:'#4a9eff',width:1.5}});
+  Plotly.relayout('alloc-plot',{shapes:shapes});
+  var hlVols=[],hlRets=[];
+  var hlTanX=[],hlTanY=[],hlTanSh=[];
+  var selected=indices.map(function(i){return allDraws[i]}).filter(Boolean);
+  for(var j=0;j<selected.length;j++){
+    var d=selected[j];
+    for(var i=0;i<=N_PTS;i++){hlVols.push(d.curve.vols[i]*100);hlRets.push(d.curve.rets[i]*100)}
+    hlVols.push(null);hlRets.push(null);
+    hlTanX.push(d.tan.vol*100);hlTanY.push(d.tan.ret*100);hlTanSh.push(d.tan.sharpe);
+  }
+  var newTraces=[];
+  newTraces.push({type:'scatter',mode:'lines',x:hlVols,y:hlRets,
+    line:{color:'rgba(74,158,255,0.25)',width:1.5},
+    connectgaps:false,hoverinfo:'skip',showlegend:false});
+  newTraces.push({type:'scatter',mode:'markers',x:hlTanX,y:hlTanY,
+    marker:{size:7,color:'#4a9eff',opacity:0.85,line:{color:'#fff',width:1}},
+    showlegend:false,
+    hovertemplate:'Vol %{x:.1f}%<br>Return %{y:.2f}%<extra></extra>'});
+  Plotly.addTraces('frontier-plot',newTraces);
+  binHLCount=2;
+  binActive=true;
+  activeBinX=pt.x;
+  document.getElementById('step-info').textContent=
+    'Bin '+binStart.toFixed(0)+'\u2013'+binEnd.toFixed(0)+'% stocks \u2014 '+selected.length+' draws';
+  document.getElementById('step-clear').classList.remove('hidden');
+}
+
+/* ================================================================
+   Presets
+   ================================================================ */
+function applyPreset(id){
+  var p=PRESETS.filter(function(p){return p.id===id})[0];if(!p)return;
+  var changedWraps=[];
+  var keys=Object.keys(p.v);
+  for(var ki=0;ki<keys.length;ki++){
+    var k=keys[ki],v=p.v[k];
+    if(els[k]&&Math.abs(parseFloat(els[k].value)-v)>0.001){
+      var wrap=els[k].closest('.slider-wrap');if(wrap&&changedWraps.indexOf(wrap)===-1)changedWraps.push(wrap);
+    }
+  }
+  activePreset=id;
+  for(var ki=0;ki<keys.length;ki++){var k=keys[ki];if(els[k])els[k].value=p.v[k]}
+  displayFns.forEach(function(fn){fn()});
+  document.getElementById('draws_d').textContent=p.v.draws||DEF_DRAWS;
+  document.getElementById('rf_d').textContent=(p.v.rf!==undefined?p.v.rf:DEF_RF).toFixed(1)+'%';
+  document.querySelectorAll('.preset-card').forEach(function(c){c.classList.toggle('active',c.dataset.preset===id)});
+  var cap=document.getElementById('preset-caption');cap.textContent=p.caption;cap.classList.remove('hidden');
+  changedWraps.forEach(function(w){w.classList.remove('flash');void w.offsetWidth;w.classList.add('flash');
+    w.addEventListener('animationend',function(){w.classList.remove('flash')},{once:true})});
+  simulate();
+}
+function clearPreset(){
+  if(!activePreset)return;activePreset=null;
+  document.querySelectorAll('.preset-card').forEach(function(c){c.classList.remove('active')});
+  document.getElementById('preset-caption').classList.add('hidden');
+}
+
+/* ================================================================
+   UI
+   ================================================================ */
+function mkSliderPair(parent,id,label,cDef,uDef,cR,uR,cFmt,uFmt){
+  var row=document.createElement('div');row.className='param-row';
+  var hdr=document.createElement('div');hdr.className='param-header';
+  var lbl=document.createElement('span');lbl.className='lbl';lbl.textContent=label;
+  var vls=document.createElement('span');vls.className='vals';vls.id=id+'_disp';
+  hdr.appendChild(lbl);hdr.appendChild(vls);
+  var pair=document.createElement('div');pair.className='slider-pair';
+  var cs=document.createElement('input');cs.type='range';cs.min=cR.min;cs.max=cR.max;cs.step=cR.step;cs.value=cDef;cs.id=id;
+  var us=document.createElement('input');us.type='range';us.className='unc';us.min=uR.min;us.max=uR.max;us.step=uR.step;us.value=uDef;us.id=id+'U';
+  var cw=document.createElement('div');cw.className='slider-wrap';cw.appendChild(cs);
+  var uw=document.createElement('div');uw.className='slider-wrap';uw.appendChild(us);
+  pair.appendChild(cw);pair.appendChild(uw);row.appendChild(hdr);row.appendChild(pair);parent.appendChild(row);
+  els[id]=cs;els[id+'U']=us;
+  var upd=function(){vls.innerHTML=cFmt(cs.value)+' <span class="unc">\u00b1 '+uFmt(us.value)+'</span>'};
+  displayFns.push(upd);upd();
+  cs.addEventListener('input',function(){upd();clearPreset();debouncedSim()});
+  us.addEventListener('input',function(){upd();clearPreset();debouncedSim()});
+}
+function pctFmt(v){return parseFloat(v).toFixed(1)+'%'}
+function pctFmt2(v){return parseFloat(v).toFixed(2)+'%'}
+function corFmt(v){return parseFloat(v).toFixed(2)}
+
+function buildUI(){
+  var pg=document.getElementById('preset-grid');
+  PRESETS.forEach(function(p){
+    var btn=document.createElement('button');btn.className='preset-card';btn.dataset.preset=p.id;
+    btn.innerHTML='<span class="preset-name">'+p.name+'</span><span class="preset-desc">'+p.desc+'</span>';
+    btn.addEventListener('click',function(){applyPreset(p.id)});
+    pg.appendChild(btn);
+  });
+
+  var ag=document.getElementById('asset-grid');
+  ASSETS.forEach(function(a){
+    var card=document.createElement('div');card.className='asset-card';
+    var h3=document.createElement('h3');h3.textContent=a.name;card.appendChild(h3);
+    ag.appendChild(card);
+    mkSliderPair(card,a.key+'_ret','Expected return',a.retDef,a.retUnc,R.ret,R.retU,pctFmt,pctFmt2);
+    mkSliderPair(card,a.key+'_vol','Volatility',a.volDef,a.volUnc,R.vol,R.volU,pctFmt,pctFmt);
+  });
+
+  var cr=document.getElementById('corr-row');
+  var card=document.createElement('div');card.className='corr-card';
+  var h3=document.createElement('h3');h3.textContent=CORR.label;card.appendChild(h3);
+  cr.appendChild(card);
+  mkSliderPair(card,CORR.key,'Correlation',CORR.def,CORR.unc,R.cor,R.corU,corFmt,corFmt);
+
+  var sr=document.getElementById('settings-row');
+  var dc=document.createElement('div');dc.className='settings-ctrl';
+  dc.innerHTML='<label>Draws</label><span class="val" id="draws_d">'+DEF_DRAWS+'</span>';
+  var ds=document.createElement('input');ds.type='range';ds.min=R.draws.min;ds.max=R.draws.max;ds.step=R.draws.step;ds.value=DEF_DRAWS;ds.id='draws';
+  dc.insertBefore(ds,dc.querySelector('.val'));sr.appendChild(dc);
+  els.draws=ds;var dd=dc.querySelector('#draws_d');
+  ds.addEventListener('input',function(){dd.textContent=ds.value;clearPreset();debouncedSim()});
+
+  var rc=document.createElement('div');rc.className='settings-ctrl';
+  rc.innerHTML='<label>Risk-free rate</label><span class="val" id="rf_d">'+DEF_RF.toFixed(1)+'%</span>';
+  var rs=document.createElement('input');rs.type='range';rs.min=R.rf.min;rs.max=R.rf.max;rs.step=R.rf.step;rs.value=DEF_RF;rs.id='rf';
+  rc.insertBefore(rs,rc.querySelector('.val'));sr.appendChild(rc);
+  els.rf=rs;var rd=rc.querySelector('#rf_d');
+  rs.addEventListener('input',function(){rd.textContent=parseFloat(rs.value).toFixed(1)+'%';clearPreset();debouncedSim()});
+
+  var btn=document.createElement('button');btn.className='btn-reset';btn.textContent='Reset';
+  btn.addEventListener('click',function(){applyPreset('realistic')});
+  sr.appendChild(btn);
+
+  document.getElementById('step-btn').addEventListener('click',stepForward);
+  document.getElementById('step-clear').addEventListener('click',clearStep);
+  document.getElementById('cloud-toggle').addEventListener('click',toggleCloud);
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+function debounce(fn,ms){var t;return function(){var a=arguments;clearTimeout(t);t=setTimeout(function(){fn.apply(null,a)},ms)}}
+var debouncedSim=debounce(simulate,200);
+buildUI();
+applyPreset('realistic');
+})();
+</script>
+
+<script src="portfolio-nav.js"></script>
+</body>
+</html>

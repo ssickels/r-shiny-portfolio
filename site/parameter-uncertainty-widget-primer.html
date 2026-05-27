@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Parameter Uncertainty Primer — The Textbook Construction</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.6}
+
+.page-wrap{max-width:1100px;margin:0 auto;padding:40px 24px 60px}
+
+.page-header{margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.6rem;font-weight:400;color:#f0e6d8;margin-bottom:6px}
+.page-header .subtitle{color:rgba(200,185,160,0.55);font-size:0.95rem}
+
+.widget-wrap{border:1px solid rgba(200,185,160,0.15);border-radius:8px;background:#241c14;margin-bottom:40px}
+
+/* ── Controls ── */
+.controls-section{padding:14px 16px 12px}
+.controls-label{font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.35);margin-bottom:6px}
+
+.asset-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:600px){.asset-grid{grid-template-columns:1fr}}
+
+.asset-card,.corr-card{background:rgba(255,255,255,0.02);border:1px solid rgba(200,185,160,0.08);border-radius:5px;padding:8px 10px}
+.asset-card h3,.corr-card h3{font-size:0.76rem;font-weight:500;color:#d4b896;margin-bottom:5px;letter-spacing:0.02em}
+
+.param-row{margin-bottom:5px}
+.param-row:last-child{margin-bottom:0}
+.param-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px}
+.param-header .lbl{font-size:0.65rem;color:rgba(200,185,160,0.4);text-transform:uppercase;letter-spacing:0.04em}
+.param-header .vals{font-size:0.72rem;color:#d4b896;font-variant-numeric:tabular-nums}
+
+input[type=range]{width:100%;height:3px;-webkit-appearance:none;appearance:none;background:rgba(200,185,160,0.18);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#d4b896;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#d4b896;border:none;cursor:pointer}
+input[type=range]::-moz-range-track{background:rgba(200,185,160,0.18);height:3px;border-radius:2px}
+
+.settings-row{display:flex;align-items:center;gap:14px;padding:6px 0 2px;flex-wrap:wrap;border-top:1px solid rgba(200,185,160,0.06);margin-top:8px;padding-top:10px}
+.settings-ctrl{display:flex;align-items:center;gap:6px}
+.settings-ctrl label{font-size:0.65rem;color:rgba(200,185,160,0.4);white-space:nowrap}
+.settings-ctrl .val{color:#d4b896;font-size:0.65rem;min-width:30px;text-align:right}
+.settings-ctrl input[type=range]{width:110px}
+.btn-reset{padding:4px 14px;background:rgba(200,185,160,0.06);border:1px solid rgba(200,185,160,0.2);border-radius:3px;color:rgba(200,185,160,0.5);font-size:0.7rem;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.btn-reset:hover{background:rgba(200,185,160,0.12);color:#d4b896;border-color:rgba(200,185,160,0.35)}
+
+/* ── Plot ── */
+.plot-box{min-height:460px}
+
+/* ── Plotly modebar (subtle, hover-only) ── */
+.plot-box .modebar{opacity:0.15!important;transition:opacity 0.2s!important}
+.plot-box:hover .modebar{opacity:0.6!important}
+.plot-box .modebar-btn path{fill:#c4b5a0!important}
+
+/* ── Toggle bar ── */
+.toggle-bar{padding:8px 18px;border-top:1px solid rgba(200,185,160,0.08);display:flex;align-items:center}
+.label-toggle{padding:5px 14px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.3);border-radius:4px;color:#2bc49a;font-size:0.78rem;cursor:pointer;transition:all 0.15s;font-family:inherit;margin-left:auto}
+.label-toggle:hover{background:rgba(29,158,117,0.15);border-color:rgba(29,158,117,0.5)}
+.label-toggle.off{color:rgba(200,185,160,0.4);border-color:rgba(200,185,160,0.15);background:transparent}
+.label-toggle.off:hover{color:#d4b896;border-color:rgba(200,185,160,0.3)}
+
+/* ── Readout ── */
+.readout{padding:12px 18px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.82rem;color:#c4b5a0;display:flex;flex-wrap:wrap;gap:18px;align-items:baseline}
+.readout-item{display:flex;gap:4px;align-items:baseline}
+.ro-lbl{color:rgba(200,185,160,0.4);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em}
+.ro-val{color:#d4b896;font-variant-numeric:tabular-nums}
+.ro-sharpe{color:#e8c44a;font-weight:500;font-size:0.95rem}
+
+/* ── Explanation ── */
+section.explanation{margin-top:40px}
+section.explanation h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section.explanation p{margin-bottom:14px;color:#c4b5a0;font-size:0.95rem;line-height:1.7}
+section.explanation em{color:#f0e6d8;font-style:italic}
+section.explanation strong{color:#f0e6d8;font-weight:500}
+.section-divider{margin:24px 0;border:none;border-top:1px solid rgba(200,185,160,0.1)}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <header class="page-header">
+    <h1>The Textbook Construction</h1>
+    <p class="subtitle">How do you compare portfolios that differ in both return and risk?</p>
+  </header>
+
+  <section class="explanation">
+    <h2>What problem is this solving?</h2>
+    <p>Investors face a tradeoff between expected return and risk. Higher returns generally come with higher volatility. So how do you compare two portfolios when one has higher expected return but also higher volatility? You can&rsquo;t say one is &ldquo;better&rdquo; without some way of trading off return against risk.</p>
+    <p>The <strong>Sharpe ratio</strong> is one common answer. It measures <em>excess return per unit of risk</em> &mdash; specifically, the portfolio&rsquo;s return above the risk-free rate, divided by its volatility. A higher Sharpe ratio means more return for each unit of risk taken. By this measure, the portfolio with the highest Sharpe ratio is the most efficient &mdash; sometimes called the <strong>tangency portfolio</strong>.</p>
+    <p>The widget below shows how the tangency portfolio is constructed geometrically. The frontier curve traces every possible stocks/bonds mix; the capital allocation line picks out the one with the highest Sharpe ratio.</p>
+    <p><strong>A note on what the Sharpe ratio is and isn&rsquo;t:</strong> it&rsquo;s the standard return-per-unit-of-risk measure, but it has known limitations &mdash; it treats upside and downside volatility symmetrically, and it assumes returns are roughly normally distributed (they aren&rsquo;t, exactly). Despite these limitations, it remains widely used in practice as an intuitive summary, and it&rsquo;s a useful starting point for thinking about the return-risk tradeoff. The next page (on parameter uncertainty) shows one important reason why specific Sharpe ratio numbers shouldn&rsquo;t be taken too literally.</p>
+  </section>
+
+  <div class="widget-wrap">
+    <div class="controls-section">
+      <div class="controls-label">Asset parameters</div>
+      <div class="asset-grid" id="asset-grid"></div>
+
+      <div class="controls-label">Correlation</div>
+      <div id="corr-row"></div>
+
+      <div class="settings-row" id="settings-row"></div>
+    </div>
+
+    <div class="plot-box" id="main-plot"></div>
+
+    <div class="toggle-bar">
+      <button class="label-toggle" id="label-toggle">Hide labels</button>
+    </div>
+
+    <div class="readout" id="readout"></div>
+  </div>
+
+  <section class="explanation">
+    <h2>The construction</h2>
+    <p>The <strong>frontier curve</strong> shows every possible (volatility, return) pair you can achieve by mixing stocks and bonds. Each point on the curve is one allocation &mdash; from 100% bonds on the left to 100% stocks on the right.</p>
+    <p>The <strong>capital allocation line</strong> (CAL) is the straight line from the risk-free rate to the point where it just touches the frontier. That touch point is the <strong>tangency portfolio</strong> &mdash; the allocation that maximizes the Sharpe ratio.</p>
+    <p>Why &ldquo;tangency&rdquo;? The Sharpe ratio is the slope of a line from the risk-free rate to any point on the frontier. The CAL is the steepest such line that still reaches the frontier &mdash; it&rsquo;s tangent to the curve. The tangency portfolio is where that line touches the frontier, and its slope is the highest achievable Sharpe ratio.</p>
+    <hr class="section-divider"/>
+    <h2>Things to try</h2>
+    <p>Move the sliders to see how the construction responds. Try increasing stock volatility &mdash; the frontier stretches rightward and the tangency point shifts. Lower the correlation &mdash; the frontier becomes more concave (diversification becomes more powerful). Raise the risk-free rate &mdash; the tangency point slides along the frontier toward bonds.</p>
+    <p>This is the textbook construction with parameters treated as <em>known</em>. The next widget shows what happens when the parameters themselves are uncertain.</p>
+  </section>
+</div>
+
+<script>
+/* ================================================================
+   Configuration
+   ================================================================ */
+const ASSETS=[
+  {key:'stk',name:'Stocks',retDef:8,volDef:16},
+  {key:'bnd',name:'Bonds', retDef:3,volDef:5}
+];
+const CORR_DEF=0.10, RF_DEF=2.0;
+
+const R={
+  ret:{min:0,max:15,step:0.5},
+  vol:{min:1,max:40,step:0.5},
+  cor:{min:-0.5,max:1.0,step:0.05},
+  rf:{min:0,max:8,step:0.25}
+};
+
+const els={};
+const displayFns=[];
+let labelsVisible=true;
+/* ================================================================
+   Math
+   ================================================================ */
+function clamp(x,lo,hi){return x<lo?lo:x>hi?hi:x}
+
+const N_PTS=100;
+function frontier(muS,muB,sigS,sigB,rho){
+  const vols=[],rets=[],weights=[];
+  for(let i=0;i<=N_PTS;i++){
+    const w=i/N_PTS;
+    rets.push(w*muS+(1-w)*muB);
+    vols.push(Math.sqrt(w*w*sigS*sigS+(1-w)*(1-w)*sigB*sigB+2*w*(1-w)*rho*sigS*sigB));
+    weights.push(w);
+  }
+  return{vols,rets,weights};
+}
+
+function tangencyW(muS,muB,sigS,sigB,rho,rf){
+  const es=muS-rf,eb=muB-rf;
+  if(es<=0&&eb<=0)return null;
+  if(es<=0)return 0;if(eb<=0)return 1;
+  const num=es*sigB*sigB-eb*rho*sigS*sigB;
+  const den=es*sigB*sigB+eb*sigS*sigS-(es+eb)*rho*sigS*sigB;
+  if(Math.abs(den)<1e-14)return es/sigS>=eb/sigB?1:0;
+  return clamp(num/den,0,1);
+}
+
+/* ================================================================
+   Compute & render
+   ================================================================ */
+let plotReady=false;
+function update(){
+  const muS=val('stk_ret')/100, muB=val('bnd_ret')/100;
+  const sigS=val('stk_vol')/100, sigB=val('bnd_vol')/100;
+  const rho=val('corr'), rf=val('rf')/100;
+
+  const f=frontier(muS,muB,sigS,sigB,rho);
+  const w=tangencyW(muS,muB,sigS,sigB,rho,rf);
+
+  let tan=null;
+  if(w!==null){
+    const tRet=w*muS+(1-w)*muB;
+    const tVol=Math.sqrt(w*w*sigS*sigS+(1-w)*(1-w)*sigB*sigB+2*w*(1-w)*rho*sigS*sigB);
+    const sharpe=(tRet-rf)/tVol;
+    tan={w,ret:tRet,vol:tVol,sharpe};
+  }
+
+  renderPlot(f,tan,rf,muS,muB,sigS,sigB);
+  renderReadout(tan);
+}
+function val(id){return parseFloat(els[id].value)}
+
+function renderPlot(f,tan,rf,muS,muB,sigS,sigB){
+  const fVolPct=f.vols.map(v=>v*100), fRetPct=f.rets.map(r=>r*100);
+
+  const traces=[];
+
+  /* 1. Frontier curve */
+  traces.push({type:'scatter',mode:'lines',
+    x:fVolPct,y:fRetPct,
+    line:{color:'#8a7a6a',width:2.5},
+    name:'Frontier',
+    hovertemplate:'Vol %{x:.1f}%<br>Return %{y:.2f}%<br>Stocks %{customdata:.0f}%<extra></extra>',
+    customdata:f.weights.map(w=>w*100)});
+
+  /* 2. Risk-free rate marker */
+  traces.push({type:'scatter',mode:'markers',
+    x:[0],y:[rf*100],
+    marker:{size:10,color:'#5b9bd5',symbol:'circle',line:{color:'#fff',width:1.5}},
+    name:'Risk-free rate',
+    hovertemplate:'Risk-free rate<br>%{y:.2f}%<extra></extra>'});
+
+  /* 3. Capital Allocation Line (CAL) */
+  if(tan){
+    /* Extend line beyond tangency point */
+    const calSlope=tan.sharpe;
+    const xMax=Math.max(tan.vol*100+5, sigS*100+2);
+    traces.push({type:'scatter',mode:'lines',
+      x:[0,xMax],y:[rf*100, rf*100+calSlope*xMax],
+      line:{color:'#e8c44a',width:2,dash:'dot'},
+      name:'Capital Allocation Line',
+      hoverinfo:'skip'});
+  }
+
+  /* 4. Tangency portfolio */
+  if(tan){
+    traces.push({type:'scatter',mode:'markers',
+      x:[tan.vol*100],y:[tan.ret*100],
+      marker:{size:15,color:'#e8c44a',symbol:'diamond',line:{color:'#fff',width:2}},
+      name:'Tangency portfolio',
+      hovertemplate:'Tangency portfolio<br>Stocks %{customdata:.1f}%<br>Vol %{x:.1f}%<br>Return %{y:.2f}%<br>Sharpe '+tan.sharpe.toFixed(3)+'<extra></extra>',
+      customdata:[tan.w*100]});
+  }
+
+  /* 5. Endpoints */
+  traces.push({type:'scatter',mode:'markers',
+    x:[sigB*100],y:[muB*100],
+    marker:{size:8,color:'#6ab7a8',symbol:'circle',line:{color:'#fff',width:1}},
+    name:'100% Bonds',
+    hovertemplate:'100% Bonds<br>Vol %{x:.1f}%<br>Return %{y:.2f}%<extra></extra>'});
+  traces.push({type:'scatter',mode:'markers',
+    x:[sigS*100],y:[muS*100],
+    marker:{size:8,color:'#c97a5a',symbol:'circle',line:{color:'#fff',width:1}},
+    name:'100% Stocks',
+    hovertemplate:'100% Stocks<br>Vol %{x:.1f}%<br>Return %{y:.2f}%<extra></extra>'});
+
+  /* Annotations */
+  const annotations=[];
+  if(labelsVisible){
+    /* Frontier label — place at ~40% stocks */
+    const fIdx=Math.round(N_PTS*0.4);
+    annotations.push({x:fVolPct[fIdx],y:fRetPct[fIdx],text:'Frontier',showarrow:true,arrowhead:0,arrowcolor:'#8a7a6a',ax:-40,ay:-20,font:{size:11,color:'#8a7a6a'}});
+
+    /* Risk-free rate */
+    annotations.push({x:0,y:rf*100,text:'Risk-free<br>rate',showarrow:false,xanchor:'left',xshift:8,font:{size:10,color:'#5b9bd5'}});
+
+    /* CAL */
+    if(tan){
+      const calX=tan.vol*100*0.45;
+      const calY=rf*100+tan.sharpe*calX;
+      annotations.push({x:calX,y:calY,text:'Capital allocation<br>line (CAL)',showarrow:true,arrowhead:0,arrowcolor:'#e8c44a',ax:-10,ay:-30,font:{size:10,color:'#e8c44a'}});
+    }
+
+    /* Tangency portfolio */
+    if(tan){
+      annotations.push({x:tan.vol*100,y:tan.ret*100,text:'Tangency portfolio<br>(max Sharpe)',showarrow:true,arrowhead:0,arrowcolor:'#e8c44a',ax:30,ay:-30,font:{size:10,color:'#e8c44a'}});
+    }
+
+    /* Endpoints */
+    annotations.push({x:sigB*100,y:muB*100,text:'100% Bonds',showarrow:false,xanchor:'left',xshift:8,yshift:-2,font:{size:10,color:'#6ab7a8'}});
+    annotations.push({x:sigS*100,y:muS*100,text:'100% Stocks',showarrow:false,xanchor:'left',xshift:8,yshift:-2,font:{size:10,color:'#c97a5a'}});
+  }
+
+  const layout={
+    paper_bgcolor:'#241c14',plot_bgcolor:'#faf8f4',
+    font:{color:'#c4b5a0',family:'system-ui,-apple-system,sans-serif',size:11},
+    xaxis:{title:{text:'Portfolio Volatility (%)',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.1)',rangemode:'tozero'},
+    yaxis:{title:{text:'Expected Return (%)',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.1)'},
+    margin:{t:30,b:50,l:55,r:30},
+    showlegend:false,
+    annotations:annotations
+  };
+
+  const cfg={responsive:true,displayModeBar:true,
+    modeBarButtonsToRemove:['zoom2d','pan2d','select2d','lasso2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+    toImageButtonOptions:{format:'png',filename:'frontier-construction',height:800,width:1200,scale:2},
+    displaylogo:false};
+
+  if(!plotReady){Plotly.newPlot('main-plot',traces,layout,cfg);plotReady=true}
+  else{Plotly.react('main-plot',traces,layout,cfg)}
+}
+
+function renderReadout(tan){
+  const el=document.getElementById('readout');
+  if(!tan){el.innerHTML='<span style="color:rgba(200,185,160,0.4)">No tangency portfolio (both assets below risk-free rate).</span>';return}
+  el.innerHTML=`
+    <div class="readout-item"><span class="ro-lbl">Tangency:</span><span class="ro-val">Stocks&nbsp;${(tan.w*100).toFixed(1)}% / Bonds&nbsp;${((1-tan.w)*100).toFixed(1)}%</span></div>
+    <div class="readout-item"><span class="ro-lbl">Return:</span><span class="ro-val">${(tan.ret*100).toFixed(2)}%</span></div>
+    <div class="readout-item"><span class="ro-lbl">Volatility:</span><span class="ro-val">${(tan.vol*100).toFixed(2)}%</span></div>
+    <div class="readout-item"><span class="ro-lbl">Sharpe ratio:</span><span class="ro-sharpe">${tan.sharpe.toFixed(3)}</span></div>`;
+}
+
+/* ================================================================
+   Label toggle
+   ================================================================ */
+function toggleLabels(){
+  labelsVisible=!labelsVisible;
+  const btn=document.getElementById('label-toggle');
+  btn.textContent=labelsVisible?'Hide labels':'Show labels';
+  btn.classList.toggle('off',!labelsVisible);
+  update();
+}
+
+/* ================================================================
+   UI
+   ================================================================ */
+function mkSlider(parent,id,label,def,range,fmt){
+  const row=document.createElement('div');row.className='param-row';
+  const hdr=document.createElement('div');hdr.className='param-header';
+  const lbl=document.createElement('span');lbl.className='lbl';lbl.textContent=label;
+  const vls=document.createElement('span');vls.className='vals';vls.id=id+'_disp';
+  hdr.append(lbl,vls);
+  const s=document.createElement('input');s.type='range';s.min=range.min;s.max=range.max;s.step=range.step;s.value=def;s.id=id;
+  row.append(hdr,s);parent.appendChild(row);
+  els[id]=s;
+  const upd=()=>{vls.textContent=fmt(s.value)};
+  displayFns.push(upd);upd();
+  s.addEventListener('input',()=>{upd();update()});
+}
+function pctFmt(v){return parseFloat(v).toFixed(1)+'%'}
+function corFmt(v){return parseFloat(v).toFixed(2)}
+
+function buildUI(){
+  const ag=document.getElementById('asset-grid');
+  ASSETS.forEach(a=>{
+    const card=document.createElement('div');card.className='asset-card';
+    const h3=document.createElement('h3');h3.textContent=a.name;card.appendChild(h3);
+    ag.appendChild(card);
+    mkSlider(card,a.key+'_ret','Expected return',a.retDef,R.ret,pctFmt);
+    mkSlider(card,a.key+'_vol','Volatility',a.volDef,R.vol,pctFmt);
+  });
+
+  const cr=document.getElementById('corr-row');
+  const card=document.createElement('div');card.className='corr-card';
+  const h3=document.createElement('h3');h3.textContent='Stocks \u2194 Bonds';card.appendChild(h3);
+  cr.appendChild(card);
+  mkSlider(card,'corr','Correlation',CORR_DEF,R.cor,corFmt);
+
+  const sr=document.getElementById('settings-row');
+  const rc=document.createElement('div');rc.className='settings-ctrl';
+  rc.innerHTML=`<label>Risk-free rate</label><span class="val" id="rf_d">${RF_DEF.toFixed(1)}%</span>`;
+  const rs=document.createElement('input');rs.type='range';rs.min=R.rf.min;rs.max=R.rf.max;rs.step=R.rf.step;rs.value=RF_DEF;rs.id='rf';
+  rc.insertBefore(rs,rc.querySelector('.val'));sr.appendChild(rc);
+  els.rf=rs;const rd=rc.querySelector('#rf_d');
+  rs.addEventListener('input',()=>{rd.textContent=parseFloat(rs.value).toFixed(1)+'%';update()});
+
+  const btn=document.createElement('button');btn.className='btn-reset';btn.textContent='Reset';
+  btn.addEventListener('click',resetAll);
+  sr.appendChild(btn);
+
+  document.getElementById('label-toggle').addEventListener('click',toggleLabels);
+}
+
+function resetAll(){
+  els.stk_ret.value=8;els.stk_vol.value=16;
+  els.bnd_ret.value=3;els.bnd_vol.value=5;
+  els.corr.value=0.10;els.rf.value=2.0;
+  document.getElementById('rf_d').textContent='2.0%';
+  displayFns.forEach(fn=>fn());
+  update();
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+buildUI();
+update();
+</script>
+</body>
+</html>

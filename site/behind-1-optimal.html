@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>What Does 'Optimal' Mean? — Behind the Assumptions</title>
+<meta property="og:title" content="What Does 'Optimal' Mean? — Behind the Assumptions"/>
+<meta property="og:description" content="The Sharpe ratio, the tangency portfolio, and how the framework defines its answer."/>
+<meta property="og:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://stevessite.com/behind-1-optimal.html"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="What Does 'Optimal' Mean? — Behind the Assumptions"/>
+<meta name="twitter:description" content="The Sharpe ratio, the tangency portfolio, and how the framework defines its answer."/>
+<meta name="twitter:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+
+.page-wrap{max-width:740px;margin:0 auto;padding:72px 24px 60px}
+
+/* Breadcrumb */
+.breadcrumb{font-size:0.82rem;color:rgba(200,185,160,0.45);margin-bottom:20px}
+.breadcrumb a{color:rgba(200,185,160,0.55);text-decoration:none;transition:color 0.15s}
+.breadcrumb a:hover{color:#f0e6d8}
+.breadcrumb .sep{margin:0 6px}
+
+.page-header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
+.page-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
+
+section{margin-bottom:40px}
+section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem}
+section p:last-child{margin-bottom:0}
+em{color:#f0e6d8;font-style:italic}
+strong{color:#f0e6d8;font-weight:500}
+
+/* Formula */
+.formula-block{margin:20px 0;text-align:center}
+.fraction{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 4px}
+.fraction .num{border-bottom:1.5px solid rgba(200,185,160,0.5);padding:0 8px 4px;font-size:0.95rem;color:#e8ddd0}
+.fraction .den{padding:4px 8px 0;font-size:0.95rem;color:#e8ddd0}
+.formula-label{color:#c4b5a0;font-size:0.95rem}
+
+/* Widget */
+.widget-wrap{border:1px solid rgba(200,185,160,0.15);border-radius:8px;background:#241c14;margin:24px 0 40px}
+
+.controls-section{padding:14px 16px 12px}
+.controls-label{font-size:0.65rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:rgba(200,185,160,0.35);margin-bottom:6px}
+
+.asset-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:600px){.asset-grid{grid-template-columns:1fr}}
+
+.asset-card,.corr-card{background:rgba(255,255,255,0.02);border:1px solid rgba(200,185,160,0.08);border-radius:5px;padding:8px 10px}
+.asset-card h3,.corr-card h3{font-size:0.76rem;font-weight:500;color:#d4b896;margin-bottom:5px;letter-spacing:0.02em}
+
+.param-row{margin-bottom:5px}
+.param-row:last-child{margin-bottom:0}
+.param-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px}
+.param-header .lbl{font-size:0.65rem;color:rgba(200,185,160,0.4);text-transform:uppercase;letter-spacing:0.04em}
+.param-header .vals{font-size:0.72rem;color:#d4b896;font-variant-numeric:tabular-nums}
+
+input[type=range]{width:100%;height:3px;-webkit-appearance:none;appearance:none;background:rgba(200,185,160,0.18);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#d4b896;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#d4b896;border:none;cursor:pointer}
+input[type=range]::-moz-range-track{background:rgba(200,185,160,0.18);height:3px;border-radius:2px}
+
+.settings-row{display:flex;align-items:center;gap:14px;padding:6px 0 2px;flex-wrap:wrap;border-top:1px solid rgba(200,185,160,0.06);margin-top:8px;padding-top:10px}
+.settings-ctrl{display:flex;align-items:center;gap:6px}
+.settings-ctrl label{font-size:0.65rem;color:rgba(200,185,160,0.4);white-space:nowrap}
+.settings-ctrl .val{color:#d4b896;font-size:0.65rem;min-width:30px;text-align:right}
+.settings-ctrl input[type=range]{width:110px}
+.btn-reset{padding:4px 14px;background:rgba(200,185,160,0.06);border:1px solid rgba(200,185,160,0.2);border-radius:3px;color:rgba(200,185,160,0.5);font-size:0.7rem;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.btn-reset:hover{background:rgba(200,185,160,0.12);color:#d4b896;border-color:rgba(200,185,160,0.35)}
+
+.plot-box{min-height:460px}
+.plot-box .modebar{opacity:0.15!important;transition:opacity 0.2s!important}
+.plot-box:hover .modebar{opacity:0.6!important}
+.plot-box .modebar-btn path{fill:#c4b5a0!important}
+
+.toggle-bar{padding:8px 18px;border-top:1px solid rgba(200,185,160,0.08);display:flex;align-items:center}
+.label-toggle{padding:5px 14px;background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.3);border-radius:4px;color:#2bc49a;font-size:0.78rem;cursor:pointer;transition:all 0.15s;font-family:inherit;margin-left:auto}
+.label-toggle:hover{background:rgba(29,158,117,0.15);border-color:rgba(29,158,117,0.5)}
+.label-toggle.off{color:rgba(200,185,160,0.4);border-color:rgba(200,185,160,0.15);background:transparent}
+.label-toggle.off:hover{color:#d4b896;border-color:rgba(200,185,160,0.3)}
+
+.readout{padding:12px 18px;border-top:1px solid rgba(200,185,160,0.08);font-size:0.82rem;color:#c4b5a0;display:flex;flex-wrap:wrap;gap:18px;align-items:baseline}
+.readout-item{display:flex;gap:4px;align-items:baseline}
+.ro-lbl{color:rgba(200,185,160,0.4);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.04em}
+.ro-val{color:#d4b896;font-variant-numeric:tabular-nums}
+.ro-sharpe{color:#e8c44a;font-weight:500;font-size:0.95rem}
+
+/* Chapter nav */
+.chapter-nav{display:flex;justify-content:space-between;align-items:flex-start;margin-top:48px;padding-top:24px;border-top:1px solid rgba(200,185,160,0.15);gap:24px}
+.chapter-nav a{text-decoration:none;transition:color 0.15s}
+.chapter-nav .nav-prev,.chapter-nav .nav-next{display:flex;flex-direction:column;gap:4px}
+.chapter-nav .nav-prev{align-items:flex-start}
+.chapter-nav .nav-next{align-items:flex-end;margin-left:auto;text-align:right}
+.chapter-nav .nav-dir{font-size:0.78rem;color:rgba(200,185,160,0.45)}
+.chapter-nav .nav-title{font-size:0.95rem;color:#1D9E75}
+.chapter-nav a:hover .nav-title{color:#f0e6d8}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ═══ Breadcrumb ═══ -->
+<div class="breadcrumb">
+  <a href="/behind-the-assumptions.html">&larr; Behind the Assumptions</a>
+  <span class="sep">&middot;</span>
+  Chapter 1 of 4
+</div>
+
+<!-- ═══ Title ═══ -->
+<div class="page-header">
+  <h1>What does &lsquo;optimal&rsquo; mean?</h1>
+  <p>The Sharpe ratio, the tangency portfolio, and how the framework defines its answer.</p>
+</div>
+
+<!-- ═══ Opening ═══ -->
+<section>
+  <p>Before we can examine where the standard framework breaks down, we need to be clear about what it&rsquo;s claiming. The simulator on the <a href="/monte-carlo.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">main page</a> mostly sidestepped the question of &ldquo;optimality&rdquo; &mdash; it showed distributions of outcomes for different allocations, without singling any of them out as best. But the textbook treatment does single one out, and the reasoning behind it is worth understanding directly before we ask whether the reasoning holds up.</p>
+</section>
+
+<!-- ═══ The underlying problem ═══ -->
+<section>
+  <h2>The underlying problem</h2>
+  <p>Suppose you&rsquo;re comparing two portfolios. The first has an expected return of 6% and volatility of 10%. The second has an expected return of 8% and volatility of 16%. Which is better?</p>
+  <p>You can&rsquo;t answer without taking a position on how you trade off return against risk. The second portfolio has higher expected return, but you&rsquo;d have to live with bigger swings to get it. Different investors with different risk tolerances would land on different answers. There&rsquo;s no single &ldquo;correct&rdquo; choice.</p>
+  <p>But this leaves the framework without a way to recommend anything specific. It can plot a frontier of (volatility, return) tradeoffs across all possible allocations, but it can&rsquo;t say which point on that frontier is best &mdash; that depends on the investor&rsquo;s preferences.</p>
+  <p>The Sharpe ratio is one way out of this. Rather than asking &ldquo;which point on the frontier is best for you?&rdquo;, it asks: &ldquo;if I had to pick a single point that&rsquo;s &lsquo;efficient&rsquo; in some objective sense, what would it be?&rdquo; The Sharpe ratio provides one answer to that question.</p>
+</section>
+
+<!-- ═══ What the Sharpe ratio measures ═══ -->
+<section>
+  <h2>What the Sharpe ratio measures</h2>
+  <p>The Sharpe ratio is a portfolio&rsquo;s excess return per unit of risk. More precisely:</p>
+  <div class="formula-block">
+    <span class="formula-label">Sharpe ratio</span>
+    <span class="formula-label">&thinsp;=&thinsp;</span>
+    <span class="fraction">
+      <span class="num">expected return &minus; risk-free rate</span>
+      <span class="den">volatility</span>
+    </span>
+  </div>
+  <p>The numerator is the portfolio&rsquo;s expected return above what you could get without taking any risk (typically a Treasury bill or similar). The denominator is volatility, used as the measure of risk. The ratio answers: for each unit of risk you take on, how much excess return do you get in exchange?</p>
+  <p>A higher Sharpe ratio means more return per unit of risk. By this measure, a portfolio with Sharpe ratio 0.6 is &ldquo;more efficient&rdquo; than one with Sharpe ratio 0.4 &mdash; it&rsquo;s getting more return for each unit of risk.</p>
+  <p>This gives the framework a way to single out a specific portfolio: the one that maximizes the Sharpe ratio. That portfolio is called the <em>tangency portfolio</em>, for reasons that become visual when you see the geometry.</p>
+</section>
+
+<!-- ═══ The geometry ═══ -->
+<section>
+  <h2>The geometry</h2>
+  <p>The widget below shows the construction. The frontier curve traces every possible stocks-bonds mix. The risk-free rate sits on the y-axis at the volatility-equals-zero point. The capital allocation line (CAL) is the straight line from the risk-free rate to the frontier that just touches the curve &mdash; it&rsquo;s tangent to the frontier. The tangency portfolio is where that line touches.</p>
+  <p>Why this particular line? The slope of any line from the risk-free rate to a point on the frontier is that point&rsquo;s Sharpe ratio (excess return over volatility). The steeper the line, the higher the Sharpe ratio. The CAL is the steepest line that still reaches the frontier &mdash; any steeper and it would miss the curve entirely. So the tangency portfolio, sitting at the point where the steepest possible line touches the frontier, is the portfolio with the highest possible Sharpe ratio.</p>
+</section>
+
+<!-- ═══ Embedded widget ═══ -->
+<div class="widget-wrap">
+  <div class="controls-section">
+    <div class="controls-label">Asset parameters</div>
+    <div class="asset-grid" id="asset-grid"></div>
+
+    <div class="controls-label">Correlation</div>
+    <div id="corr-row"></div>
+
+    <div class="settings-row" id="settings-row"></div>
+  </div>
+
+  <div class="plot-box" id="main-plot"></div>
+
+  <div class="toggle-bar">
+    <button class="label-toggle" id="label-toggle">Hide labels</button>
+  </div>
+
+  <div class="readout" id="readout"></div>
+</div>
+
+<!-- ═══ Post-widget prose ═══ -->
+<section>
+  <p>Move the sliders to see how the construction responds. Try increasing stock volatility &mdash; the frontier stretches and the tangency point shifts. Lower the correlation &mdash; the frontier becomes more concave, and diversification becomes more powerful. Raise the risk-free rate &mdash; the tangency point slides along the frontier toward bonds.</p>
+</section>
+
+<!-- ═══ What this is — and isn't ═══ -->
+<section>
+  <h2>What this is &mdash; and isn&rsquo;t</h2>
+  <p>The Sharpe ratio is the standard return-per-unit-of-risk measure in finance, and the tangency portfolio is the standard definition of an &ldquo;optimal&rdquo; portfolio that comes out of mean-variance analysis. They&rsquo;re widely used and well-defended for the questions they were designed to answer.</p>
+  <p>But they have known limitations. The Sharpe ratio treats upside and downside volatility symmetrically &mdash; a portfolio that occasionally has very good months gets penalized for that variability the same way one that occasionally has very bad months does. It also assumes returns are roughly normally distributed, which they aren&rsquo;t exactly (real returns have fatter tails than the normal distribution predicts, especially on the downside).</p>
+  <p>These limitations matter, and have generated a substantial literature of alternative measures (Sortino ratio, downside deviation, conditional Value-at-Risk, and others). But for the purposes of this section, the Sharpe ratio is enough &mdash; it&rsquo;s the standard, it captures the basic return-vs-risk tradeoff intuitively, and the issues we&rsquo;re going to examine in the next chapters arise even before we worry about its specific limitations as a measure.</p>
+  <p>The point of this chapter is to make sure we understand what the framework is claiming when it produces an &ldquo;optimal&rdquo; portfolio. Now that we do, we can ask the harder question: how much should we trust that claim?</p>
+</section>
+
+<!-- ═══ Chapter navigation ═══ -->
+<nav class="chapter-nav">
+  <a href="/behind-the-assumptions.html" class="nav-prev">
+    <span class="nav-dir">&larr; Previous</span>
+    <span class="nav-title">Behind the Assumptions</span>
+  </a>
+  <a href="/behind-2-parameter-uncertainty.html" class="nav-next">
+    <span class="nav-dir">Next &rarr;</span>
+    <span class="nav-title">How much does the answer depend on the inputs?</span>
+  </a>
+</nav>
+
+</div><!-- .page-wrap -->
+
+<!-- ═══ Widget JS ═══ -->
+<script>
+(function(){
+/* ================================================================
+   Configuration
+   ================================================================ */
+var ASSETS=[
+  {key:'stk',name:'Stocks',retDef:8,volDef:16},
+  {key:'bnd',name:'Bonds', retDef:3,volDef:5}
+];
+var CORR_DEF=0.10, RF_DEF=2.0;
+
+var R={
+  ret:{min:0,max:15,step:0.5},
+  vol:{min:1,max:40,step:0.5},
+  cor:{min:-0.5,max:1.0,step:0.05},
+  rf:{min:0,max:8,step:0.25}
+};
+
+var els={};
+var displayFns=[];
+var labelsVisible=true;
+/* ================================================================
+   Math
+   ================================================================ */
+function clamp(x,lo,hi){return x<lo?lo:x>hi?hi:x}
+
+var N_PTS=100;
+function frontier(muS,muB,sigS,sigB,rho){
+  var vols=[],rets=[],weights=[];
+  for(var i=0;i<=N_PTS;i++){
+    var w=i/N_PTS;
+    rets.push(w*muS+(1-w)*muB);
+    vols.push(Math.sqrt(w*w*sigS*sigS+(1-w)*(1-w)*sigB*sigB+2*w*(1-w)*rho*sigS*sigB));
+    weights.push(w);
+  }
+  return{vols:vols,rets:rets,weights:weights};
+}
+
+function tangencyW(muS,muB,sigS,sigB,rho,rf){
+  var es=muS-rf,eb=muB-rf;
+  if(es<=0&&eb<=0)return null;
+  if(es<=0)return 0;if(eb<=0)return 1;
+  var num=es*sigB*sigB-eb*rho*sigS*sigB;
+  var den=es*sigB*sigB+eb*sigS*sigS-(es+eb)*rho*sigS*sigB;
+  if(Math.abs(den)<1e-14)return es/sigS>=eb/sigB?1:0;
+  return clamp(num/den,0,1);
+}
+
+/* ================================================================
+   Compute & render
+   ================================================================ */
+var plotReady=false;
+function update(){
+  var muS=val('stk_ret')/100, muB=val('bnd_ret')/100;
+  var sigS=val('stk_vol')/100, sigB=val('bnd_vol')/100;
+  var rho=val('corr'), rf=val('rf')/100;
+
+  var f=frontier(muS,muB,sigS,sigB,rho);
+  var w=tangencyW(muS,muB,sigS,sigB,rho,rf);
+
+  var tan=null;
+  if(w!==null){
+    var tRet=w*muS+(1-w)*muB;
+    var tVol=Math.sqrt(w*w*sigS*sigS+(1-w)*(1-w)*sigB*sigB+2*w*(1-w)*rho*sigS*sigB);
+    var sharpe=(tRet-rf)/tVol;
+    tan={w:w,ret:tRet,vol:tVol,sharpe:sharpe};
+  }
+
+  renderPlot(f,tan,rf,muS,muB,sigS,sigB);
+  renderReadout(tan);
+}
+function val(id){return parseFloat(els[id].value)}
+
+function renderPlot(f,tan,rf,muS,muB,sigS,sigB){
+  var fVolPct=f.vols.map(function(v){return v*100}), fRetPct=f.rets.map(function(r){return r*100});
+
+  var traces=[];
+
+  /* 1. Frontier curve */
+  traces.push({type:'scatter',mode:'lines',
+    x:fVolPct,y:fRetPct,
+    line:{color:'#8a7a6a',width:2.5},
+    name:'Frontier',
+    hovertemplate:'Vol %{x:.1f}%<br>Return %{y:.2f}%<br>Stocks %{customdata:.0f}%<extra></extra>',
+    customdata:f.weights.map(function(w){return w*100})});
+
+  /* 2. Risk-free rate marker */
+  traces.push({type:'scatter',mode:'markers',
+    x:[0],y:[rf*100],
+    marker:{size:10,color:'#5b9bd5',symbol:'circle',line:{color:'#fff',width:1.5}},
+    name:'Risk-free rate',
+    hovertemplate:'Risk-free rate<br>%{y:.2f}%<extra></extra>'});
+
+  /* 3. Capital Allocation Line (CAL) */
+  if(tan){
+    var calSlope=tan.sharpe;
+    var xMax=Math.max(tan.vol*100+5, sigS*100+2);
+    traces.push({type:'scatter',mode:'lines',
+      x:[0,xMax],y:[rf*100, rf*100+calSlope*xMax],
+      line:{color:'#e8c44a',width:2,dash:'dot'},
+      name:'Capital Allocation Line',
+      hoverinfo:'skip'});
+  }
+
+  /* 4. Tangency portfolio */
+  if(tan){
+    traces.push({type:'scatter',mode:'markers',
+      x:[tan.vol*100],y:[tan.ret*100],
+      marker:{size:15,color:'#e8c44a',symbol:'diamond',line:{color:'#fff',width:2}},
+      name:'Tangency portfolio',
+      hovertemplate:'Tangency portfolio<br>Stocks %{customdata:.1f}%<br>Vol %{x:.1f}%<br>Return %{y:.2f}%<br>Sharpe '+tan.sharpe.toFixed(3)+'<extra></extra>',
+      customdata:[tan.w*100]});
+  }
+
+  /* 5. Endpoints */
+  traces.push({type:'scatter',mode:'markers',
+    x:[sigB*100],y:[muB*100],
+    marker:{size:8,color:'#6ab7a8',symbol:'circle',line:{color:'#fff',width:1}},
+    name:'100% Bonds',
+    hovertemplate:'100% Bonds<br>Vol %{x:.1f}%<br>Return %{y:.2f}%<extra></extra>'});
+  traces.push({type:'scatter',mode:'markers',
+    x:[sigS*100],y:[muS*100],
+    marker:{size:8,color:'#c97a5a',symbol:'circle',line:{color:'#fff',width:1}},
+    name:'100% Stocks',
+    hovertemplate:'100% Stocks<br>Vol %{x:.1f}%<br>Return %{y:.2f}%<extra></extra>'});
+
+  /* Annotations */
+  var annotations=[];
+  if(labelsVisible){
+    var fIdx=Math.round(N_PTS*0.4);
+    annotations.push({x:fVolPct[fIdx],y:fRetPct[fIdx],text:'Frontier',showarrow:true,arrowhead:0,arrowcolor:'#8a7a6a',ax:-40,ay:-20,font:{size:11,color:'#8a7a6a'}});
+    annotations.push({x:0,y:rf*100,text:'Risk-free<br>rate',showarrow:false,xanchor:'left',xshift:8,font:{size:10,color:'#5b9bd5'}});
+    if(tan){
+      var calX=tan.vol*100*0.45;
+      var calY=rf*100+tan.sharpe*calX;
+      annotations.push({x:calX,y:calY,text:'Capital allocation<br>line (CAL)',showarrow:true,arrowhead:0,arrowcolor:'#e8c44a',ax:-10,ay:-30,font:{size:10,color:'#e8c44a'}});
+    }
+    if(tan){
+      annotations.push({x:tan.vol*100,y:tan.ret*100,text:'Tangency portfolio<br>(max Sharpe)',showarrow:true,arrowhead:0,arrowcolor:'#e8c44a',ax:30,ay:-30,font:{size:10,color:'#e8c44a'}});
+    }
+    annotations.push({x:sigB*100,y:muB*100,text:'100% Bonds',showarrow:false,xanchor:'left',xshift:8,yshift:-2,font:{size:10,color:'#6ab7a8'}});
+    annotations.push({x:sigS*100,y:muS*100,text:'100% Stocks',showarrow:false,xanchor:'left',xshift:8,yshift:-2,font:{size:10,color:'#c97a5a'}});
+  }
+
+  var layout={
+    paper_bgcolor:'#241c14',plot_bgcolor:'#faf8f4',
+    font:{color:'#c4b5a0',family:'system-ui,-apple-system,sans-serif',size:11},
+    xaxis:{title:{text:'Portfolio Volatility (%)',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.1)',rangemode:'tozero'},
+    yaxis:{title:{text:'Expected Return (%)',font:{size:12}},gridcolor:'rgba(0,0,0,0.06)',linecolor:'#999',tickfont:{size:10,color:'#666'},zerolinecolor:'rgba(0,0,0,0.1)'},
+    margin:{t:30,b:50,l:55,r:30},
+    showlegend:false,
+    annotations:annotations
+  };
+
+  var cfg={responsive:true,displayModeBar:true,
+    modeBarButtonsToRemove:['zoom2d','pan2d','select2d','lasso2d','zoomIn2d','zoomOut2d','autoScale2d','resetScale2d'],
+    toImageButtonOptions:{format:'png',filename:'frontier-construction',height:800,width:1200,scale:2},
+    displaylogo:false};
+
+  if(!plotReady){Plotly.newPlot('main-plot',traces,layout,cfg);plotReady=true}
+  else{Plotly.react('main-plot',traces,layout,cfg)}
+}
+
+function renderReadout(tan){
+  var el=document.getElementById('readout');
+  if(!tan){el.innerHTML='<span style="color:rgba(200,185,160,0.4)">No tangency portfolio (both assets below risk-free rate).</span>';return}
+  el.innerHTML=
+    '<div class="readout-item"><span class="ro-lbl">Tangency:</span><span class="ro-val">Stocks&nbsp;'+(tan.w*100).toFixed(1)+'% / Bonds&nbsp;'+((1-tan.w)*100).toFixed(1)+'%</span></div>'+
+    '<div class="readout-item"><span class="ro-lbl">Return:</span><span class="ro-val">'+(tan.ret*100).toFixed(2)+'%</span></div>'+
+    '<div class="readout-item"><span class="ro-lbl">Volatility:</span><span class="ro-val">'+(tan.vol*100).toFixed(2)+'%</span></div>'+
+    '<div class="readout-item"><span class="ro-lbl">Sharpe ratio:</span><span class="ro-sharpe">'+tan.sharpe.toFixed(3)+'</span></div>';
+}
+
+/* ================================================================
+   Label toggle
+   ================================================================ */
+function toggleLabels(){
+  labelsVisible=!labelsVisible;
+  var btn=document.getElementById('label-toggle');
+  btn.textContent=labelsVisible?'Hide labels':'Show labels';
+  btn.classList.toggle('off',!labelsVisible);
+  update();
+}
+
+/* ================================================================
+   UI
+   ================================================================ */
+function mkSlider(parent,id,label,def,range,fmt){
+  var row=document.createElement('div');row.className='param-row';
+  var hdr=document.createElement('div');hdr.className='param-header';
+  var lbl=document.createElement('span');lbl.className='lbl';lbl.textContent=label;
+  var vls=document.createElement('span');vls.className='vals';vls.id=id+'_disp';
+  hdr.appendChild(lbl);hdr.appendChild(vls);
+  var s=document.createElement('input');s.type='range';s.min=range.min;s.max=range.max;s.step=range.step;s.value=def;s.id=id;
+  row.appendChild(hdr);row.appendChild(s);parent.appendChild(row);
+  els[id]=s;
+  var upd=function(){vls.textContent=fmt(s.value)};
+  displayFns.push(upd);upd();
+  s.addEventListener('input',function(){upd();update()});
+}
+function pctFmt(v){return parseFloat(v).toFixed(1)+'%'}
+function corFmt(v){return parseFloat(v).toFixed(2)}
+
+function buildUI(){
+  var ag=document.getElementById('asset-grid');
+  ASSETS.forEach(function(a){
+    var card=document.createElement('div');card.className='asset-card';
+    var h3=document.createElement('h3');h3.textContent=a.name;card.appendChild(h3);
+    ag.appendChild(card);
+    mkSlider(card,a.key+'_ret','Expected return',a.retDef,R.ret,pctFmt);
+    mkSlider(card,a.key+'_vol','Volatility',a.volDef,R.vol,pctFmt);
+  });
+
+  var cr=document.getElementById('corr-row');
+  var card=document.createElement('div');card.className='corr-card';
+  var h3=document.createElement('h3');h3.textContent='Stocks \u2194 Bonds';card.appendChild(h3);
+  cr.appendChild(card);
+  mkSlider(card,'corr','Correlation',CORR_DEF,R.cor,corFmt);
+
+  var sr=document.getElementById('settings-row');
+  var rc=document.createElement('div');rc.className='settings-ctrl';
+  rc.innerHTML='<label>Risk-free rate</label><span class="val" id="rf_d">'+RF_DEF.toFixed(1)+'%</span>';
+  var rs=document.createElement('input');rs.type='range';rs.min=R.rf.min;rs.max=R.rf.max;rs.step=R.rf.step;rs.value=RF_DEF;rs.id='rf';
+  rc.insertBefore(rs,rc.querySelector('.val'));sr.appendChild(rc);
+  els.rf=rs;var rd=rc.querySelector('#rf_d');
+  rs.addEventListener('input',function(){rd.textContent=parseFloat(rs.value).toFixed(1)+'%';update()});
+
+  var btn=document.createElement('button');btn.className='btn-reset';btn.textContent='Reset';
+  btn.addEventListener('click',resetAll);
+  sr.appendChild(btn);
+
+  document.getElementById('label-toggle').addEventListener('click',toggleLabels);
+}
+
+function resetAll(){
+  els.stk_ret.value=8;els.stk_vol.value=16;
+  els.bnd_ret.value=3;els.bnd_vol.value=5;
+  els.corr.value=0.10;els.rf.value=2.0;
+  document.getElementById('rf_d').textContent='2.0%';
+  displayFns.forEach(function(fn){fn()});
+  update();
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+buildUI();
+update();
+})();
+</script>
+
+<script src="portfolio-nav.js"></script>
+</body>
+</html>

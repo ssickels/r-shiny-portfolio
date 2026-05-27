@@ -9,6 +9,7 @@
     <a href="/monte-carlo-guide.html" class="nav-tab" data-path="monte-carlo-guide">Guide</a>
     <a href="/monte-carlo-about.html" class="nav-tab" data-path="monte-carlo-about">About</a>
     <a href="/monte-carlo-methodology.html" class="nav-tab" data-path="monte-carlo-methodology">How It Works</a>
+    <a href="/behind-the-assumptions.html" class="nav-tab" data-path="behind-">Behind the Assumptions</a>
   </div>
   <div id="nav-panel" aria-hidden="true">
     <a href="https://stevessite.com" class="nav-panel-home">&#8962; Home</a>
@@ -31,6 +32,7 @@
       <a href="https://stevessite.com/monte-carlo-guide.html">Getting Started</a>
       <a href="https://stevessite.com/monte-carlo-about.html">About</a>
       <a href="https://stevessite.com/monte-carlo-methodology.html">How It Works</a>
+      <a href="https://stevessite.com/behind-the-assumptions.html">Behind the Assumptions</a>
       <a href="https://github.com/ssickels/r-shiny-portfolio" target="_blank" class="nav-panel-github">GitHub ↗</a>
       </div>
     </div>
@@ -193,6 +195,10 @@
   transition: background 0.12s;
 }
 .nav-panel-contact:hover { background: rgba(200, 185, 160, 0.08); }
+/* --- 5-tab responsive --- */
+@media (max-width: 640px) {
+  .nav-tab { font-size: 10.5px; padding: 0 8px; }
+}
 /* --- Accordion (mobile only) --- */
 .nav-section-links {
   display: flex;

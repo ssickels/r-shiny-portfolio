@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Two Pipelines — Fixed vs. Uncertain Parameters</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f8f7f4;color:#444;font-family:Georgia,'Times New Roman',serif;line-height:1.7}
+.wrap{max-width:1020px;margin:0 auto;padding:32px 20px 48px}
+h1{font-size:1.35rem;font-weight:normal;color:#333;margin-bottom:4px}
+.subtitle{color:#888;font-size:0.88rem;margin-bottom:20px;font-style:italic}
+.canvas-wrap{background:#fff;border:1px solid #ddd;border-radius:6px;overflow:hidden;margin-bottom:14px}
+canvas{display:block;width:100%;height:auto}
+.controls{display:flex;align-items:center;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+.controls button{padding:5px 14px;background:#fff;border:1px solid #ccc;border-radius:4px;color:#555;font-size:0.82rem;cursor:pointer;font-family:system-ui,sans-serif;transition:all 0.12s}
+.controls button:hover{background:#f0f0f0;border-color:#999;color:#333}
+.controls button.active{background:#444;color:#fff;border-color:#444}
+.speed-group{display:flex;gap:0}
+.speed-group button{border-radius:0}
+.speed-group button:first-child{border-radius:4px 0 0 4px}
+.speed-group button:last-child{border-radius:0 4px 4px 0}
+.speed-group button+button{border-left:none}
+.caption{font-size:0.91rem;color:#555;line-height:1.75}
+.caption p{margin-bottom:14px}
+.caption strong{color:#333;font-weight:600}
+.caption em{color:#333}
+.caption .quote{border-left:3px solid #ccc;padding-left:14px;margin:16px 0;color:#666;font-style:italic}
+.panel-pair{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}
+.panel-pair .panel-box{border:1px solid #ddd;border-radius:5px;padding:14px 16px;background:#faf9f7}
+.panel-pair .panel-box p{margin-bottom:0}
+.panel-pair .panel-box .panel-heading{font-size:0.93rem;font-weight:600;color:#555;margin-bottom:6px}
+.panel-pair .panel-box.right .panel-heading{color:#3a7ca5}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Two Pipelines</h1>
+<p class="subtitle">What changes when you acknowledge parameter uncertainty</p>
+
+<div class="canvas-wrap">
+<canvas id="cv"></canvas>
+</div>
+
+<div class="controls">
+<button id="replay-btn">&#9654; Replay</button>
+<button id="pause-btn">&#9646;&#9646; Pause</button>
+<div class="speed-group">
+<button data-speed="0.5">0.5&times;</button>
+<button data-speed="1" class="active">1&times;</button>
+<button data-speed="2">2&times;</button>
+</div>
+</div>
+
+<p style="font-size:0.82rem;color:#888;font-style:italic;margin-bottom:18px">Inspired by Figure 3.6 in Richard McElreath&rsquo;s <em>Statistical Rethinking</em> (2nd ed.).</p>
+
+<div class="caption">
+<p><strong>Two ways to think about uncertainty in a model.</strong></p>
+<p>The cartoon shows the structural shape of the two pipelines without committing to a specific generative mechanism. In any real model, the parameter connects to outcomes through some likelihood or process. The cartoon abstracts away from those details to focus on the structural difference: a single parameter produces one outcome distribution; a distribution of parameters produces a wider combined outcome distribution.</p>
+<div class="panel-pair">
+<div class="panel-box"><p class="panel-heading">Fixed parameter</p><p>A single parameter value produces a distribution of outcomes. This is what a standard Monte Carlo simulator does &mdash; fixed parameters, distribution of outcomes. The simulator is honest about <em>outcome uncertainty</em>: given exactly these parameters, here&rsquo;s the range of possible histories.</p></div>
+<div class="panel-box right"><p class="panel-heading">Uncertain parameter</p><p>A distribution over parameter values propagates through to a wider distribution of outcomes. Each parameter value contributes its own sampling distribution, weighted by how plausible the parameter value is. The combined distribution at the bottom is wider than any single parameter&rsquo;s contribution.</p></div>
+</div>
+<p>The parameter uncertainty widgets on this page do part of the uncertain-parameter approach &mdash; they show the cloud of summary statistics (optimal allocations, Sharpe ratios) that comes from varying parameters. They don&rsquo;t combine that with the full sampling distributions for each parameter set, which would yield the full combined outcome distribution shown on the right. The cartoon shows what that full picture would look like in principle.</p>
+<p><strong>The structural point:</strong> relying on a single point estimate of a parameter &mdash; even if you correctly propagate outcome uncertainty given that estimate &mdash; produces an overconfident distribution.</p>
+<p class="quote">McElreath calls this &ldquo;the illusion of certainty that arises from tossing away uncertainty about the parameters.&rdquo;</p>
+</div>
+</div>
+
+<script>
+/* ================================================================
+   Configuration
+   ================================================================ */
+const PARAMS = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
+const FIXED_P = 0.6;
+const BETA_A = 6, BETA_B = 4;  /* mode ≈ 0.625 — asymmetric */
+const BN = 9;
+const TOTAL_DUR = 35;
+const MIN_DWELL = 1.0;
+const LEFT_TOTAL = 280;
+const RIGHT_TOTAL = 280;
+
+/* ================================================================
+   Math
+   ================================================================ */
+function lgamma(x){
+  if(x<0.5)return Math.log(Math.PI/Math.sin(Math.PI*x))-lgamma(1-x);
+  x-=1;const g=7;
+  const c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,
+    -176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  let a=c[0];const t=x+g+0.5;
+  for(let i=1;i<g+2;i++)a+=c[i]/(x+i);
+  return 0.5*Math.log(2*Math.PI)+(x+0.5)*Math.log(t)-t+Math.log(a);
+}
+function betaPdf(x,a,b){
+  if(x<=0||x>=1)return 0;
+  return Math.exp((a-1)*Math.log(x)+(b-1)*Math.log(1-x)-lgamma(a)-lgamma(b)+lgamma(a+b));
+}
+function binomSample(n,p){let s=0;for(let i=0;i<n;i++)if(Math.random()<p)s++;return s}
+
+/* ================================================================
+   Layout (logical pixels)
+   ================================================================ */
+const W=980, H=600;
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+const dpr=window.devicePixelRatio||1;
+cv.width=W*dpr; cv.height=H*dpr;
+ctx.scale(dpr,dpr);
+
+const MID=W/2;
+const LX=30, LW=MID-50, LCX=LX+LW/2;
+const RX=MID+20, RW=W-RX-25, RCX=RX+RW/2;
+
+/* vertical — generous spacing between tiers */
+const TIT_Y=22;
+const PAR_Y=50, PAR_H=55;
+const CONN1_TOP=PAR_Y+PAR_H+10;
+const CONN1_MID=CONN1_TOP+12;
+const MID_LBL=CONN1_MID+14;
+const MID_TOP=MID_LBL+18, MID_HT=100;
+const CONN2_TOP=MID_TOP+MID_HT+14;
+const CONN2_MID=CONN2_TOP+12;
+const BOT_LBL=CONN2_MID+14;
+const BOT_TOP=BOT_LBL+34, BOT_HT=100;
+
+/* full histogram dimensions — matches panel width for visual comparison */
+const HIST_W=410;
+const NBINS=BN+1;
+const BGAP=3, BARW=(HIST_W-(NBINS-1)*BGAP)/NBINS;
+
+/* mini histogram dimensions (right middle + left middle single) */
+const MINI_W=38;
+const MBGAP=0.5, MBARW=(MINI_W-(NBINS-1)*MBGAP)/NBINS;
+
+/* left middle single histogram — same size as one right-panel mini */
+const LMID_W=MINI_W;
+const LMBGAP=MBGAP, LMBARW=MBARW;
+
+/* parameter axis on right panel — same width as HIST_W for consistency */
+const parAxisX=RCX-HIST_W/2, parAxisW=HIST_W;
+function paramX(p){return parAxisX+p*parAxisW}
+
+/* box padding */
+const BP=6;
+
+/* ================================================================
+   Pre-computation
+   ================================================================ */
+const densities=PARAMS.map(p=>betaPdf(p,BETA_A,BETA_B));
+const totalDens=densities.reduce((a,b)=>a+b,0);
+
+const minTotal=MIN_DWELL*PARAMS.length;
+const remaining=TOTAL_DUR-minTotal;
+const dwellTimes=densities.map(d=>MIN_DWELL+remaining*d/totalDens);
+const dwellStarts=[0];
+for(let i=0;i<dwellTimes.length-1;i++)dwellStarts.push(dwellStarts[i]+dwellTimes[i]);
+const totalDuration=dwellStarts[dwellStarts.length-1]+dwellTimes[dwellTimes.length-1];
+
+const samplesPerParam=densities.map(d=>Math.max(3,Math.round(RIGHT_TOTAL*d/totalDens)));
+
+let steps=[];
+function generateSteps(){
+  steps=[];
+  const leftInt=totalDuration/LEFT_TOTAL;
+  for(let i=0;i<LEFT_TOTAL;i++){
+    steps.push({t:i*leftInt,panel:'L',outcome:binomSample(BN,FIXED_P)});
+  }
+  for(let pi=0;pi<PARAMS.length;pi++){
+    const ns=samplesPerParam[pi];
+    const dw=dwellTimes[pi];
+    for(let s=0;s<ns;s++){
+      steps.push({t:dwellStarts[pi]+(s+0.5)*dw/ns,panel:'R',pi:pi,outcome:binomSample(BN,PARAMS[pi])});
+    }
+  }
+  steps.sort((a,b)=>a.t-b.t);
+}
+
+/* ================================================================
+   Animation state
+   ================================================================ */
+let leftHist=new Array(NBINS).fill(0);
+let miniHists=PARAMS.map(()=>new Array(NBINS).fill(0));
+let combHist=new Array(NBINS).fill(0);
+let visitedParams=new Set();
+let stepPtr=0;
+let elapsed=0;
+let running=false, paused=false;
+let speed=1;
+let prevTS=null;
+let animId=null;
+let postElapsed=0;           /* time (in real seconds) since animation completed */
+const ARROW_DELAY=1.5;       /* pause before percentile arrows appear (at 1x) */
+
+function resetState(){
+  leftHist=new Array(NBINS).fill(0);
+  miniHists=PARAMS.map(()=>new Array(NBINS).fill(0));
+  combHist=new Array(NBINS).fill(0);
+  visitedParams=new Set();
+  stepPtr=0; elapsed=0; prevTS=null; postElapsed=0;
+}
+
+function currentParamIdx(){
+  for(let i=0;i<PARAMS.length;i++){
+    if(elapsed<dwellStarts[i]+dwellTimes[i])return i;
+  }
+  return PARAMS.length-1;
+}
+
+function processSteps(){
+  while(stepPtr<steps.length&&steps[stepPtr].t<=elapsed){
+    const s=steps[stepPtr];
+    if(s.panel==='L'){leftHist[s.outcome]++}
+    else{miniHists[s.pi][s.outcome]++;combHist[s.outcome]++;visitedParams.add(s.pi)}
+    stepPtr++;
+  }
+}
+
+/* ================================================================
+   Drawing helpers
+   ================================================================ */
+const COL={
+  text:'#444', label:'#777', axis:'#bbb', axisLight:'#ddd',
+  box:'#e8e4e0',
+  leftBar:'#d0ccc6', leftStroke:'#9a9590', leftCurve:'#8a8580',
+  rightBar:'#bcd4e6', rightStroke:'#6a9ab8', rightCurve:'#3a7ca5',
+  accent:'#3a7ca5', accentLight:'rgba(58,124,165,0.12)',
+  curveFill:'rgba(58,124,165,0.06)', curveStroke:'#3a7ca5',
+  connector:'#ccc'
+};
+
+function txt(str,x,y,{size=12,color=COL.text,align='left',baseline='middle',bold=false}={}){
+  ctx.font=`${bold?'600 ':''}${size}px system-ui,-apple-system,sans-serif`;
+  ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline=baseline;
+  ctx.fillText(str,x,y);
+}
+
+function drawBars(x,y,w,h,counts,barW,gap,fill,stroke,maxOverride){
+  const mx=maxOverride||Math.max(...counts,1);
+  ctx.lineWidth=0.7;
+  for(let i=0;i<counts.length;i++){
+    if(counts[i]===0)continue;
+    const bx=x+i*(barW+gap);
+    const bh=(counts[i]/mx)*h;
+    const by=y+h-bh;
+    ctx.fillStyle=fill;ctx.fillRect(bx,by,barW,bh);
+    ctx.strokeStyle=stroke;ctx.strokeRect(bx,by,barW,bh);
+  }
+}
+
+function drawAxisLine(x,y,w){
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+w,y);
+  ctx.strokeStyle=COL.axis;ctx.lineWidth=1;ctx.stroke();
+}
+
+function drawTick(x,y,h,{color=COL.text,width=2}={}){
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-h);
+  ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();
+}
+
+function drawTriangle(x,y,size,color){
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-size,y-size*1.5);ctx.lineTo(x+size,y-size*1.5);ctx.closePath();
+  ctx.fillStyle=color;ctx.fill();
+}
+
+function drawArrow(x,y1,y2,{color=COL.connector,dash=[3,3]}={}){
+  ctx.beginPath();ctx.setLineDash(dash);ctx.moveTo(x,y1);ctx.lineTo(x,y2);
+  ctx.strokeStyle=color;ctx.lineWidth=0.8;ctx.stroke();ctx.setLineDash([]);
+  const sz=3;
+  ctx.beginPath();ctx.moveTo(x,y2);ctx.lineTo(x-sz,y2-sz*1.6);ctx.lineTo(x+sz,y2-sz*1.6);ctx.closePath();
+  ctx.fillStyle=color;ctx.fill();
+}
+
+function drawBox(x,y,w,h,{color=COL.box,radius=4}={}){
+  ctx.beginPath();ctx.roundRect(x,y,w,h,radius);
+  ctx.strokeStyle=color;ctx.lineWidth=0.8;ctx.stroke();
+}
+
+/* Catmull-Rom smooth curve through histogram bar tops */
+function drawSmoothCurve(histX,histY,histW,histH,counts,barW,gap,color,maxOverride){
+  const mx=maxOverride||Math.max(...counts,1);
+  if(mx===0)return;
+  const total=counts.reduce((a,b)=>a+b,0);
+  if(total===0)return;
+
+  /* build points at bar centers */
+  const pts=[];
+  for(let i=0;i<counts.length;i++){
+    const cx=histX+i*(barW+gap)+barW/2;
+    const cy=histY+histH-(counts[i]/mx)*histH;
+    pts.push({x:cx,y:cy});
+  }
+
+  /* extend with zero-height endpoints for clean edges */
+  const baseline=histY+histH;
+  const padL={x:pts[0].x-(barW+gap),y:baseline};
+  const padR={x:pts[pts.length-1].x+(barW+gap),y:baseline};
+  const all=[padL,...pts,padR];
+
+  ctx.beginPath();
+  ctx.moveTo(all[0].x,all[0].y);
+  for(let i=0;i<all.length-1;i++){
+    const p0=all[Math.max(0,i-1)];
+    const p1=all[i];
+    const p2=all[i+1];
+    const p3=all[Math.min(all.length-1,i+2)];
+    const cp1x=p1.x+(p2.x-p0.x)/6;
+    const cp1y=p1.y+(p2.y-p0.y)/6;
+    const cp2x=p2.x-(p3.x-p1.x)/6;
+    const cp2y=p2.y-(p3.y-p1.y)/6;
+    ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,p2.x,p2.y);
+  }
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+}
+
+/* ================================================================
+   Main render
+   ================================================================ */
+function render(){
+  ctx.clearRect(0,0,W,H);
+
+  /* ── Divider ── */
+  ctx.beginPath();ctx.moveTo(MID,35);ctx.lineTo(MID,H-15);
+  ctx.strokeStyle='#e8e4e0';ctx.lineWidth=1;ctx.stroke();
+
+  /* ── Panel titles ── */
+  txt('Fixed parameter',LCX,TIT_Y,{size:15,bold:true,align:'center',color:'#555'});
+  txt('Uncertain parameter',RCX,TIT_Y,{size:15,bold:true,align:'center',color:COL.accent});
+
+  /* ════════════════ TOP TIER: PARAMETER ════════════════ */
+
+  /* Left: single tick on axis */
+  const lAxisX=LCX-HIST_W/2, lAxisW=HIST_W;
+  const lAxisY=PAR_Y+PAR_H;
+
+  /* box around parameter area */
+  drawBox(lAxisX-BP,PAR_Y-BP,lAxisW+BP*2,PAR_H+BP*2+4);
+
+  drawAxisLine(lAxisX,lAxisY,lAxisW);
+  const tickX=lAxisX+FIXED_P*lAxisW;
+  drawTick(tickX,lAxisY,PAR_H-10,{color:'#555',width:2.5});
+  txt(`p = ${FIXED_P.toFixed(1)}`,tickX,PAR_Y+3,{size:11,align:'center',color:'#555',baseline:'top'});
+  txt('0',lAxisX,lAxisY+11,{size:9,align:'center',color:COL.label});
+  txt('1',lAxisX+lAxisW,lAxisY+11,{size:9,align:'center',color:COL.label});
+
+  /* Right: Beta density curve */
+  const rAxisY=PAR_Y+PAR_H;
+
+  /* box */
+  drawBox(parAxisX-BP,PAR_Y-BP,parAxisW+BP*2,PAR_H+BP*2+4);
+
+  drawAxisLine(parAxisX,rAxisY,parAxisW);
+  txt('0',parAxisX,rAxisY+11,{size:9,align:'center',color:COL.label});
+  txt('1',parAxisX+parAxisW,rAxisY+11,{size:9,align:'center',color:COL.label});
+
+  /* dashed reference line at FIXED_P — connects to the left panel's point estimate */
+  const refX=parAxisX+FIXED_P*parAxisW;
+  ctx.beginPath();ctx.setLineDash([4,3]);ctx.moveTo(refX,rAxisY);ctx.lineTo(refX,PAR_Y+2);
+  ctx.strokeStyle='#bbb';ctx.lineWidth=0.8;ctx.stroke();ctx.setLineDash([]);
+
+  /* draw curve — sweep full 0-to-1 range so curve reaches labeled endpoints */
+  const cSteps=150;
+  let maxD=0;
+  for(let i=0;i<=cSteps;i++){const t=i/cSteps;const d=betaPdf(t,BETA_A,BETA_B);if(d>maxD)maxD=d}
+  ctx.beginPath();
+  ctx.moveTo(parAxisX,rAxisY);
+  for(let i=0;i<=cSteps;i++){
+    const t=i/cSteps;
+    const d=betaPdf(t,BETA_A,BETA_B);
+    ctx.lineTo(parAxisX+t*parAxisW,rAxisY-(d/maxD)*(PAR_H-12));
+  }
+  ctx.lineTo(parAxisX+parAxisW,rAxisY);ctx.closePath();
+  ctx.fillStyle=COL.curveFill;ctx.fill();
+  ctx.strokeStyle=COL.curveStroke;ctx.lineWidth=1.5;ctx.stroke();
+
+  /* tick marks for each param value */
+  for(let i=0;i<PARAMS.length;i++){
+    const px=paramX(PARAMS[i]);
+    const isVisited=visitedParams.has(i);
+    ctx.beginPath();ctx.moveTo(px,rAxisY);ctx.lineTo(px,rAxisY+4);
+    ctx.strokeStyle=isVisited?COL.accent:'#bbb';ctx.lineWidth=isVisited?1.5:0.8;ctx.stroke();
+  }
+
+  /* pointer at current parameter */
+  const cpi=currentParamIdx();
+  if(running||elapsed>0){
+    const cpx=paramX(PARAMS[cpi]);
+    drawTriangle(cpx,rAxisY+2,5,COL.accent);
+    txt(`p = ${PARAMS[cpi].toFixed(2)}`,cpx,PAR_Y+1,{size:11,align:'center',color:COL.accent,baseline:'top'});
+  }
+
+  /* ════════════════ CONNECTORS: TOP → MIDDLE ════════════════ */
+  drawArrow(tickX,lAxisY+16,MID_TOP-5);
+  txt('sample with this parameter',tickX+10,CONN1_MID,{size:10,color:COL.label});
+
+  if(running||elapsed>0){
+    const cpx=paramX(PARAMS[cpi]);
+    drawArrow(cpx,rAxisY+16,MID_TOP-5,{color:COL.accent,dash:[2,2]});
+  }
+
+  /* ════════════════ MIDDLE TIER: SAMPLING DISTRIBUTIONS ════════════════ */
+  txt('Sampling distribution',LCX,MID_LBL,{size:12,align:'center',color:COL.label,bold:true});
+  txt('Sampling distributions',RCX,MID_LBL,{size:12,align:'center',color:COL.label,bold:true});
+
+  /* Left: single small histogram (same size as one right-panel mini) */
+  const lhx=tickX-LMID_W/2;
+  drawBox(lhx-3,MID_TOP-3,LMID_W+6,MID_HT+6+2,
+    {color:COL.box});
+  ctx.beginPath();ctx.moveTo(lhx,MID_TOP+MID_HT);ctx.lineTo(lhx+LMID_W,MID_TOP+MID_HT);
+  ctx.strokeStyle=COL.axisLight;ctx.lineWidth=0.6;ctx.stroke();
+  drawBars(lhx,MID_TOP,LMID_W,MID_HT,leftHist,LMBARW,LMBGAP,COL.leftBar,COL.leftStroke);
+
+  /* Right: mini-histograms with individual boxes */
+  const miniMaxAll=Math.max(...miniHists.flat(),1);
+  for(let i=0;i<PARAMS.length;i++){
+    const mx=paramX(PARAMS[i])-MINI_W/2;
+    const isActive=visitedParams.has(i);
+    const isCurrent=(running||elapsed>0)&&i===cpi;
+
+    /* box (always visible, shows structure) */
+    drawBox(mx-3,MID_TOP-3,MINI_W+6,MID_HT+6+2,
+      {color:isActive?(isCurrent?'rgba(58,124,165,0.3)':COL.box):'#f0eeea'});
+
+    if(!isActive)continue;
+
+    /* mini axis */
+    ctx.beginPath();ctx.moveTo(mx,MID_TOP+MID_HT);ctx.lineTo(mx+MINI_W,MID_TOP+MID_HT);
+    ctx.strokeStyle=isCurrent?COL.accent:COL.axisLight;ctx.lineWidth=0.6;ctx.stroke();
+
+    /* bars */
+    const strk=isCurrent?COL.accent:COL.rightStroke;
+    drawBars(mx,MID_TOP,MINI_W,MID_HT,miniHists[i],MBARW,MBGAP,COL.rightBar,strk,miniMaxAll);
+
+    /* p-value label */
+    const labelColor=isCurrent?COL.accent:'#aaa';
+    txt(PARAMS[i].toFixed(1),paramX(PARAMS[i]),MID_TOP+MID_HT+12,{size:8,align:'center',color:labelColor});
+  }
+
+  /* ════════════════ CONNECTORS: MIDDLE → BOTTOM ════════════════ */
+  drawArrow(tickX,MID_TOP+MID_HT+20,BOT_TOP-5);
+  txt('same data',tickX+10,CONN2_MID,{size:10,color:COL.label});
+
+  drawArrow(RCX,MID_TOP+MID_HT+20,BOT_TOP-5);
+  txt('weighted combination',RCX+10,CONN2_MID,{size:10,color:COL.label});
+
+  /* ════════════════ BOTTOM TIER: OUTCOME DISTRIBUTIONS ════════════════ */
+  txt('Outcome distribution',LCX,BOT_LBL,{size:12,align:'center',color:COL.label,bold:true});
+  txt('Combined outcome distribution',RCX,BOT_LBL,{size:12,align:'center',color:COL.label,bold:true});
+
+  /* Left bottom histogram with box */
+  const lbx=LCX-HIST_W/2;
+  drawBox(lbx-BP,BOT_TOP-BP,HIST_W+BP*2,BOT_HT+BP*2+2);
+  drawAxisLine(lbx,BOT_TOP+BOT_HT,HIST_W);
+  txt('low',lbx,BOT_TOP+BOT_HT+11,{size:9,color:COL.label,align:'left'});
+  txt('high',lbx+HIST_W,BOT_TOP+BOT_HT+11,{size:9,color:COL.label,align:'right'});
+  txt('outcome',LCX,BOT_TOP+BOT_HT+24,{size:9,color:COL.label,align:'center'});
+  /* use same max for both bottom hists so bar heights are directly comparable */
+  const botMax=Math.max(Math.max(...leftHist),Math.max(...combHist),1);
+  drawBars(lbx,BOT_TOP,HIST_W,BOT_HT,leftHist,BARW,BGAP,COL.leftBar,COL.leftStroke,botMax);
+
+  /* Right bottom histogram with box */
+  const rbx=RCX-HIST_W/2;
+  drawBox(rbx-BP,BOT_TOP-BP,HIST_W+BP*2,BOT_HT+BP*2+2);
+  drawAxisLine(rbx,BOT_TOP+BOT_HT,HIST_W);
+  txt('low',rbx,BOT_TOP+BOT_HT+11,{size:9,color:COL.label,align:'left'});
+  txt('high',rbx+HIST_W,BOT_TOP+BOT_HT+11,{size:9,color:COL.label,align:'right'});
+  txt('outcome',RCX,BOT_TOP+BOT_HT+24,{size:9,color:COL.label,align:'center'});
+  drawBars(rbx,BOT_TOP,HIST_W,BOT_HT,combHist,BARW,BGAP,COL.rightBar,COL.rightStroke,botMax);
+
+  /* ════════════════ SMOOTH CURVES + PERCENTILE ARROWS (after animation completes) ════════════════ */
+  if(elapsed>=totalDuration){
+    drawSmoothCurve(lbx,BOT_TOP,HIST_W,BOT_HT,leftHist,BARW,BGAP,COL.leftCurve,botMax);
+    drawSmoothCurve(rbx,BOT_TOP,HIST_W,BOT_HT,combHist,BARW,BGAP,COL.rightCurve,botMax);
+    txt('narrower',LCX,BOT_TOP-12,{size:11,align:'center',color:COL.leftStroke,bold:true});
+    txt('wider \u2014 parameter uncertainty included',RCX,BOT_TOP-12,{size:11,align:'center',color:COL.accent,bold:true});
+
+    /* 10th–90th percentile double-headed arrows */
+    function pctBounds(counts,lo,hi){
+      const total=counts.reduce((a,b)=>a+b,0);
+      if(total===0)return{lo:0,hi:counts.length-1};
+      let cum=0, loIdx=0, hiIdx=counts.length-1;
+      for(let i=0;i<counts.length;i++){cum+=counts[i];if(cum>=total*lo){loIdx=i;break}}
+      cum=0;
+      for(let i=counts.length-1;i>=0;i--){cum+=counts[i];if(cum>=total*(1-hi)){hiIdx=i;break}}
+      return{lo:loIdx,hi:hiIdx};
+    }
+    function drawSpanArrow(histX,bounds,barW,gap,y,color){
+      const x1=histX+bounds.lo*(barW+gap);
+      const x2=histX+bounds.hi*(barW+gap)+barW;
+      const cap=4;
+      ctx.strokeStyle=color;ctx.lineWidth=1.5;
+      /* main line */
+      ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke();
+      /* endcaps */
+      ctx.beginPath();ctx.moveTo(x1,y-cap);ctx.lineTo(x1,y+cap);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x2,y-cap);ctx.lineTo(x2,y+cap);ctx.stroke();
+      /* arrowheads */
+      const ah=4;
+      ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x1+ah*1.4,y-ah);ctx.lineTo(x1+ah*1.4,y+ah);ctx.closePath();ctx.fillStyle=color;ctx.fill();
+      ctx.beginPath();ctx.moveTo(x2,y);ctx.lineTo(x2-ah*1.4,y-ah);ctx.lineTo(x2-ah*1.4,y+ah);ctx.closePath();ctx.fill();
+    }
+    if(postElapsed>=ARROW_DELAY){
+      const arrowY=BOT_TOP+BOT_HT*0.3;
+      const lBounds=pctBounds(leftHist,0.10,0.90);
+      const rBounds=pctBounds(combHist,0.10,0.90);
+      drawSpanArrow(lbx,lBounds,BARW,BGAP,arrowY,COL.leftStroke);
+      drawSpanArrow(rbx,rBounds,BARW,BGAP,arrowY,COL.accent);
+    }
+  }
+}
+
+/* ================================================================
+   Animation loop
+   ================================================================ */
+function tick(ts){
+  if(!running)return;
+  if(prevTS===null)prevTS=ts;
+  if(!paused){
+    const dt=(ts-prevTS)/1000*speed;
+    if(elapsed<totalDuration){
+      elapsed=Math.min(elapsed+dt,totalDuration);
+      processSteps();
+    } else {
+      postElapsed+=dt;
+    }
+  }
+  prevTS=ts;
+  render();
+  const done=elapsed>=totalDuration&&postElapsed>=ARROW_DELAY;
+  if(!done){animId=requestAnimationFrame(tick)}
+  else{
+    running=false;
+    render();
+    document.getElementById('pause-btn').textContent='\u23F8 Pause';
+  }
+}
+
+function startAnim(){
+  generateSteps();
+  resetState();
+  running=true;paused=false;
+  document.getElementById('pause-btn').textContent='\u23F8 Pause';
+  animId=requestAnimationFrame(tick);
+}
+
+/* ================================================================
+   Controls
+   ================================================================ */
+document.getElementById('replay-btn').addEventListener('click',()=>{
+  if(animId)cancelAnimationFrame(animId);
+  startAnim();
+});
+
+document.getElementById('pause-btn').addEventListener('click',()=>{
+  if(!running&&elapsed>=totalDuration){startAnim();return}
+  paused=!paused;
+  document.getElementById('pause-btn').textContent=paused?'\u25B6 Resume':'\u23F8 Pause';
+  if(!paused){prevTS=null;animId=requestAnimationFrame(tick)}
+});
+
+document.querySelectorAll('.speed-group button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    speed=parseFloat(btn.dataset.speed);
+    document.querySelectorAll('.speed-group button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+/* ════════════════ Init ════════════════ */
+render();
+setTimeout(startAnim,800);
+</script>
+</body>
+</html>
