@@ -163,8 +163,8 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
           <button class="mh-btn" id="mh-step" title="Step">&#9654;| Step</button>
         </div>
         <div class="mh-speed-toggle">
-          <button class="mh-speed-btn active" data-speed="1">1x</button>
-          <button class="mh-speed-btn" data-speed="2">2x</button>
+          <button class="mh-speed-btn active" data-speed="0.5">1x</button>
+          <button class="mh-speed-btn" data-speed="4">4x</button>
         </div>
         <div class="mh-speed-toggle">
           <button class="mh-steps-btn active" data-steps="30">30</button>
@@ -363,7 +363,7 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
   var chain = [];       // {value, proposed, ratio, uDraw, accepted}
   var histogram = [];   // bin counts, 40 bins over [0,20]
   var NBINS = 40;
-  var speed = 1;        // 1=1x, 2=2x
+  var speed = 0.5;      // 0.5=1x (slow, follow the algorithm), 4=4x (fast, see results)
   var playing = false;
   var stepping = false;      // true when advancing one phase per Step click
   var waitingForStep = false; // true when phase completed, waiting for next Step click
@@ -801,7 +801,7 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
     phaseTime = 0;
   }
 
-  function speedMult() { return speed === 2 ? 2 : 1; }
+  function speedMult() { return speed; }
 
   function advancePhase(dt) {
     if (phase === 'IDLE' || phase === 'DONE') return;
@@ -822,19 +822,19 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
   function transitionPhase() {
     var s = chain[stepIdx];
     if (phase === 'SHOW_PROPOSAL') {
-      startPhase('PROPOSING', DUR_PROPOSING / speedMult());
+      startPhase('PROPOSING', DUR_PROPOSING);
     } else if (phase === 'PROPOSING') {
       if (s.ratio >= 1) {
         // Auto-accept, brief flash then decided
-        startPhase('DECIDED', DUR_DECIDED_ACC / speedMult());
+        startPhase('DECIDED', DUR_DECIDED_ACC);
         chain[stepIdx].accepted = true; // already true from precompute
       } else {
-        startPhase('EVALUATING', DUR_EVALUATING / speedMult());
+        startPhase('EVALUATING', DUR_EVALUATING);
       }
     } else if (phase === 'EVALUATING') {
-      startPhase('DECIDED', (s.accepted ? DUR_DECIDED_ACC : DUR_DECIDED_REJ) / speedMult());
+      startPhase('DECIDED', (s.accepted ? DUR_DECIDED_ACC : DUR_DECIDED_REJ));
     } else if (phase === 'DECIDED') {
-      startPhase('MOVING', DUR_MOVING / speedMult());
+      startPhase('MOVING', DUR_MOVING);
     } else if (phase === 'MOVING') {
       // Complete this step
       var nextVal = s.accepted ? s.proposed : s.value;
@@ -859,7 +859,7 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
         return;
       }
       // Continue to next step
-      startPhase('SHOW_PROPOSAL', DUR_SHOW_PROPOSAL / speedMult());
+      startPhase('SHOW_PROPOSAL', DUR_SHOW_PROPOSAL);
     }
   }
 
@@ -983,7 +983,7 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
     waitingForStep = false;
     playing = true;
     if (phase === 'IDLE') {
-      startPhase('SHOW_PROPOSAL', DUR_SHOW_PROPOSAL / speedMult());
+      startPhase('SHOW_PROPOSAL', DUR_SHOW_PROPOSAL);
     }
     startLoop();
     updateButtons();
@@ -1059,7 +1059,7 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:0.88em;color:#d4b896;bac
     btn.addEventListener('click', function() {
       speedBtns.forEach(function(b){ b.classList.remove('active'); });
       btn.classList.add('active');
-      speed = parseInt(btn.getAttribute('data-speed'));
+      speed = parseFloat(btn.getAttribute('data-speed'));
     });
   });
 
