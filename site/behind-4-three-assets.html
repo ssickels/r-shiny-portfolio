@@ -216,6 +216,11 @@ blockquote{border-left:3px solid rgba(200,185,160,0.25);padding:16px 20px;margin
 <!-- ═══ Post-widget prose ═══ -->
 <section>
   <p>The allocation cloud is plotted on a triangular diagram called a ternary plot. Each corner represents 100% in one asset; the opposite edge represents 0% in that asset. Any point inside represents some mixture of all three, with the weights summing to 1. (A point near the bottom edge has roughly 0% in US stocks; a point near the lower-left corner has roughly 100% in international.) The triangular shape captures the constraint that the three weights must sum to 1.</p>
+  <p style="font-size:0.9rem;color:rgba(200,185,160,0.5);font-style:italic;margin-top:6px">
+    Curious how this triangle relates to the familiar risk/return frontier curve?
+    See <a href="/behind-4a-frontier-geometry.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">the geometry of the simplex and the frontier &rarr;</a>
+    for a deep dive (a digression from the main thread).
+  </p>
   <p>Each dot is the tangency portfolio for one Monte Carlo draw of the parameters. The central allocation (computed from the central parameter values, no Monte Carlo noise) is marked distinctly.</p>
   <p>Try the <em>Realistic uncertainty</em> preset. The cloud is wide &mdash; much wider than the comparable two-asset case might have suggested. Some draws favor heavy US stock allocations; others favor international; others favor bonds. The &ldquo;optimal&rdquo; allocation under realistic input uncertainty is not a precise point but a region, and the region spans much of the simplex.</p>
   <p>The other presets show the same patterns we saw in the two-asset case, in three dimensions: tight clouds under low uncertainty, dramatic shifts under correlation uncertainty, vertical scatter under return uncertainty. The qualitative lessons from <a href="/behind-2-parameter-uncertainty.html" style="color:#1D9E75;text-decoration:none;border-bottom:1px solid rgba(29,158,117,0.3)">Chapter 2</a> carry over. They just play out in a larger space.</p>

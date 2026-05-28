@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three-Asset Frontier — Simplex to Bullet</title>
+<style>
+  :root{
+    --bg:#0b0f0e;
+    --panel:#111817;
+    --ink:#e7efec;
+    --muted:#7d908a;
+    --teal:#1D9E75;
+    --teal-bright:#2fd6a0;
+    --line:#1e2a27;
+    --rA:#ff5d6c;
+    --rB:#56c3ff;
+    --rC:#ffd24a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 20px;position:relative;}
+  h1{font-size:25px;font-weight:600;letter-spacing:.2px;margin:0 0 2px;}
+  h1 .accent{color:var(--teal-bright);}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 20px;
+    font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;}
+  .grid{display:grid;grid-template-columns:1fr 1.45fr 1fr;gap:14px;}
+  @media(max-width:920px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:12px 12px 8px;position:relative;}
+  .card h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.4px;
+    color:var(--muted);margin:2px 4px 8px;font-family:"IBM Plex Mono",monospace;}
+  canvas{display:block;width:100%;border-radius:7px;cursor:default;}
+  #c3d{cursor:grab;}
+  #c3d:active{cursor:grabbing;}
+  .ctrls{margin-top:18px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:16px 18px;display:flex;flex-wrap:wrap;gap:26px;align-items:flex-end;}
+  .ctrl{display:flex;flex-direction:column;gap:7px;}
+  .ctrl label{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);
+    font-family:"IBM Plex Mono",monospace;}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .seg button{background:transparent;border:none;color:var(--muted);padding:8px 13px;
+    font-size:13px;cursor:pointer;font-family:inherit;transition:.15s;border-right:1px solid var(--line);}
+  .seg button:last-child{border-right:none;}
+  .seg button.on{background:var(--teal);color:#04140e;font-weight:600;}
+  .seg button:hover:not(.on){color:var(--ink);}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:230px;height:4px;
+    background:var(--line);border-radius:3px;outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;
+    border-radius:50%;background:var(--teal-bright);cursor:pointer;border:2px solid #04140e;}
+  input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;
+    background:var(--teal-bright);cursor:pointer;border:2px solid #04140e;}
+  .flatval{font-family:"IBM Plex Mono",monospace;color:var(--teal-bright);font-size:13px;}
+  .note{margin-top:16px;color:var(--muted);font-size:13.5px;line-height:1.6;max-width:880px;}
+  .note b{color:var(--ink);font-weight:600;}
+  .chip{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px -1px 2px;}
+  .legend{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);
+    margin:6px 4px 0;}
+  .snap-btn{position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.06);
+    border:1px solid var(--line);border-radius:6px;padding:6px 8px;cursor:pointer;
+    color:var(--muted);transition:color 0.15s,background 0.15s,border-color 0.15s;z-index:10;
+    display:flex;align-items:center;gap:5px;}
+  .snap-btn:hover{color:var(--ink);background:rgba(255,255,255,0.10);border-color:var(--teal);}
+  .snap-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .snap-btn span{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:0.5px;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <button class="snap-btn" id="snap-btn" title="Save as PNG">
+    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span>PNG</span>
+  </button>
+  <h1>The third axis is <span class="accent">arbitrary</span></h1>
+  <p class="sub">three-asset frontier · simplex → bullet → (σ, μ) projection · drag the center panel to rotate</p>
+
+  <div class="seg" id="mode" style="margin-bottom:18px;width:max-content;">
+    <button data-m="3" class="on">3 assets · triangle</button>
+    <button data-m="4">4 assets · tetrahedron</button>
+  </div>
+
+  <div id="sec3">
+  <div class="grid">
+    <div class="card">
+      <h2>1 · Weight simplex</h2>
+      <canvas id="ctri" width="640" height="560"></canvas>
+      <div class="legend">corners = 100% in one asset · color = barycentric mix
+        <span class="chip" style="background:var(--rA)"></span>A
+        <span class="chip" style="background:var(--rB)"></span>B
+        <span class="chip" style="background:var(--rC)"></span>C</div>
+    </div>
+    <div class="card">
+      <h2>2 · The "bullet" — (σ, μ, <span id="zname">w₃</span>)</h2>
+      <canvas id="c3d" width="820" height="640"></canvas>
+      <div class="legend">drag to rotate · pull the flatten slider to collapse the 3rd axis</div>
+    </div>
+    <div class="card">
+      <h2>3 · Projection → frontier</h2>
+      <canvas id="cfr" width="640" height="560"></canvas>
+      <div class="legend">looking straight down the 3rd axis · curve = efficient frontier</div>
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <div class="ctrl">
+      <label>Third axis (the thing being projected away)</label>
+      <div class="seg" id="zsel">
+        <button data-z="w3" class="on">weight w₃</button>
+        <button data-z="w1">weight w₁</button>
+        <button data-z="herf">concentration</button>
+      </div>
+    </div>
+    <div class="ctrl">
+      <label>Flatten 3rd axis → <span class="flatval" id="flv">100%</span> tall</label>
+      <input type="range" id="flat" min="0" max="100" value="100">
+    </div>
+    <div class="ctrl">
+      <label>Auto-spin</label>
+      <div class="seg" id="spin"><button data-s="1" class="on">on</button><button data-s="0">off</button></div>
+    </div>
+    <div class="ctrl">
+      <label>Axes</label>
+      <div class="seg" id="axmode"><button data-a="mini" class="on">mini</button><button data-a="full">full</button></div>
+    </div>
+  </div>
+
+  <p class="note">
+    Every dot is the same portfolio across all three panels (matched by color). The <b>real map is
+    simplex → (σ, μ)</b>, a 2-D→2-D map that's many-to-one — which is why differently-colored dots
+    <b>pile onto the same spot</b> in panel 3 and the region fills in. The bullet in panel 2 only looks
+    3-D because we re-attached one weight coordinate to <b>un-stack</b> those collisions. Drag the flatten
+    slider to 0 and the bullet squashes into exactly panel 3: no risk-return information was ever lost,
+    because the third axis carried none. The efficient frontier is the left edge.
+  </p>
+  </div><!-- /sec3 -->
+
+  <div id="sec4" style="display:none;">
+  <div class="grid">
+    <div class="card">
+      <h2>1 · Weight simplex (tetrahedron)</h2>
+      <canvas id="ttet" width="640" height="560"></canvas>
+      <div class="legend">4 corners = 100% in one asset · 3-D, drag to rotate
+        <span class="chip" style="background:#ff5d6c"></span>A
+        <span class="chip" style="background:#56c3ff"></span>B
+        <span class="chip" style="background:#ffd24a"></span>C
+        <span class="chip" style="background:#46e0a0"></span>D</div>
+    </div>
+    <div class="card">
+      <h2>2 · The bullet — (σ, μ, <span id="zname4">w₄</span>)</h2>
+      <canvas id="t3d" width="820" height="640"></canvas>
+      <div class="legend">a filled <b>volume</b> now — one extra axis can't fully un-stack a 3-D domain</div>
+    </div>
+    <div class="card">
+      <h2>3 · Projection → frontier</h2>
+      <canvas id="tfr" width="640" height="560"></canvas>
+      <div class="legend">same (σ, μ) target · curve = efficient frontier</div>
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <div class="ctrl">
+      <label>Third axis (one of three projected away)</label>
+      <div class="seg" id="zsel4">
+        <button data-z="w4" class="on">weight w₄</button>
+        <button data-z="w1">weight w₁</button>
+        <button data-z="herf">concentration</button>
+      </div>
+    </div>
+    <div class="ctrl">
+      <label>Flatten 3rd axis → <span class="flatval" id="flv4">100%</span> tall</label>
+      <input type="range" id="flat4" min="0" max="100" value="100">
+    </div>
+    <div class="ctrl">
+      <label>Auto-spin</label>
+      <div class="seg" id="spin4"><button data-s="1" class="on">on</button><button data-s="0">off</button></div>
+    </div>
+    <div class="ctrl">
+      <label>Axes</label>
+      <div class="seg" id="axmode4"><button data-a="mini" class="on">mini</button><button data-a="full">full</button></div>
+    </div>
+  </div>
+
+  <p class="note">
+    With four assets the simplex is a <b>tetrahedron</b> (3-D), so the real map is now
+    <b>3-D → (σ, μ)</b> — even more many-to-one. Re-attaching <i>one</i> weight coordinate (panel 2)
+    no longer separates everything: the cloud is a genuinely <b>filled solid</b>, not a thin surface,
+    because you'd need <i>two</i> extra axes to fully un-stack a 3-D domain. Flatten it and it still
+    collapses to the same 2-D frontier in panel 3 — driving the point home that the projected-away
+    dimensions are bookkeeping coordinates of weight space, never risk-return content.
+  </p>
+  </div><!-- /sec4 -->
+</div><!-- /wrap -->
+
+<script>
+const A_R=[0.05,0.10,0.15];                // expected returns
+const VOL=[0.10,0.18,0.30];                // vols
+const RHO=[[1,0.2,-0.1],[0.2,1,0.4],[-0.1,0.4,1]];
+const COV=[[0,0,0],[0,0,0],[0,0,0]];
+for(let i=0;i<3;i++)for(let j=0;j<3;j++)COV[i][j]=RHO[i][j]*VOL[i]*VOL[j];
+
+// ---- sample the simplex ----
+const N=46, pts=[];
+for(let i=0;i<=N;i++)for(let j=0;j<=N-i;j++){
+  const w1=i/N, w2=j/N, w3=1-w1-w2;
+  const mu=w1*A_R[0]+w2*A_R[1]+w3*A_R[2];
+  let v=0; const w=[w1,w2,w3];
+  for(let a=0;a<3;a++)for(let b=0;b<3;b++)v+=w[a]*w[b]*COV[a][b];
+  const sig=Math.sqrt(v);
+  const herf=w1*w1+w2*w2+w3*w3;
+  // barycentric color
+  const col=`rgb(${Math.round(40+w1*215)},${Math.round(40+w2*215)},${Math.round(40+w3*195)})`;
+  pts.push({w1,w2,w3,mu,sig,herf,col});
+}
+// ranges
+const sigMin=Math.min(...pts.map(p=>p.sig)), sigMax=Math.max(...pts.map(p=>p.sig));
+const muMin=Math.min(...pts.map(p=>p.mu)),  muMax=Math.max(...pts.map(p=>p.mu));
+const nx=(s)=>(s-sigMin)/(sigMax-sigMin);
+const ny=(m)=>(m-muMin)/(muMax-muMin);
+
+// efficient frontier (lower-sigma envelope per mu-bin, then keep upper branch)
+function envelope(){
+  const B=120, bins=new Array(B).fill(null);
+  for(const p of pts){const k=Math.min(B-1,Math.floor(ny(p.mu)*B));
+    if(!bins[k]||p.sig<bins[k].sig)bins[k]=p;}
+  const arr=bins.filter(Boolean);
+  // efficient = from global min-var point upward
+  let mv=arr[0];for(const p of arr)if(p.sig<mv.sig)mv=p;
+  return {all:arr, mvMu:mv.mu};
+}
+const ENV=envelope();
+
+// ---------- panel 1: triangle ----------
+const ctri=document.getElementById('ctri'),gt=ctri.getContext('2d');
+function triPos(p,W,H){
+  const m=46, w=W-2*m, h=H-2*m;
+  // corners: A top, B bottom-left, C bottom-right
+  const Ax=W/2,Ay=m, Bx=m,By=H-m, Cx=W-m,Cy=H-m;
+  return {x:p.w1*Ax+p.w2*Bx+p.w3*Cx, y:p.w1*Ay+p.w2*By+p.w3*Cy};
+}
+function drawTri(){
+  const W=ctri.width,H=ctri.height;gt.clearRect(0,0,W,H);
+  for(const p of pts){const q=triPos(p,W,H);
+    gt.fillStyle=p.col;gt.beginPath();gt.arc(q.x,q.y,3.4,0,7);gt.fill();}
+  gt.fillStyle='#cfe';gt.font='13px IBM Plex Mono, monospace';
+  gt.textAlign='center';gt.fillText('A (μ=5%)',W/2,30);
+  gt.textAlign='left';gt.fillText('B (μ=10%)',38,H-22);
+  gt.textAlign='right';gt.fillText('C (μ=15%)',W-38,H-22);
+}
+
+// ---------- panel 3: 2D frontier ----------
+const cfr=document.getElementById('cfr'),gf=cfr.getContext('2d');
+function frPos(p,W,H){const m=52;return {x:m+nx(p.sig)*(W-1.5*m), y:H-m-ny(p.mu)*(H-1.6*m)};}
+function drawFr(){
+  const W=cfr.width,H=cfr.height;gf.clearRect(0,0,W,H);
+  // axes
+  gf.strokeStyle='#243330';gf.lineWidth=1;gf.beginPath();
+  gf.moveTo(52,18);gf.lineTo(52,H-52);gf.lineTo(W-22,H-52);gf.stroke();
+  for(const p of pts){const q=frPos(p,W,H);
+    gf.fillStyle=p.col;gf.globalAlpha=.8;gf.beginPath();gf.arc(q.x,q.y,3,0,7);gf.fill();}
+  gf.globalAlpha=1;
+  // frontier curve
+  gf.strokeStyle='#eafff6';gf.lineWidth=2.4;gf.beginPath();
+  ENV.all.forEach((p,i)=>{const q=frPos(p,W,H);i?gf.lineTo(q.x,q.y):gf.moveTo(q.x,q.y);});
+  gf.stroke();
+  // efficient portion highlight
+  gf.strokeStyle='#2fd6a0';gf.lineWidth=3.4;gf.beginPath();let started=false;
+  ENV.all.forEach(p=>{if(p.mu>=ENV.mvMu){const q=frPos(p,W,H);started?gf.lineTo(q.x,q.y):gf.moveTo(q.x,q.y);started=true;}});
+  gf.stroke();
+  gf.fillStyle='#cfe';gf.font='600 15px IBM Plex Mono, monospace';
+  gf.textAlign='center';gf.fillText('σ  (risk)',(W+30)/2,H-22);
+  gf.save();gf.translate(20,H/2);gf.rotate(-Math.PI/2);gf.fillText('μ  (return)',0,0);gf.restore();
+}
+
+// ---------- panel 2: 3D bullet ----------
+const c3=document.getElementById('c3d'),g3=c3.getContext('2d');
+let yaw=-0.7, pitch=0.5, flat=1, zmode='w3', spin=true, spinOfs=0, axFull=false, settling=false;
+function zval(p){
+  if(zmode==='w3')return p.w3;
+  if(zmode==='w1')return p.w1;
+  return (p.herf-0.333)/(1-0.333); // concentration normalized 0..1
+}
+function draw3d(){
+  const W=c3.width,H=c3.height;g3.clearRect(0,0,W,H);
+  const cx=W/2,cy=H/2+30,S=Math.min(W,H)*0.62;
+  // Blend drag rotation toward face-on as flat→0; spin offset is always full-rate
+  const ef=flat*flat, eyaw=yaw*ef+spinOfs, epitch=pitch*ef;
+  const cosY=Math.cos(eyaw),sinY=Math.sin(eyaw),cosP=Math.cos(epitch),sinP=Math.sin(epitch);
+  const proj=[];
+  for(const p of pts){
+    // centered cube coords: x=sigma, y=mu(up), z=third axis
+    const X=nx(p.sig)-0.5;
+    const Y=ny(p.mu)-0.5;
+    const Z=(zval(p)-0.5)*flat;
+    // rotate yaw about vertical (Y), then pitch about X
+    let x1=X*cosY+Z*sinY, z1=-X*sinY+Z*cosY;
+    let y2=Y*cosP - z1*sinP, z2=Y*sinP + z1*cosP;
+    proj.push({sx:cx+x1*S, sy:cy - y2*S, depth:z2, col:p.col});
+  }
+  proj.sort((a,b)=>a.depth-b.depth);
+  for(const q of proj){const r=3.1+(q.depth)*1.1;
+    g3.fillStyle=q.col;g3.globalAlpha=0.55+0.45*((q.depth)+0.5);
+    g3.beginPath();g3.arc(q.sx,q.sy,Math.max(1.6,r),0,7);g3.fill();}
+  g3.globalAlpha=1;
+
+  // ── axis compass ──
+  const axLen=axFull?S*0.48:38, axOx=axFull?cx:48, axOy=axFull?cy:H-48;
+  const axLw=axFull?2.5:2, axFs=axFull?18:11, axLblOfs=axFull?22:12;
+  const axAlphaBase=axFull?0.2:0.35, axAlphaRange=axFull?0.4:0.55;
+  const axes=[
+    {x:1,y:0,z:0,    label:'σ', col:'#aecbc0'},
+    {x:0,y:1,z:0,    label:'μ', col:'#aecbc0'},
+    {x:0,y:0,z:flat, label:zmode==='w3'?'w₃':zmode==='w1'?'w₁':'conc.',
+     col:flat<0.06?'#5a6b66':'#2fd6a0'}
+  ];
+  const axProj=axes.map(a=>{
+    let x1=a.x*cosY+a.z*sinY, z1=-a.x*sinY+a.z*cosY;
+    let y2=a.y*cosP-z1*sinP, z2=a.y*sinP+z1*cosP;
+    return{sx:x1*axLen, sy:-y2*axLen, depth:z2, label:a.label, col:a.col};
+  });
+  axProj.sort((a,b)=>a.depth-b.depth);
+  for(const a of axProj){
+    const tipX=axOx+a.sx, tipY=axOy+a.sy, len=Math.hypot(a.sx,a.sy);
+    g3.globalAlpha=axAlphaBase+axAlphaRange*((a.depth+1)/2);
+    g3.strokeStyle=a.col;g3.lineWidth=axLw;
+    g3.beginPath();g3.moveTo(axOx,axOy);g3.lineTo(tipX,tipY);g3.stroke();
+    if(len>4){
+      g3.font=(axFull?'700 ':'600 ')+axFs+'px IBM Plex Mono, monospace';
+      g3.fillStyle=a.col;g3.textAlign='center';g3.textBaseline='middle';
+      g3.fillText(a.label, tipX+(a.sx/len)*axLblOfs, tipY+(a.sy/len)*axLblOfs);
+    }
+  }
+  g3.globalAlpha=1;
+
+  // ── text labels (top-left) ──
+  g3.font='600 16px IBM Plex Mono, monospace';g3.textAlign='left';
+  g3.fillStyle='#aecbc0';
+  g3.fillText('↑ μ (return)', 18,32);
+  g3.fillText('σ (risk) →', 18,56);
+  const zlab=zmode==='w3'?'w₃':zmode==='w1'?'w₁':'concentration';
+  g3.fillStyle=flat<0.06?'#5a6b66':'#2fd6a0';
+  g3.fillText('3rd axis: '+zlab+(flat<0.06?'  ·  flattened':''), 18,80);
+}
+
+// ---------- interaction ----------
+let drag=false,px,py;
+c3.addEventListener('pointerdown',e=>{drag=true;spin=false;settling=false;setSpinUI(false);px=e.offsetX;py=e.offsetY;});
+window.addEventListener('pointerup',()=>drag=false);
+window.addEventListener('pointermove',e=>{if(!drag)return;
+  const r=c3.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  yaw+=(x-px)*0.011; pitch+=(y-py)*0.011;
+  pitch=Math.max(-1.3,Math.min(1.3,pitch));px=x;py=y;});
+
+document.getElementById('zsel').addEventListener('click',e=>{
+  if(e.target.dataset.z){zmode=e.target.dataset.z;
+    [...e.currentTarget.children].forEach(b=>b.classList.toggle('on',b===e.target));
+    document.getElementById('zname').textContent=zmode==='w3'?'w₃':zmode==='w1'?'w₁':'conc.';}
+});
+const flatEl=document.getElementById('flat'),flv=document.getElementById('flv');
+flatEl.addEventListener('input',()=>{flat=flatEl.value/100;flv.textContent=flatEl.value+'%';if(spin){spin=false;setSpinUI(false);}});
+const spinSel=document.getElementById('spin');
+function setSpinUI(on){[...spinSel.children].forEach(b=>b.classList.toggle('on',(b.dataset.s==='1')===on));}
+spinSel.addEventListener('click',e=>{if(e.target.dataset.s){spin=e.target.dataset.s==='1';setSpinUI(spin);
+  if(!spin&&flat<0.5)settling=true; else settling=false;}});
+const axSel=document.getElementById('axmode');
+axSel.addEventListener('click',e=>{if(e.target.dataset.a){axFull=e.target.dataset.a==='full';
+  [...axSel.children].forEach(b=>b.classList.toggle('on',b===e.target));}});
+
+drawTri();drawFr();
+function loop(){
+  if(spin&&!drag)spinOfs+=0.006;
+  if(settling){const t=Math.round(spinOfs/Math.PI)*Math.PI,d=t-spinOfs;
+    if(Math.abs(d)<0.003){spinOfs=t;settling=false;}else spinOfs+=d*0.08;}
+  draw3d();requestAnimationFrame(loop);}
+loop();
+
+/* ===================== 4-ASSET SECTION ===================== */
+const R4=[0.04,0.08,0.12,0.16], V4=[0.08,0.15,0.24,0.34];
+const RHO4=[[1,0.2,0.0,-0.1],[0.2,1,0.3,0.1],[0.0,0.3,1,0.4],[-0.1,0.1,0.4,1]];
+const COV4=[];for(let i=0;i<4;i++){COV4.push([]);for(let j=0;j<4;j++)COV4[i].push(RHO4[i][j]*V4[i]*V4[j]);}
+const COL4=[[255,93,108],[86,195,255],[255,210,74],[70,224,160]];
+// regular tetrahedron vertices
+const TET=[[1,1,1],[1,-1,-1],[-1,1,-1],[-1,-1,1]];
+
+const M=22, p4=[];
+for(let i=0;i<=M;i++)for(let j=0;j<=M-i;j++)for(let k=0;k<=M-i-j;k++){
+  const w=[i/M,j/M,k/M,(M-i-j-k)/M];
+  let mu=0,v=0;for(let a=0;a<4;a++){mu+=w[a]*R4[a];for(let b=0;b<4;b++)v+=w[a]*w[b]*COV4[a][b];}
+  const sig=Math.sqrt(v); let herf=0;for(const x of w)herf+=x*x;
+  let cr=0,cg=0,cb=0;for(let a=0;a<4;a++){cr+=w[a]*COL4[a][0];cg+=w[a]*COL4[a][1];cb+=w[a]*COL4[a][2];}
+  const col=`rgb(${cr|0},${cg|0},${cb|0})`;
+  let tx=0,ty=0,tz=0;for(let a=0;a<4;a++){tx+=w[a]*TET[a][0];ty+=w[a]*TET[a][1];tz+=w[a]*TET[a][2];}
+  p4.push({w,mu,sig,herf,col,tx,ty,tz});
+}
+const s4min=Math.min(...p4.map(p=>p.sig)),s4max=Math.max(...p4.map(p=>p.sig));
+const m4min=Math.min(...p4.map(p=>p.mu)),m4max=Math.max(...p4.map(p=>p.mu));
+const nx4=s=>(s-s4min)/(s4max-s4min), ny4=m=>(m-m4min)/(m4max-m4min);
+function env4(){const B=120,bins=new Array(B).fill(null);
+  for(const p of p4){const kk=Math.min(B-1,Math.floor(ny4(p.mu)*B));if(!bins[kk]||p.sig<bins[kk].sig)bins[kk]=p;}
+  const arr=bins.filter(Boolean);let mv=arr[0];for(const p of arr)if(p.sig<mv.sig)mv=p;return{all:arr,mvMu:mv.mu};}
+const ENV4=env4();
+
+let yaw4=-0.7,pitch4=0.5,flat4=1,zmode4='w4',spin4=true,tyaw=0.6,tpitch=0.45,spinOfs4=0,axFull4=false,settling4=false;
+function zval4(p){if(zmode4==='w4')return p.w[3];if(zmode4==='w1')return p.w[0];return (p.herf-0.25)/0.75;}
+
+const ttet=document.getElementById('ttet'),gtt=ttet.getContext('2d');
+function drawTet(){const W=ttet.width,H=ttet.height;gtt.clearRect(0,0,W,H);
+  const cx=W/2,cy=H/2,S=Math.min(W,H)*0.30;
+  const cy_=Math.cos(tyaw),sy=Math.sin(tyaw),cp=Math.cos(tpitch),sp=Math.sin(tpitch);
+  const pr=p4.map(p=>{let x1=p.tx*cy_+p.tz*sy,z1=-p.tx*sy+p.tz*cy_;
+    let y2=p.ty*cp-z1*sp,z2=p.ty*sp+z1*cp;return{sx:cx+x1*S,sy:cy-y2*S,d:z2,col:p.col};});
+  pr.sort((a,b)=>a.d-b.d);
+  for(const q of pr){gtt.fillStyle=q.col;gtt.globalAlpha=0.5+0.5*((q.d/2.2)+0.5);
+    gtt.beginPath();gtt.arc(q.sx,q.sy,3.0,0,7);gtt.fill();}
+  gtt.globalAlpha=1;}
+
+const t3d=document.getElementById('t3d'),gt3=t3d.getContext('2d');
+function drawT3d(){const W=t3d.width,H=t3d.height;gt3.clearRect(0,0,W,H);
+  const cx=W/2,cy=H/2+30,S=Math.min(W,H)*0.62;
+  const ef4=flat4*flat4, ey4=yaw4*ef4+spinOfs4, ep4=pitch4*ef4;
+  const cy_=Math.cos(ey4),sy=Math.sin(ey4),cp=Math.cos(ep4),sp=Math.sin(ep4);
+  const pr=p4.map(p=>{const X=nx4(p.sig)-0.5,Y=ny4(p.mu)-0.5,Z=(zval4(p)-0.5)*flat4;
+    let x1=X*cy_+Z*sy,z1=-X*sy+Z*cy_;let y2=Y*cp-z1*sp,z2=Y*sp+z1*cp;
+    return{sx:cx+x1*S,sy:cy-y2*S,d:z2,col:p.col};});
+  pr.sort((a,b)=>a.d-b.d);
+  for(const q of pr){gt3.fillStyle=q.col;gt3.globalAlpha=0.5+0.45*(q.d+0.5);
+    gt3.beginPath();gt3.arc(q.sx,q.sy,Math.max(1.6,3.0+q.d),0,7);gt3.fill();}
+  gt3.globalAlpha=1;
+
+  // ── axis compass ──
+  const axL4=axFull4?S*0.48:38, axOx4=axFull4?cx:48, axOy4=axFull4?cy:H-48;
+  const axLw4=axFull4?2.5:2, axFs4=axFull4?18:11, axLo4=axFull4?22:12;
+  const axAb4=axFull4?0.2:0.35, axAr4=axFull4?0.4:0.55;
+  const zl=zmode4==='w4'?'w₄':zmode4==='w1'?'w₁':'conc.';
+  const axes4=[
+    {x:1,y:0,z:0,     label:'σ', col:'#aecbc0'},
+    {x:0,y:1,z:0,     label:'μ', col:'#aecbc0'},
+    {x:0,y:0,z:flat4, label:zl, col:flat4<0.06?'#5a6b66':'#2fd6a0'}
+  ];
+  const axP4=axes4.map(a=>{
+    let x1=a.x*cy_+a.z*sy,z1=-a.x*sy+a.z*cy_;
+    let y2=a.y*cp-z1*sp,z2=a.y*sp+z1*cp;
+    return{sx:x1*axL4,sy:-y2*axL4,depth:z2,label:a.label,col:a.col};
+  });
+  axP4.sort((a,b)=>a.depth-b.depth);
+  for(const a of axP4){
+    const tipX=axOx4+a.sx,tipY=axOy4+a.sy,len=Math.hypot(a.sx,a.sy);
+    gt3.globalAlpha=axAb4+axAr4*((a.depth+1)/2);
+    gt3.strokeStyle=a.col;gt3.lineWidth=axLw4;
+    gt3.beginPath();gt3.moveTo(axOx4,axOy4);gt3.lineTo(tipX,tipY);gt3.stroke();
+    if(len>4){gt3.font=(axFull4?'700 ':'600 ')+axFs4+'px IBM Plex Mono, monospace';gt3.fillStyle=a.col;
+      gt3.textAlign='center';gt3.textBaseline='middle';
+      gt3.fillText(a.label,tipX+(a.sx/len)*axLo4,tipY+(a.sy/len)*axLo4);}
+  }
+  gt3.globalAlpha=1;
+
+  gt3.font='600 16px IBM Plex Mono, monospace';gt3.textAlign='left';gt3.fillStyle='#aecbc0';
+  gt3.fillText('↑ μ (return)',18,32);gt3.fillText('σ (risk) →',18,56);
+  gt3.fillStyle=flat4<0.06?'#5a6b66':'#2fd6a0';
+  gt3.fillText('3rd axis: '+zl+(flat4<0.06?'  ·  flattened':''),18,80);}
+
+const tfr=document.getElementById('tfr'),gtf=tfr.getContext('2d');
+function frPos4(p,W,H){const m=52;return{x:m+nx4(p.sig)*(W-1.5*m),y:H-m-ny4(p.mu)*(H-1.6*m)};}
+function drawTfr(){const W=tfr.width,H=tfr.height;gtf.clearRect(0,0,W,H);
+  gtf.strokeStyle='#243330';gtf.lineWidth=1;gtf.beginPath();gtf.moveTo(52,18);gtf.lineTo(52,H-52);gtf.lineTo(W-22,H-52);gtf.stroke();
+  for(const p of p4){const q=frPos4(p,W,H);gtf.fillStyle=p.col;gtf.globalAlpha=.7;gtf.beginPath();gtf.arc(q.x,q.y,2.6,0,7);gtf.fill();}
+  gtf.globalAlpha=1;
+  gtf.strokeStyle='#eafff6';gtf.lineWidth=2.4;gtf.beginPath();
+  ENV4.all.forEach((p,i)=>{const q=frPos4(p,W,H);i?gtf.lineTo(q.x,q.y):gtf.moveTo(q.x,q.y);});gtf.stroke();
+  gtf.strokeStyle='#2fd6a0';gtf.lineWidth=3.4;gtf.beginPath();let st=false;
+  ENV4.all.forEach(p=>{if(p.mu>=ENV4.mvMu){const q=frPos4(p,W,H);st?gtf.lineTo(q.x,q.y):gtf.moveTo(q.x,q.y);st=true;}});gtf.stroke();
+  gtf.fillStyle='#cfe';gtf.font='600 15px IBM Plex Mono, monospace';gtf.textAlign='center';
+  gtf.fillText('σ  (risk)',(W+30)/2,H-22);
+  gtf.save();gtf.translate(20,H/2);gtf.rotate(-Math.PI/2);gtf.fillText('μ  (return)',0,0);gtf.restore();}
+
+// interaction: dragging either 3-D canvas
+let drag4=null,p4x,p4y;
+function bindDrag(canvas,which){canvas.addEventListener('pointerdown',e=>{drag4=which;spin4=false;settling4=false;setSpin4UI(false);p4x=e.offsetX;p4y=e.offsetY;});}
+bindDrag(t3d,'bullet');bindDrag(ttet,'tet');
+window.addEventListener('pointerup',()=>drag4=null);
+window.addEventListener('pointermove',e=>{if(!drag4)return;
+  const cv=drag4==='bullet'?t3d:ttet;const r=cv.getBoundingClientRect();
+  const x=e.clientX-r.left,y=e.clientY-r.top;
+  if(drag4==='bullet'){yaw4+=(x-p4x)*0.011;pitch4+=(y-p4y)*0.011;pitch4=Math.max(-1.3,Math.min(1.3,pitch4));}
+  else{tyaw+=(x-p4x)*0.011;tpitch+=(y-p4y)*0.011;tpitch=Math.max(-1.3,Math.min(1.3,tpitch));}
+  p4x=x;p4y=y;});
+
+document.getElementById('zsel4').addEventListener('click',e=>{if(e.target.dataset.z){zmode4=e.target.dataset.z;
+  [...e.currentTarget.children].forEach(b=>b.classList.toggle('on',b===e.target));
+  document.getElementById('zname4').textContent=zmode4==='w4'?'w₄':zmode4==='w1'?'w₁':'conc.';}});
+const flat4El=document.getElementById('flat4'),flv4=document.getElementById('flv4');
+flat4El.addEventListener('input',()=>{flat4=flat4El.value/100;flv4.textContent=flat4El.value+'%';if(spin4){spin4=false;setSpin4UI(false);}});
+const spin4Sel=document.getElementById('spin4');
+function setSpin4UI(on){[...spin4Sel.children].forEach(b=>b.classList.toggle('on',(b.dataset.s==='1')===on));}
+spin4Sel.addEventListener('click',e=>{if(e.target.dataset.s){spin4=e.target.dataset.s==='1';setSpin4UI(spin4);
+  if(!spin4&&flat4<0.5)settling4=true; else settling4=false;}});
+const axSel4=document.getElementById('axmode4');
+axSel4.addEventListener('click',e=>{if(e.target.dataset.a){axFull4=e.target.dataset.a==='full';
+  [...axSel4.children].forEach(b=>b.classList.toggle('on',b===e.target));}});
+
+drawTfr();
+function loop4(){
+  if(spin4&&drag4!=='bullet'){spinOfs4+=0.006;}if(spin4&&drag4!=='tet'){tyaw+=0.004;}
+  if(settling4){const t=Math.round(spinOfs4/Math.PI)*Math.PI,d=t-spinOfs4;
+    if(Math.abs(d)<0.003){spinOfs4=t;settling4=false;}else spinOfs4+=d*0.08;}
+  drawTet();drawT3d();requestAnimationFrame(loop4);}
+loop4();
+
+// mode toggle
+document.getElementById('mode').addEventListener('click',e=>{if(!e.target.dataset.m)return;
+  const m=e.target.dataset.m;[...e.currentTarget.children].forEach(b=>b.classList.toggle('on',b===e.target));
+  document.getElementById('sec3').style.display=m==='3'?'':'none';
+  document.getElementById('sec4').style.display=m==='4'?'':'none';});
+
+// ── Screenshot ──
+document.getElementById('snap-btn').addEventListener('click',function(){
+  var is3=document.getElementById('sec3').style.display!=='none';
+  var cvs=is3?[document.getElementById('ctri'),document.getElementById('c3d'),document.getElementById('cfr')]
+    :[document.getElementById('ttet'),document.getElementById('t3d'),document.getElementById('tfr')];
+
+  var pad=24, gap=14, titleH=64, modeH=56, ctrlH=110, botPad=16;
+  var cW=cvs.reduce(function(s,c){return s+c.width},0)+gap*(cvs.length-1);
+  var cH=Math.max.apply(null,cvs.map(function(c){return c.height}));
+  var W=cW+pad*2, H=titleH+modeH+cH+gap+ctrlH+pad+botPad;
+  var off=document.createElement('canvas');off.width=W;off.height=H;
+  var g=off.getContext('2d');
+
+  var bg='#0b0f0e', panel='#111817', line='#1e2a27', ink='#e7efec', muted='#7d908a', teal='#1D9E75', tealBr='#2fd6a0';
+
+  // background
+  g.fillStyle=bg;g.fillRect(0,0,W,H);
+
+  // title
+  g.font='600 28px "IBM Plex Mono", monospace';g.textAlign='left';
+  g.fillStyle=ink;g.fillText('The third axis is ',pad,pad+36);
+  var tw=g.measureText('The third axis is ').width;
+  g.fillStyle=tealBr;g.fillText('arbitrary',pad+tw,pad+36);
+
+  // mode selector
+  var modeY=titleH, mLabels=['3 assets \u00b7 triangle','4 assets \u00b7 tetrahedron'];
+  var mActive=is3?0:1;
+  drawSegBar(g,pad,modeY,mLabels,mActive,220,34,16);
+
+  // canvases
+  var cx=pad, cy=titleH+modeH;
+  for(var i=0;i<cvs.length;i++){
+    g.drawImage(cvs[i],cx,cy);
+    cx+=cvs[i].width+gap;
+  }
+
+  // controls bar
+  var barY=titleH+modeH+cH+gap;
+  g.fillStyle=panel;g.strokeStyle=line;g.lineWidth=1;
+  roundRect(g,pad,barY,cW,ctrlH,10);g.fill();g.stroke();
+
+  var bx=pad+20, by=barY+12;
+
+  // Third axis
+  g.fillStyle=muted;g.font='600 15px "IBM Plex Mono", monospace';g.textAlign='left';
+  g.fillText('THIRD AXIS',bx,by+16);
+  var zLabels, zActive;
+  if(is3){
+    zLabels=['w\u2083','w\u2081','conc.'];
+    zActive=zmode==='w3'?0:zmode==='w1'?1:2;
+  }else{
+    zLabels=['w\u2084','w\u2081','conc.'];
+    zActive=zmode4==='w4'?0:zmode4==='w1'?1:2;
+  }
+  bx=drawSegBar(g,bx,by+26,zLabels,zActive,90,34,16)+36;
+
+  // Flatten
+  g.fillStyle=muted;g.font='600 15px "IBM Plex Mono", monospace';
+  g.fillText('FLATTEN',bx,by+16);
+  var fVal=is3?flat:flat4;
+  g.fillStyle=tealBr;g.font='600 18px "IBM Plex Mono", monospace';
+  g.fillText(Math.round(fVal*100)+'%',bx+90,by+16);
+  bx=drawSlider(g,bx,by+34,200,fVal,tealBr)+36;
+
+  // Auto-spin
+  g.fillStyle=muted;g.font='600 15px "IBM Plex Mono", monospace';
+  g.fillText('AUTO-SPIN',bx,by+16);
+  var spVal=is3?spin:spin4;
+  bx=drawSegBar(g,bx,by+26,['on','off'],spVal?0:1,60,34,16)+36;
+
+  // Axes
+  g.fillStyle=muted;g.font='600 15px "IBM Plex Mono", monospace';
+  g.fillText('AXES',bx,by+16);
+  var axVal=is3?axFull:axFull4;
+  bx=drawSegBar(g,bx,by+26,['mini','full'],axVal?1:0,64,34,16)+36;
+
+  // download
+  off.toBlob(function(blob){
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='frontier-explorer'+(is3?'-3asset':'-4asset')+'.png';
+    a.click();URL.revokeObjectURL(a.href);
+  });
+
+  // ── drawing helpers ──
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+  }
+  function drawSegBar(ctx,x,y,labels,active,btnW,h,fs){
+    h=h||24;fs=fs||12;var r=7;
+    ctx.strokeStyle=line;ctx.lineWidth=1;
+    roundRect(ctx,x,y,btnW*labels.length,h,r);ctx.fillStyle=panel;ctx.fill();ctx.stroke();
+    for(var i=0;i<labels.length;i++){
+      var bx_=x+i*btnW;
+      if(i===active){
+        ctx.save();ctx.beginPath();
+        roundRect(ctx,bx_,y,btnW,h,i===0&&labels.length>1?r:i===labels.length-1?r:0);
+        ctx.clip();
+        ctx.fillStyle=teal;ctx.fillRect(bx_,y,btnW,h);
+        ctx.restore();
+        ctx.fillStyle='#04140e';
+      }else{
+        ctx.fillStyle=muted;
+      }
+      ctx.font=(i===active?'600 ':'')+fs+'px "IBM Plex Mono", monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(labels[i],bx_+btnW/2,y+h/2);
+      if(i<labels.length-1){ctx.strokeStyle=line;ctx.beginPath();ctx.moveTo(bx_+btnW,y);ctx.lineTo(bx_+btnW,y+h);ctx.stroke();}
+    }
+    return x+btnW*labels.length;
+  }
+  function drawSlider(ctx,x,y,w,val,col){
+    ctx.fillStyle=line;
+    roundRect(ctx,x,y,w,6,3);ctx.fill();
+    var tx=x+val*w;
+    ctx.beginPath();ctx.arc(tx,y+3,10,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+    return x+w;
+  }
+});
+</script>
+</body>
+</html>

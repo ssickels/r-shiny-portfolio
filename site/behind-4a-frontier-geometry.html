@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>The Triangle and the Frontier — Behind the Assumptions</title>
+<meta property="og:title" content="The Triangle and the Frontier — Behind the Assumptions"/>
+<meta property="og:description" content="How the portfolio weight simplex maps onto the risk/return frontier — and what the textbook bullet's third dimension actually is."/>
+<meta property="og:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://stevessite.com/behind-4a-frontier-geometry.html"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="The Triangle and the Frontier — Behind the Assumptions"/>
+<meta name="twitter:description" content="How the portfolio weight simplex maps onto the risk/return frontier — and what the textbook bullet's third dimension actually is."/>
+<meta name="twitter:image" content="https://stevessite.com/r_shiny_portfolio_preview.jpg"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1410;color:#e8ddd0;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}
+
+.page-wrap{max-width:740px;margin:0 auto;padding:72px 24px 60px}
+
+/* Breadcrumb */
+.breadcrumb{font-size:0.82rem;color:rgba(200,185,160,0.45);margin-bottom:20px}
+.breadcrumb a{color:rgba(200,185,160,0.55);text-decoration:none;transition:color 0.15s}
+.breadcrumb a:hover{color:#f0e6d8}
+.breadcrumb .sep{margin:0 6px}
+
+.page-header{margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(200,185,160,0.15)}
+.page-header h1{font-size:1.8rem;font-weight:400;margin-bottom:8px;color:#f0e6d8}
+.page-header p{color:rgba(200,185,160,0.55);font-size:1.05rem}
+
+section{margin-bottom:40px}
+section h2{font-size:1.15rem;font-weight:400;color:#f0e6d8;margin-bottom:14px}
+section h3{font-size:1.0rem;font-weight:400;color:#d4b896;margin-top:28px;margin-bottom:10px}
+section p{margin-bottom:14px;color:#c4b5a0;font-size:0.97rem}
+section p:last-child{margin-bottom:0}
+em{color:#f0e6d8;font-style:italic}
+strong{color:#f0e6d8;font-weight:500}
+
+/* ── iframe widget (full-bleed breakout) ── */
+.widget-iframe{width:100vw;margin-left:calc(-50vw + 50%);border:none;border-radius:0;margin-bottom:40px}
+
+/* ── Return link ── */
+.return-link{text-align:center;margin-top:16px}
+.return-link a{color:rgba(200,185,160,0.5);text-decoration:none;font-size:0.88rem;transition:color 0.15s}
+.return-link a:hover{color:#f0e6d8}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+<div class="breadcrumb">
+  <a href="/behind-the-assumptions.html">&larr; Behind the Assumptions</a>
+  <span class="sep">&middot;</span> Digression
+</div>
+
+<div class="page-header">
+  <h1>The Triangle and the Frontier</h1>
+  <p>How the portfolio weight simplex maps onto the familiar risk/return curve &mdash; and what the textbook bullet&rsquo;s third dimension actually is.</p>
+</div>
+
+<!-- ═══ Short intro ═══ -->
+<section>
+  <p>Each dot below is one portfolio, colored by its weight mix. Drag the center panel to rotate the 3-D bullet; switch which coordinate plays the &ldquo;third axis&rdquo;; pull the <strong>flatten</strong> slider to collapse it and watch the bullet squash into the plain 2-D frontier. Toggle to <strong>4 assets</strong> and the simplex becomes a tetrahedron, the bullet becomes a filled solid.</p>
+</section>
+
+<!-- ═══ Widget iframe ═══ -->
+<iframe class="widget-iframe" src="frontier_explorer.html"></iframe>
+
+<!-- ═══ Explanation ═══ -->
+<section>
+  <h2>What you&rsquo;re looking at</h2>
+  <p>Elsewhere on this site I show the three-asset <em>simplex</em> &mdash; the triangle of all portfolios you can build from three assets &mdash; and scatter tangency points across it for various Monte-Carlo&rsquo;d parameter sets. A natural question follows: how does that triangle relate to the familiar risk/return <em>frontier</em> plot? And if you&rsquo;ve seen the classic 3-D &ldquo;bullet&rdquo; rendering of a three-asset frontier, you may have wondered what its third dimension actually <em>is</em>. The short answer is the fun one: <strong>there is no intrinsic third dimension.</strong> Here&rsquo;s why.</p>
+
+  <h3>Two assets</h3>
+  <p>With two assets the simplex is one-dimensional &mdash; a single slider, since w&#x2082; = 1 &minus; w&#x2081;. Both expected return &mu;(w) and variance &sigma;&sup2;(w) are functions on that line, so the map is <em>line &rarr; (&sigma;, &mu;) plane</em>: a 1-D object dropped into 2-D space. The result is a curve with no interior. Nothing collides; nothing fills in.</p>
+
+  <h3>Three assets</h3>
+  <p>Now the simplex is the two-dimensional triangle. The actual map is <em>triangle &rarr; (&sigma;, &mu;) plane</em> &mdash; a 2-D domain into a 2-D codomain. Because two different weight triples can share the same risk and return, the map is <strong>many-to-one</strong>, and the image is no longer a curve but a filled region. Points strictly inside that region are <em>dominated</em> (some other portfolio offers more return at the same risk, or less risk at the same return); only the left/upper edge is efficient.</p>
+
+  <h3>So what is the &ldquo;bullet&rdquo; living in?</h3>
+  <p>The 3-D bullet you find in textbooks is an <em>embedding choice</em>, not a feature of the problem. Two of its axes are &sigma; and &mu;; the third is something tacked on so the colliding portfolios separate out into a visible surface instead of piling on top of one another. That third axis is <em>arbitrary</em> &mdash; it can be one of the weights (w&#x2083;, w&#x2081;, &hellip;) or any portfolio statistic you like (concentration, exposure to one asset, a third moment). Whatever you pick, projecting it away returns you to exactly the same 2-D frontier, because <strong>the third axis never carried any risk-return information.</strong> It&rsquo;s bookkeeping for the weight space, not a financial dimension.</p>
+
+  <p>Another way to see it: iso-mean lines on the triangle are straight (&mu; is linear in the weights), and along each one &sigma;&sup2; is a convex quadratic with a single minimum. Collect those minima and you trace the minimum-variance frontier &mdash; a <em>one-dimensional</em> curve sitting inside the 2-D triangle, whose image is the hyperbola whose upper branch is the efficient frontier. The genuine frontier object is 1-D in weight space all along.</p>
+
+  <p>The takeaway: the dimensions that get &ldquo;projected away&rdquo; are coordinates of the weight space, never risk or return. The frontier itself is always a 1-D curve; everything inside it is just the shadow of a many-to-one map.</p>
+</section>
+
+<!-- ═══ Return link ═══ -->
+<div class="return-link">
+  <a href="/behind-4-three-assets.html">&larr; Back to Chapter 4: Three Assets and Beyond</a>
+</div>
+
+</div><!-- .page-wrap -->
+
+<script>
+(function(){
+  var f=document.querySelector('.widget-iframe');
+  function fit(){try{f.style.height=f.contentDocument.documentElement.scrollHeight+'px'}catch(e){}}
+  f.addEventListener('load',function(){fit();new MutationObserver(fit).observe(f.contentDocument.body,{childList:true,subtree:true,attributes:true})});
+})();
+</script>
+<script src="portfolio-nav.js"></script>
+</body>
+</html>
