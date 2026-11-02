@@ -514,123 +514,43 @@ document.getElementById('mode').addEventListener('click',e=>{if(!e.target.datase
 
 // ── Screenshot ──
 document.getElementById('snap-btn').addEventListener('click',function(){
-  var is3=document.getElementById('sec3').style.display!=='none';
-  var cvs=is3?[document.getElementById('ctri'),document.getElementById('c3d'),document.getElementById('cfr')]
+  const is3=document.getElementById('sec3').style.display!=='none';
+  const canvases=is3?[document.getElementById('ctri'),document.getElementById('c3d'),document.getElementById('cfr')]
     :[document.getElementById('ttet'),document.getElementById('t3d'),document.getElementById('tfr')];
-
-  var pad=24, gap=14, titleH=64, modeH=56, ctrlH=110, botPad=16;
-  var cW=cvs.reduce(function(s,c){return s+c.width},0)+gap*(cvs.length-1);
-  var cH=Math.max.apply(null,cvs.map(function(c){return c.height}));
-  var W=cW+pad*2, H=titleH+modeH+cH+gap+ctrlH+pad+botPad;
-  var off=document.createElement('canvas');off.width=W;off.height=H;
-  var g=off.getContext('2d');
-
-  var bg='#0b0f0e', panel='#111817', line='#1e2a27', ink='#e7efec', muted='#7d908a', teal='#1D9E75', tealBr='#2fd6a0';
-
+  const pad=20, gap=14, topH=48, botH=36;
+  const cW=canvases.reduce(function(s,c){return s+c.width},0)+gap*(canvases.length-1);
+  const cH=Math.max.apply(null,canvases.map(function(c){return c.height}));
+  const W=cW+pad*2, H=cH+pad*2+topH+botH;
+  const off=document.createElement('canvas');off.width=W;off.height=H;
+  const g=off.getContext('2d');
   // background
-  g.fillStyle=bg;g.fillRect(0,0,W,H);
-
+  g.fillStyle='#0b0f0e';g.fillRect(0,0,W,H);
   // title
-  g.font='600 28px "IBM Plex Mono", monospace';g.textAlign='left';
-  g.fillStyle=ink;g.fillText('The third axis is ',pad,pad+36);
-  var tw=g.measureText('The third axis is ').width;
-  g.fillStyle=tealBr;g.fillText('arbitrary',pad+tw,pad+36);
-
-  // mode selector
-  var modeY=titleH, mLabels=['3 assets \u00b7 triangle','4 assets \u00b7 tetrahedron'];
-  var mActive=is3?0:1;
-  drawSegBar(g,pad,modeY,mLabels,mActive,220,34,16);
-
+  g.fillStyle='#e7efec';g.font='600 20px IBM Plex Mono, system-ui, sans-serif';g.textAlign='left';
+  g.fillText('The third axis is arbitrary'+(is3?' — 3 assets':' — 4 assets'),pad,pad+26);
   // canvases
-  var cx=pad, cy=titleH+modeH;
-  for(var i=0;i<cvs.length;i++){
-    g.drawImage(cvs[i],cx,cy);
-    cx+=cvs[i].width+gap;
+  var x=pad, y=pad+topH;
+  for(var i=0;i<canvases.length;i++){
+    g.drawImage(canvases[i],x,y);
+    x+=canvases[i].width+gap;
   }
-
-  // controls bar
-  var barY=titleH+modeH+cH+gap;
-  g.fillStyle=panel;g.strokeStyle=line;g.lineWidth=1;
-  roundRect(g,pad,barY,cW,ctrlH,10);g.fill();g.stroke();
-
-  var bx=pad+20, by=barY+12;
-
-  // Third axis
-  g.fillStyle=muted;g.font='600 15px "IBM Plex Mono", monospace';g.textAlign='left';
-  g.fillText('THIRD AXIS',bx,by+16);
-  var zLabels, zActive;
+  // settings strip
+  var info;
   if(is3){
-    zLabels=['w\u2083','w\u2081','conc.'];
-    zActive=zmode==='w3'?0:zmode==='w1'?1:2;
+    var zl=zmode==='w3'?'w₃':zmode==='w1'?'w₁':'concentration';
+    info='3rd axis: '+zl+'  ·  flatten: '+Math.round(flat*100)+'%  ·  spin: '+(spin?'on':'off')+'  ·  axes: '+(axFull?'full':'mini');
   }else{
-    zLabels=['w\u2084','w\u2081','conc.'];
-    zActive=zmode4==='w4'?0:zmode4==='w1'?1:2;
+    var zl4=zmode4==='w4'?'w₄':zmode4==='w1'?'w₁':'concentration';
+    info='3rd axis: '+zl4+'  ·  flatten: '+Math.round(flat4*100)+'%  ·  spin: '+(spin4?'on':'off')+'  ·  axes: '+(axFull4?'full':'mini');
   }
-  bx=drawSegBar(g,bx,by+26,zLabels,zActive,90,34,16)+36;
-
-  // Flatten
-  g.fillStyle=muted;g.font='600 15px "IBM Plex Mono", monospace';
-  g.fillText('FLATTEN',bx,by+16);
-  var fVal=is3?flat:flat4;
-  g.fillStyle=tealBr;g.font='600 18px "IBM Plex Mono", monospace';
-  g.fillText(Math.round(fVal*100)+'%',bx+90,by+16);
-  bx=drawSlider(g,bx,by+34,200,fVal,tealBr)+36;
-
-  // Auto-spin
-  g.fillStyle=muted;g.font='600 15px "IBM Plex Mono", monospace';
-  g.fillText('AUTO-SPIN',bx,by+16);
-  var spVal=is3?spin:spin4;
-  bx=drawSegBar(g,bx,by+26,['on','off'],spVal?0:1,60,34,16)+36;
-
-  // Axes
-  g.fillStyle=muted;g.font='600 15px "IBM Plex Mono", monospace';
-  g.fillText('AXES',bx,by+16);
-  var axVal=is3?axFull:axFull4;
-  bx=drawSegBar(g,bx,by+26,['mini','full'],axVal?1:0,64,34,16)+36;
-
+  g.fillStyle='#7d908a';g.font='13px IBM Plex Mono, monospace';g.textAlign='left';
+  g.fillText(info,pad,H-pad+4);
   // download
   off.toBlob(function(blob){
     var a=document.createElement('a');a.href=URL.createObjectURL(blob);
     a.download='frontier-explorer'+(is3?'-3asset':'-4asset')+'.png';
     a.click();URL.revokeObjectURL(a.href);
   });
-
-  // ── drawing helpers ──
-  function roundRect(ctx,x,y,w,h,r){
-    ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
-    ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
-  }
-  function drawSegBar(ctx,x,y,labels,active,btnW,h,fs){
-    h=h||24;fs=fs||12;var r=7;
-    ctx.strokeStyle=line;ctx.lineWidth=1;
-    roundRect(ctx,x,y,btnW*labels.length,h,r);ctx.fillStyle=panel;ctx.fill();ctx.stroke();
-    for(var i=0;i<labels.length;i++){
-      var bx_=x+i*btnW;
-      if(i===active){
-        ctx.save();ctx.beginPath();
-        roundRect(ctx,bx_,y,btnW,h,i===0&&labels.length>1?r:i===labels.length-1?r:0);
-        ctx.clip();
-        ctx.fillStyle=teal;ctx.fillRect(bx_,y,btnW,h);
-        ctx.restore();
-        ctx.fillStyle='#04140e';
-      }else{
-        ctx.fillStyle=muted;
-      }
-      ctx.font=(i===active?'600 ':'')+fs+'px "IBM Plex Mono", monospace';
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(labels[i],bx_+btnW/2,y+h/2);
-      if(i<labels.length-1){ctx.strokeStyle=line;ctx.beginPath();ctx.moveTo(bx_+btnW,y);ctx.lineTo(bx_+btnW,y+h);ctx.stroke();}
-    }
-    return x+btnW*labels.length;
-  }
-  function drawSlider(ctx,x,y,w,val,col){
-    ctx.fillStyle=line;
-    roundRect(ctx,x,y,w,6,3);ctx.fill();
-    var tx=x+val*w;
-    ctx.beginPath();ctx.arc(tx,y+3,10,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
-    return x+w;
-  }
 });
 </script>
 </body>
