@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>From R Script to Shiny App</title>
+
+  <!-- Prism.js — dark theme overridden below to match site palette -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+
+  <style>
+    /* ── Site theme variables (inlined for standalone use) ──────────── */
+    :root {
+      --color-bg:         #001e2a;
+      --color-surface:    #002d3d;
+      --color-surface-hi: #003a50;
+      --color-primary:    #7dd4e8;
+      --color-primary-hi: #c8f0f8;
+      --color-accent:     #e8c020;
+      --color-accent-hi:  #f5d84a;
+      --color-text:       #d0eef5;
+      --color-text-dim:   #5a9aaa;
+      --color-text-inv:   #001e2a;
+      --color-border:     rgba(100, 210, 230, 0.14);
+      --color-border-hi:  rgba(100, 210, 230, 0.32);
+      --color-positive:   #4db8a0;
+      --color-negative:   #e07040;
+      --color-data-3:     #4db8a0;
+      --color-data-5:     #a080d0;
+      --font-sans:        system-ui, -apple-system, sans-serif;
+      --font-mono:        ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+      --space-xs:  4px;
+      --space-sm:  8px;
+      --space-md:  16px;
+      --space-lg:  28px;
+      --space-xl:  48px;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; min-height: 100%;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.55;
+      overflow-y: auto;
+    }
+
+    h1, h2, h3, h4 {
+      color: var(--color-primary-hi);
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    h1 { font-size: 1.9rem; }
+    h2 { font-size: 1.4rem; }
+    h3 { font-size: 1.1rem; color: var(--color-primary); }
+
+    p { margin-bottom: var(--space-md); }
+
+    a { color: var(--color-primary); text-decoration: none; }
+    a:hover { color: var(--color-primary-hi); }
+
+    ::-webkit-scrollbar       { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: var(--color-bg); }
+    ::-webkit-scrollbar-thumb { background: var(--color-border-hi); border-radius: 99px; }
+
+    /* ── Page layout ───────────────────────────────────────────────── */
+    .page-wrap {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 48px var(--space-lg) var(--space-xl);
+    }
+
+    .page-header {
+      margin-bottom: var(--space-xl);
+      padding-bottom: var(--space-lg);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .page-header p {
+      color: var(--color-text-dim);
+      font-size: 1.05rem;
+      margin-bottom: 0;
+    }
+
+    section { margin-bottom: var(--space-xl); }
+    section h2 {
+      margin-bottom: var(--space-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .section-intro {
+      color: var(--color-text-dim);
+      font-size: 0.92rem;
+      margin-bottom: var(--space-md);
+      line-height: 1.6;
+    }
+
+    /* ── Code blocks — override Prism to match site palette ────────── */
+    pre[class*="language-"],
+    code[class*="language-"] {
+      font-family: var(--font-mono) !important;
+      font-size: 0.82rem !important;
+      line-height: 1.6 !important;
+      background: #0a1a22 !important;
+      color: var(--color-text) !important;
+      text-shadow: none !important;
+    }
+    pre[class*="language-"] {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-md) !important;
+      margin: 0 0 var(--space-md) 0 !important;
+      overflow-x: auto;
+    }
+
+    /* Prism token overrides to match site colors */
+    .token.comment,
+    .token.prolog,
+    .token.doctype   { color: var(--color-text-dim) !important; font-style: italic; }
+    .token.string,
+    .token.attr-value { color: var(--color-accent) !important; }
+    .token.keyword    { color: var(--color-primary) !important; font-weight: 600; }
+    .token.function   { color: var(--color-primary-hi) !important; }
+    .token.number,
+    .token.boolean    { color: var(--color-data-3) !important; }
+    .token.operator   { color: var(--color-text) !important; }
+    .token.punctuation{ color: var(--color-text-dim) !important; }
+    .token.namespace  { color: var(--color-data-5) !important; }
+
+    /* ── Before / After labels ─────────────────────────────────────── */
+    .code-pair { margin-bottom: var(--space-lg); }
+
+    .code-label {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 10px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      margin-bottom: 0;
+    }
+    .code-label + pre {
+      border-top-left-radius: 0 !important;
+      margin-top: 0 !important;
+    }
+    .code-label.before {
+      background: var(--color-negative);
+      color: var(--color-text-inv);
+    }
+    .code-label.after {
+      background: var(--color-positive);
+      color: var(--color-text-inv);
+    }
+
+    .arrow-between {
+      text-align: center;
+      color: var(--color-text-dim);
+      font-size: 1.4rem;
+      padding: var(--space-sm) 0;
+    }
+
+    /* ── Highlighted lines inside code blocks ──────────────────────── */
+    .line-highlight {
+      background: rgba(77, 184, 160, 0.12);
+      display: block;
+    }
+
+    /* ── File tree ─────────────────────────────────────────────────── */
+    .file-tree {
+      background: #0a1a22;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: var(--color-text);
+      margin-bottom: var(--space-md);
+    }
+    .file-tree .dir  { color: var(--color-primary); font-weight: 600; }
+    .file-tree .file { color: var(--color-text); }
+    .file-tree .desc { color: var(--color-text-dim); font-size: 0.78rem; }
+
+    /* ── Callout box ───────────────────────────────────────────────── */
+    .callout {
+      background: var(--color-surface);
+      border-left: 3px solid var(--color-accent);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      padding: var(--space-md);
+      margin-bottom: var(--space-md);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .callout strong { color: var(--color-accent); }
+
+    /* ── Summary table ─────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: var(--space-md);
+      font-size: 0.85rem;
+    }
+    th {
+      color: var(--color-text-dim);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-align: left;
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--color-border-hi);
+    }
+    td {
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text);
+      vertical-align: top;
+    }
+
+    /* ── Closing ───────────────────────────────────────────────────── */
+    .closing {
+      margin-top: var(--space-lg);
+      padding-top: var(--space-lg);
+      border-top: 1px solid var(--color-border);
+      color: var(--color-text-dim);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    /* ── Mobile adjustments ────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .page-wrap { padding: 28px var(--space-md) var(--space-lg); }
+      h1 { font-size: 1.5rem; }
+      h2 { font-size: 1.2rem; }
+      pre[class*="language-"] { font-size: 0.75rem !important; padding: var(--space-sm) !important; }
+      td, th { padding: var(--space-xs) var(--space-sm); font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <header class="page-header">
+      <h1>From R Script to Shiny App</h1>
+      <p>
+        How a ~450-line monolithic R simulation was restructured into
+        an interactive Shiny application — and why each change was made.
+      </p>
+    </header>
+
+    <!-- ─── 1. The Starting Point ─────────────────────────────────── -->
+    <section>
+      <h2>The Starting Point</h2>
+      <p class="section-intro">
+        The original code was two R scripts. The main script (~400 lines) mixed
+        parameters, computation, and plotting in a single file. The second script
+        (~30 lines) looped over allocation percentages by <code>source()</code>-ing
+        the main script repeatedly.
+      </p>
+      <p>
+        Here's a condensed view of how the original main script was organized:
+      </p>
+
+      <pre><code class="language-r">########## Parameters ############
+n = 1000
+s.mean = 10
+s.sd = 6
+b.mean = 10
+b.sd = 6
+s.b.corr = .7
+init.inv = 1000
+perc.stocks = 0.999999  # Comment this out when running Meta Script
+rebal.interval = 100
+# ... 10+ more parameters ...
+
+plotType = 6   # Change this number to see different plots
+runCalcs = TRUE  # Set to FALSE to look at different plots
+
+######### Functions #############
+annualizeFn = function(P, G, n) { ... }
+
+########## Program Body ##########
+n = n - 1
+if (runCalcs == TRUE) {
+  # ~200 lines of computation: covariance matrix,
+  # Metropolis sampling, portfolio tracking,
+  # rolling SD calculations, data frame assembly...
+}
+
+########## Plots ############
+if (plotType == 1) {
+  # Gain vs SD scatterplot
+} else if (plotType == 6) {
+  # Trajectory plots
+} else if (plotType == 7) {
+  # Cost profiles
+} else if (plotType == 8) {
+  # Final densities
+} else if (plotType == 9) {
+  # Rebal delta density
+} else if (plotType == 10) {
+  # Multi-panel explorer (patchwork)
+}
+
+cat("mean rebal    :", mean(value.rebal.tot), "\n")
+cat("mean non-rebal:", mean(value.nonrebal.tot), "\n")</code></pre>
+
+      <p>And the meta script — the efficient frontier sweep:</p>
+
+      <pre><code class="language-r">perc.stocks.vec = c(0.000001, seq(from=0.1, to=.9, by=0.1), 0.999999)
+
+perc.stocks = perc.stocks.vec[1]
+source("~/Documents/Bayes/Financial Modeling/Metropolis Sampling - 2021-12-18 v3d.R")
+gainsVsSdDf = gainsVsSD.point.estDf
+
+for (k in 2:length(perc.stocks.vec)) {
+  perc.stocks = perc.stocks.vec[k]
+  source("~/Documents/Bayes/Financial Modeling/Metropolis Sampling - 2021-12-18 v3d.R")
+  gainsVsSdDf = rbind( gainsVsSdDf, gainsVsSD.point.estDf )
+}</code></pre>
+
+      <div class="callout">
+        <strong>Key observation:</strong> The meta script works by setting a global variable
+        (<code>perc.stocks</code>), then <code>source()</code>-ing the entire main script.
+        The main script reads that global and runs everything — all the computation,
+        all the data frame assembly. This is clever but fragile: every variable the
+        main script creates lands in the global environment, and the meta script
+        has to know which output variable to grab (<code>gainsVsSD.point.estDf</code>).
+      </div>
+    </section>
+
+    <!-- ─── 2. The End Result ─────────────────────────────────────── -->
+    <section>
+      <h2>The Shiny File Structure</h2>
+      <p class="section-intro">
+        The same logic, split into seven focused files. Each file has a single
+        responsibility. No globals, no side effects, no <code>plotType</code> switch.
+      </p>
+
+      <div class="file-tree">
+        <span class="dir">r-shiny-portfolio/</span><br>
+        ├── <span class="file">global.R</span> <span class="desc">— loads packages, sources the R/ modules</span><br>
+        ├── <span class="file">ui.R</span> <span class="desc">— the user interface: sliders, buttons, tabs</span><br>
+        ├── <span class="file">server.R</span> <span class="desc">— reactive wiring: inputs → computation → outputs</span><br>
+        └── <span class="dir">R/</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">helpers.R</span> <span class="desc">— small utility functions</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">simulation_engine.R</span> <span class="desc">— core MCMC simulation (pure function)</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">meta_sweep.R</span> <span class="desc">— efficient frontier sweep</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;└── <span class="file">plotting.R</span> <span class="desc">— one function per plot type</span>
+      </div>
+
+      <div class="callout">
+        <strong>Why this structure?</strong> Shiny expects three files at the top level —
+        <code>global.R</code>, <code>ui.R</code>, and <code>server.R</code>. Anything in the
+        <code>R/</code> subdirectory is conventional for helper code. This separation means
+        you can edit a plot function without touching the simulation logic, or add a
+        new UI input without modifying any computation code.
+      </div>
+    </section>
+
+    <!-- ─── 3. Strategy 1: Extract the Engine ─────────────────────── -->
+    <section>
+      <h2>Strategy 1: Extract the Computation Engine</h2>
+      <p class="section-intro">
+        The single biggest change: wrapping the ~200 lines of computation in a
+        <strong>pure function</strong> that takes parameters in and returns structured
+        data out. No side effects. No global variables.
+      </p>
+
+      <div class="code-pair">
+        <div class="code-label before">Before — computation runs in global scope</div>
+        <pre><code class="language-r">########## Program Body ##########
+n = n - 1
+
+if (runCalcs == TRUE) {
+
+  # Compose interest covariance matrix
+  sdVec = c( s.sd, b.sd )/propStepDivisor
+  sdM = diag( sdVec )
+  rho = matrix( c(1, rep(s.b.corr, 2), 1), ncol=2 )
+  s.b.cov = sdM %*% rho %*% sdM
+
+  # ... 200 lines of computation ...
+  # All variables (costs, value.rebal.tot, gainVsSDDf, etc.)
+  # land in the global environment as side effects.
+}</code></pre>
+
+        <div class="arrow-between">⟱</div>
+
+        <div class="code-label after">After — a pure function with explicit inputs and outputs</div>
+        <pre><code class="language-r"># simulation_engine.R
+
+run_simulation &lt;- function(n, s.mean, s.sd, b.mean, b.sd, s.b.corr,
+                           init.inv, perc.stocks, rebal.interval,
+                           s.int, b.int, int.period,
+                           propStepDivisor, nSims, nSimsToRecord,
+                           widthVal, progress_callback = NULL) {
+
+  n &lt;- n - 1
+
+  # Compose interest covariance matrix
+  sdVec &lt;- c(s.sd, b.sd) / propStepDivisor
+  sdM &lt;- diag(sdVec)
+  rho &lt;- matrix(c(1, rep(s.b.corr, 2), 1), ncol = 2)
+  s.b.cov &lt;- sdM %*% rho %*% sdM
+
+  # ... same computation, now inside a function ...
+
+  # Return structured output — no globals
+  list(
+    costsDf = costsDf,
+    valueDf = valueDf,
+    sharesDf = sharesDf,
+    value.totDf = value.totDf,
+    gainVsSDDf = gainVsSDDf,
+    gainsVsSD.point.estDf = gainsVsSD.point.estDf,
+    deltaDf = deltaDf,
+    mean.vecDf = mean.vecDf,
+    params = list(n = n, s.mean = s.mean, ...)
+  )
+}</code></pre>
+      </div>
+
+      <div class="callout">
+        <strong>Why this matters:</strong> The original script creates dozens of variables
+        in the global environment — <code>costs</code>, <code>value.rebal.tot</code>,
+        <code>gainVsSDDf</code>, etc. — with no clear contract about which ones are
+        "outputs." The function version returns a single named list. Every downstream
+        consumer (plots, tables, the meta sweep) pulls from that list. Nothing leaks.
+      </div>
+    </section>
+
+    <!-- ─── 4. Strategy 2: Parameters Become UI Inputs ────────────── -->
+    <section>
+      <h2>Strategy 2: Parameters Become UI Inputs</h2>
+      <p class="section-intro">
+        The parameter block at the top of the original script maps almost
+        one-to-one to Shiny input widgets. Instead of editing code to change
+        a value, you drag a slider.
+      </p>
+
+      <div class="code-pair">
+        <div class="code-label before">Before — hardcoded parameters</div>
+        <pre><code class="language-r">########## Parameters ############
+n = 1000
+s.mean = 10
+s.sd = 6
+b.mean = 10
+b.sd = 6
+s.b.corr = .7
+init.inv = 1000
+perc.stocks = 0.999999
+rebal.interval = 100
+s.int = 0.04
+b.int = 0.04
+int.period = 300
+propStepDivisor = 20
+nSims = 100
+nSimsToRecord = 5
+widthVal = 600
+
+plotType = 6       # Change number, re-run script
+runCalcs = TRUE    # Set FALSE to skip computation</code></pre>
+
+        <div class="arrow-between">⟱</div>
+
+        <div class="code-label after">After — interactive UI widgets (ui.R)</div>
+        <pre><code class="language-r"># ui.R
+fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+
+      h4("Asset Distributions"),
+      numericInput("s_mean", "Stock Mean Price",   value = 10, min = 0.1),
+      numericInput("s_sd",   "Stock Std Dev",      value = 6,  min = 0.1),
+      numericInput("b_mean", "Bond Mean Price",     value = 10, min = 0.1),
+      numericInput("b_sd",   "Bond Std Dev",        value = 6,  min = 0.1),
+      sliderInput("s_b_corr", "Stock-Bond Correlation",
+                  min = -1, max = 1, value = 0.7, step = 0.05),
+
+      h4("Portfolio Settings"),
+      numericInput("init_inv", "Initial Investment ($)", value = 1000),
+      sliderInput("perc_stocks", "Stock Allocation (%)",
+                  min = 0, max = 100, value = 60),
+      # ... more inputs ...
+
+      actionButton("run_single", "Run Simulation",
+                   class = "btn-primary btn-block"),
+    ),
+
+    mainPanel(
+      tabsetPanel(  # Replaces plotType = 1, 6, 7, 8, 9, 10
+        tabPanel("Gain vs SD",       plotOutput("plot_gain_sd")),
+        tabPanel("Trajectories",     plotOutput("plot_trajectories")),
+        tabPanel("Cost Profiles",    plotOutput("plot_costs")),
+        tabPanel("Final Densities",  plotOutput("plot_densities")),
+        tabPanel("Rebal Delta",      plotOutput("plot_delta")),
+        tabPanel("Single Sim Explorer", plotOutput("plot_explorer")),
+        tabPanel("Efficient Frontier",  plotOutput("plot_frontier")),
+        tabPanel("Summary", tableOutput("summary_table")),
+      )
+    )
+  )
+)</code></pre>
+      </div>
+
+      <p>
+        Notice how <code>plotType = 6</code> and the entire <code>if/else if</code> chain
+        disappear. In Shiny, every plot is always available — users click tabs instead
+        of editing a variable and re-running. And <code>runCalcs = TRUE</code> becomes a
+        button click.
+      </p>
+    </section>
+
+    <!-- ─── 5. Strategy 3: One Function Per Plot ──────────────────── -->
+    <section>
+      <h2>Strategy 3: One Function Per Plot</h2>
+      <p class="section-intro">
+        The original script's <code>if (plotType == N)</code> chain is replaced by
+        individual named functions in <code>plotting.R</code>. Each takes the simulation
+        result list and returns a ggplot object.
+      </p>
+
+      <div class="code-pair">
+        <div class="code-label before">Before — plot selection by number</div>
+        <pre><code class="language-r">plotType = 6
+
+if (plotType == 1) {
+  plt = ggplot( data=gainVsSDDf, aes(x=sd, y=gain, color=type) ) +
+    geom_point( alpha=0.08 ) +
+    geom_point( data = gainsVsSD.point.estDf, aes(x=sd, y=gain, fill=type),
+                size=3, shape=21, color="black", alpha=0.8 ) +
+    geom_hline(yintercept=c(s.int, b.int), linetype="dashed",
+               color="darkblue", alpha=0.3) +
+    ylab("gain (annualized %)") +
+    xlab("standard deviation") +
+    ggtitle(paste0("Stocks / Bonds = ", perc.stocks*100, "% / ",
+                   (1-perc.stocks)*100, "%")) +
+
+    # Zoomed in parameters
+    # scale_y_continuous(labels = scales::percent, limits=c(0, 0.08)) +
+    # xlim(0, 300) +
+
+    # Medium view
+    # scale_y_continuous(labels = scales::percent, limits=c(-0.02, 0.15)) +
+    # xlim(0, 1000) +
+
+    # Unconstrained
+    scale_y_continuous(labels = scales::percent) +
+    theme_light()
+  plot(plt)
+
+} else if (plotType == 6) {
+  plt = ggplot(data=value.totDf[with(value.totDf, sim &lt;= 100), ],
+               aes(x=time, y=val, group=interaction(type, sim), color=type)) +
+    geom_line( alpha=0.1 ) +
+    theme_light()
+  plot(plt)
+
+} else if (plotType == 7) {
+  # ...
+} else if (plotType == 8) {
+  # ...
+} # ... and so on through plotType == 10</code></pre>
+
+        <div class="arrow-between">⟱</div>
+
+        <div class="code-label after">After — named functions in plotting.R</div>
+        <pre><code class="language-r"># plotting.R — each function takes the result list, returns a ggplot
+
+plot_gain_vs_sd &lt;- function(result) {
+  p &lt;- result$params
+  ggplot(data = result$gainVsSDDf, aes(x = sd, y = gain, color = type)) +
+    geom_point(alpha = 0.08) +
+    geom_point(data = result$gainsVsSD.point.estDf,
+               aes(x = sd, y = gain, fill = type),
+               size = 3, shape = 21, color = "black", alpha = 0.8) +
+    geom_hline(yintercept = c(p$s.int, p$b.int),
+               linetype = "dashed", color = "darkblue", alpha = 0.3) +
+    ylab("gain (annualized %)") +
+    xlab("standard deviation") +
+    ggtitle(paste0("Stocks / Bonds = ", round(p$perc.stocks * 100, 1),
+                   "% / ", round((1 - p$perc.stocks) * 100, 1), "%")) +
+    scale_y_continuous(labels = scales::percent) +
+    theme_light()
+}
+
+plot_trajectories &lt;- function(result, max_sims = 100) {
+  df &lt;- result$value.totDf[result$value.totDf$sim &lt;= max_sims, ]
+  ggplot(data = df,
+         aes(x = time, y = val,
+             group = interaction(type, sim), color = type)) +
+    geom_line(alpha = 0.1) +
+    ylab("portfolio value ($)") +
+    ggtitle(paste0("Portfolio Trajectories (up to ", max_sims, " sims)")) +
+    theme_light()
+}</code></pre>
+      </div>
+
+      <p>Key differences in the "after" version:</p>
+      <ul style="margin-bottom: var(--space-md); padding-left: var(--space-lg); color: var(--color-text);">
+        <li>Each function receives data through <code>result$...</code> — no global variable access</li>
+        <li>Parameters like <code>perc.stocks</code> come from <code>result$params</code>, not the global scope</li>
+        <li>Commented-out zoom levels are gone — the user can zoom interactively</li>
+        <li>No <code>plot(plt)</code> call — Shiny's <code>renderPlot</code> handles that</li>
+      </ul>
+    </section>
+
+    <!-- ─── 6. Strategy 4: The Meta Script ────────────────────────── -->
+    <section>
+      <h2>Strategy 4: The Meta Script Becomes a Function</h2>
+      <p class="section-intro">
+        The second script — which <code>source()</code>-ed the main script in a loop to
+        sweep across allocations — becomes a clean function that calls
+        <code>run_simulation()</code> directly.
+      </p>
+
+      <div class="code-pair">
+        <div class="code-label before">Before — source() loop with global state</div>
+        <pre><code class="language-r"># Meta script (separate file)
+perc.stocks.vec = c(0.000001, seq(from=0.1, to=.9, by=0.1), 0.999999)
+
+perc.stocks = perc.stocks.vec[1]
+source("~/Documents/Bayes/.../Metropolis Sampling - 2021-12-18 v3d.R")
+gainsVsSdDf = gainsVsSD.point.estDf
+
+for (k in 2:length(perc.stocks.vec)) {
+  perc.stocks = perc.stocks.vec[k]
+  source("~/Documents/Bayes/.../Metropolis Sampling - 2021-12-18 v3d.R")
+  gainsVsSdDf = rbind( gainsVsSdDf, gainsVsSD.point.estDf )
+}</code></pre>
+
+        <div class="arrow-between">⟱</div>
+
+        <div class="code-label after">After — clean function call in meta_sweep.R</div>
+        <pre><code class="language-r"># meta_sweep.R
+run_meta_sweep &lt;- function(perc.stocks.vec, n, s.mean, s.sd, b.mean, b.sd,
+                           s.b.corr, init.inv, rebal.interval,
+                           s.int, b.int, int.period,
+                           propStepDivisor, nSims, nSimsToRecord,
+                           widthVal, progress_callback = NULL) {
+
+  results &lt;- list()
+
+  for (k in seq_along(perc.stocks.vec)) {
+    alloc &lt;- perc.stocks.vec[k]
+
+    # Build a progress callback that also reports allocation progress
+    sim_cb &lt;- NULL
+    if (!is.null(progress_callback)) {
+      sim_cb &lt;- function(i, total, msg) {
+        progress_callback(k, length(perc.stocks.vec), i, total,
+                          paste0("Allocation ", k, "/", length(perc.stocks.vec),
+                                 " (", round(alloc * 100), "% stocks): sim ",
+                                 i, "/", total))
+      }
+    }
+
+    res &lt;- run_simulation(
+      n = n, s.mean = s.mean, s.sd = s.sd, b.mean = b.mean, b.sd = b.sd,
+      s.b.corr = s.b.corr, init.inv = init.inv, perc.stocks = alloc,
+      rebal.interval = rebal.interval, s.int = s.int, b.int = b.int,
+      int.period = int.period, propStepDivisor = propStepDivisor,
+      nSims = nSims, nSimsToRecord = nSimsToRecord,
+      widthVal = widthVal, progress_callback = sim_cb
+    )
+
+    pe &lt;- res$gainsVsSD.point.estDf
+    results[[k]] &lt;- data.frame(
+      allocation = alloc,
+      rebal_gain = pe$gain[pe$type == "rebal"],
+      rebal_sd   = pe$sd[pe$type == "rebal"],
+      nonrebal_gain = pe$gain[pe$type == "nonrebal"],
+      nonrebal_sd   = pe$sd[pe$type == "nonrebal"],
+      s.int = s.int, b.int = b.int
+    )
+  }
+
+  do.call(rbind, results)
+}</code></pre>
+      </div>
+
+      <p>
+        The <code>source()</code> pattern is replaced by a direct function call. Instead of
+        setting a global variable and hoping the sourced script reads it, every parameter
+        is passed explicitly. And instead of picking output from the global environment
+        (<code>gainsVsSD.point.estDf</code>), results come back as return values.
+      </p>
+    </section>
+
+    <!-- ─── 7. Strategy 5: Reactive Wiring ────────────────────────── -->
+    <section>
+      <h2>Strategy 5: Reactive Wiring</h2>
+      <p class="section-intro">
+        <code>server.R</code> is the "glue" layer. It reacts to button clicks,
+        calls the computation functions, stores results, and feeds them to
+        plot renderers. This is the Shiny-specific part — everything else is
+        plain R.
+      </p>
+
+      <pre><code class="language-r"># server.R — the reactive glue
+function(input, output, session) {
+
+  # Reactive values: the single source of truth for results
+  sim_result   &lt;- reactiveVal(NULL)
+  sweep_result &lt;- reactiveVal(NULL)
+
+  # When the user clicks "Run Simulation":
+  observeEvent(input$run_single, {
+
+    # Disable buttons during computation
+    shinyjs::disable("run_single")
+    shinyjs::disable("run_sweep")
+
+    # Convert percentage slider to fraction, clamping extremes
+    perc &lt;- max(0.000001, min(0.999999, input$perc_stocks / 100))
+
+    # Run with a progress bar
+    withProgress(message = "Running simulation...", value = 0, {
+      result &lt;- run_simulation(
+        n         = input$n_timesteps,
+        s.mean    = input$s_mean,
+        s.sd      = input$s_sd,
+        # ... all other params from input$... ...
+        progress_callback = function(i, total, msg) {
+          setProgress(value = i / total, message = msg)
+        }
+      )
+      sim_result(result)  # Store the result
+    })
+
+    shinyjs::enable("run_single")
+    shinyjs::enable("run_sweep")
+  })
+
+  # Every plot just reads from sim_result() — when it updates,
+  # all plots automatically re-render.
+
+  output$plot_gain_sd &lt;- renderPlot({
+    req(sim_result())           # Wait until there's data
+    plot_gain_vs_sd(sim_result())  # Call our pure plot function
+  })
+
+  output$plot_trajectories &lt;- renderPlot({
+    req(sim_result())
+    plot_trajectories(sim_result())
+  })
+
+  # ... one renderPlot per tab ...
+}</code></pre>
+
+      <div class="callout">
+        <strong>The key Shiny concepts here:</strong><br><br>
+        <strong><code>reactiveVal()</code></strong> — A container for a value that Shiny tracks.
+        When you write <code>sim_result(result)</code>, anything that reads
+        <code>sim_result()</code> is automatically notified and re-renders.<br><br>
+        <strong><code>observeEvent()</code></strong> — Runs code when a specific input changes
+        (here, a button click). This replaces the <code>runCalcs = TRUE</code> flag.<br><br>
+        <strong><code>req()</code></strong> — Short for "require." Silently halts rendering if
+        there's no data yet — no errors on startup.<br><br>
+        <strong><code>renderPlot()</code></strong> — Tells Shiny "this output is a plot, and here's
+        how to make it." Shiny calls this function whenever its reactive dependencies change.
+      </div>
+    </section>
+
+    <!-- ─── 8. Strategy 6: Progress & UX ──────────────────────────── -->
+    <section>
+      <h2>Strategy 6: Progress Reporting &amp; UX</h2>
+      <p class="section-intro">
+        Monte Carlo simulations can run for minutes. The original script gave
+        no feedback — you'd stare at the console. The Shiny version reports
+        progress per-simulation, with nested reporting for the frontier sweep.
+      </p>
+
+      <div class="code-pair">
+        <div class="code-label before">Before — silent loop</div>
+        <pre><code class="language-r">for (j in 1:nSims) {
+  # ... runs for minutes with no output ...
+  costs[1,1,j] = rtruncnorm(1, a=0.5, mean=s.mean, sd=s.sd)
+  # ...
+}</code></pre>
+
+        <div class="arrow-between">⟱</div>
+
+        <div class="code-label after">After — progress callbacks at two levels</div>
+        <pre><code class="language-r"># In run_simulation():
+for (j in 1:nSims) {
+  if (!is.null(progress_callback)) {
+    progress_callback(j, nSims,
+                      paste("Running simulation", j, "of", nSims))
+  }
+  # ... same computation ...
+}
+
+# In server.R — the callback updates a Shiny progress bar:
+progress_callback = function(i, total, msg) {
+  setProgress(value = i / total, message = msg)
+}
+
+# In meta_sweep — nested progress for the frontier sweep:
+sim_cb &lt;- function(i, total, msg) {
+  progress_callback(k, length(perc.stocks.vec), i, total,
+                    paste0("Allocation ", k, "/", length(perc.stocks.vec),
+                           ": sim ", i, "/", total))
+}</code></pre>
+      </div>
+
+      <p>
+        The progress callback is an <em>optional</em> parameter
+        (<code>progress_callback = NULL</code>) so the simulation function
+        works perfectly well without Shiny — you could call it from a plain
+        R script and simply not pass a callback.
+      </p>
+    </section>
+
+    <!-- ─── 9. The Glue: global.R ─────────────────────────────────── -->
+    <section>
+      <h2>The Glue: global.R</h2>
+      <p class="section-intro">
+        The simplest file in the project, but it plays an important role: it loads
+        all packages once and sources all the module files, so they're available
+        to both <code>ui.R</code> and <code>server.R</code>.
+      </p>
+
+      <div class="code-pair">
+        <div class="code-label before">Before — libraries scattered at top of main script</div>
+        <pre><code class="language-r">library(mvtnorm)
+library(ggplot2)
+library(patchwork)
+library(truncnorm)
+library(reshape2)
+library(zoo)
+library(scales)</code></pre>
+
+        <div class="arrow-between">⟱</div>
+
+        <div class="code-label after">After — centralized in global.R</div>
+        <pre><code class="language-r"># global.R — Package loading and source files
+library(shiny)
+library(shinyjs)
+library(ggplot2)
+library(patchwork)
+library(mvtnorm)
+library(truncnorm)
+library(reshape2)
+library(zoo)
+library(scales)
+
+source("R/helpers.R")
+source("R/simulation_engine.R")
+source("R/meta_sweep.R")
+source("R/plotting.R")</code></pre>
+      </div>
+
+      <p>
+        Two new packages appear: <code>shiny</code> (the framework) and
+        <code>shinyjs</code> (for disabling buttons during computation).
+        The four <code>source()</code> calls load the <code>R/</code> modules into
+        the shared environment.
+      </p>
+    </section>
+
+    <!-- ─── 10. Quick Reference ───────────────────────────────────── -->
+    <section>
+      <h2>Quick Reference</h2>
+      <p class="section-intro">
+        A summary of the migration patterns, for reference.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Original Pattern</th>
+            <th>Shiny Version</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Global variables<br><code>n = 1000</code></td>
+            <td>Function params<br><code>run_simulation(n = input$n, ...)</code></td>
+            <td>No side effects, testable, reusable</td>
+          </tr>
+          <tr>
+            <td><code>runCalcs = TRUE</code></td>
+            <td><code>observeEvent(input$run_single, {...})</code></td>
+            <td>Triggered by button click, not code editing</td>
+          </tr>
+          <tr>
+            <td><code>plotType = 6</code> switch</td>
+            <td><code>tabsetPanel()</code> + individual plot functions</td>
+            <td>All plots available simultaneously</td>
+          </tr>
+          <tr>
+            <td><code>source()</code> in a loop</td>
+            <td><code>run_meta_sweep()</code> function call</td>
+            <td>Explicit I/O, no global state pollution</td>
+          </tr>
+          <tr>
+            <td>Edit code, re-run</td>
+            <td>Drag sliders, click buttons</td>
+            <td>Non-programmers can explore parameters</td>
+          </tr>
+          <tr>
+            <td><code>cat("mean:", ...)</code></td>
+            <td><code>renderTable({...})</code></td>
+            <td>Formatted output in the browser</td>
+          </tr>
+          <tr>
+            <td>Silent computation</td>
+            <td><code>withProgress()</code> + callbacks</td>
+            <td>Users see progress during long runs</td>
+          </tr>
+          <tr>
+            <td>Commented-out alternatives</td>
+            <td>UI controls with min/max/step</td>
+            <td>Explore variants without editing code</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ─── 11. The Core Insight ──────────────────────────────────── -->
+    <section>
+      <h2>The Core Insight</h2>
+      <p>
+        Most of the migration work isn't Shiny-specific. It's <em>good R refactoring</em>:
+        wrapping computation in functions, eliminating globals, making outputs explicit.
+      </p>
+      <p>
+        Of the seven files in the Shiny project, only three are Shiny-aware
+        (<code>global.R</code>, <code>ui.R</code>, <code>server.R</code>). The other four —
+        <code>simulation_engine.R</code>, <code>meta_sweep.R</code>, <code>plotting.R</code>,
+        and <code>helpers.R</code> — are pure R. You could call them from a plain script,
+        a notebook, or a unit test. They don't know Shiny exists.
+      </p>
+      <p>
+        That's the real payoff: the code became better <em>R code</em>, and Shiny is
+        just the thin interactive layer on top.
+      </p>
+    </section>
+
+    <div class="closing">
+      <p>
+        This page documents the migration of a Monte Carlo portfolio simulator
+        from a monolithic R script to an interactive Shiny application.
+        The original scripts date to December 2021; the Shiny version was
+        built with Claude Code in 2025.
+      </p>
+    </div>
+  </div>
+
+  <!-- Prism.js for syntax highlighting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-r.min.js"></script>
+</body>
+</html>
